@@ -78,7 +78,7 @@ export function Sidebar() {
             src={logoImg}
             alt="AdmitSimple"
             className="w-full object-contain object-center"
-            style={{ height: "44px", mixBlendMode: "screen" }}
+            style={{ height: "50px", mixBlendMode: "screen" }}
           />
         </div>
         
