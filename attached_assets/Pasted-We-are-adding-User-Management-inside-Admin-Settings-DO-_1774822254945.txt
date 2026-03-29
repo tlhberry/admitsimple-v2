@@ -1,0 +1,146 @@
+We are adding User Management inside Admin Settings.
+
+DO NOT break any existing functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+Allow Admins to:
+- Create users
+- Assign roles
+- Manage access
+
+-----------------------------------
+ACCESS CONTROL
+-----------------------------------
+
+Only users with role = "admin" can:
+- View User Management page
+- Create users
+- Edit roles
+- Disable users
+
+-----------------------------------
+ROLES
+-----------------------------------
+
+We have 3 roles:
+
+1. ADMIN
+- Full system access
+- Can manage users (add/edit/remove)
+- Can change ownership of referral accounts
+- Can override admission credit
+
+2. ADMISSIONS REP
+- Full operational control
+- Can:
+  - Create and update inquiries
+  - Move inquiries through pipeline
+  - Complete VOB + admit workflow
+  - Refer out
+  - Edit all inquiry data
+- Cannot:
+  - Access Admin Settings
+  - Manage users
+
+3. BD REP (Business Development)
+- Limited to outreach + lead generation
+- Can:
+  - Create inquiries
+  - Create referral accounts
+  - Add activities (calls, meetings, notes)
+- Cannot:
+  - Move inquiries through pipeline
+  - Admit clients
+  - Access Admin Settings
+  - Edit sensitive admission data
+
+-----------------------------------
+DATABASE
+-----------------------------------
+
+Users table must include:
+- id
+- name
+- email
+- password (hashed)
+- role (admin | admissions | bd)
+- initials
+- is_active
+- created_at
+
+-----------------------------------
+ADMIN SETTINGS UI
+-----------------------------------
+
+Add new section:
+"User Management"
+
+Page includes:
+
+1. User List Table:
+- Name
+- Email
+- Role
+- Status (Active / Disabled)
+
+2. "Add User" button
+
+-----------------------------------
+CREATE USER FLOW
+-----------------------------------
+
+Fields:
+- Name
+- Email
+- Password (or auto-generate)
+- Role (dropdown: Admin / Admissions Rep / BD Rep)
+
+Auto-generate initials from name
+
+-----------------------------------
+EDIT USER
+-----------------------------------
+
+Admin can:
+- Change role
+- Activate / deactivate user
+
+-----------------------------------
+PERMISSIONS (ENFORCE IN BACKEND + FRONTEND)
+-----------------------------------
+
+- Hide Admin Settings for non-admin users
+- Restrict API routes by role
+- Prevent BD reps from moving pipeline stages
+- Prevent non-admin from creating users
+
+-----------------------------------
+SECURITY
+-----------------------------------
+
+- Hash passwords
+- Validate role on every protected route
+- Never trust frontend-only role checks
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not allow non-admin to access user management
+- Do not allow BD reps to move inquiries in pipeline
+- Do not allow admissions reps to access admin settings
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+Admin can manage users easily.
+
+Admissions reps can fully run operations.
+
+BD reps can focus only on sourcing and referral relationships.
+
+-----------------------------------
+END

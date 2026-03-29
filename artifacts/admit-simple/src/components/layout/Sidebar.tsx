@@ -18,62 +18,67 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import logoImg from "@assets/ChatGPT_Image_Mar_29,_2026,_08_28_12_AM_1774787305208.png";
 
-const navSections = [
-  {
-    label: "Admissions",
-    items: [
-      { icon: Home, label: "Dashboard", href: "/" },
-      { icon: ClipboardList, label: "Inquiries", href: "/inquiries" },
-      { icon: Users, label: "Patients", href: "/patients" },
-      { icon: GitBranch, label: "Pipeline", href: "/pipeline" },
-    ],
-  },
-  {
-    label: "Business Development",
-    items: [
-      { icon: Building2, label: "Referral Accounts", href: "/referral-accounts" },
-      { icon: Activity, label: "Activity Feed", href: "/bd-activity-feed" },
-      { icon: TrendingUp, label: "BD Reports", href: "/bd-reports" },
-      { icon: BedDouble, label: "Bed Board", href: "/bed-board" },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { icon: BarChart2, label: "Reports", href: "/reports" },
-      { icon: TrendingUp, label: "Analytics", href: "/analytics" },
-      { icon: Handshake, label: "Referrals", href: "/referrals" },
-      { icon: Brain, label: "AI Insights", href: "/ai-insights" },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { icon: Settings, label: "Settings", href: "/settings" },
-    ],
-  },
-];
-
-// Flat list for mobile bottom bar
-const mobileItems = [
-  { icon: Home, label: "Home", href: "/" },
-  { icon: ClipboardList, label: "Inquiries", href: "/inquiries" },
-  { icon: GitBranch, label: "Pipeline", href: "/pipeline" },
-  { icon: Building2, label: "BD", href: "/referral-accounts" },
-  { icon: Settings, label: "Settings", href: "/settings" },
-];
-
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const isActive = (href: string) =>
     href === "/" ? location === "/" : location.startsWith(href);
+
+  const navSections = [
+    {
+      label: "Admissions",
+      items: [
+        { icon: Home,          label: "Dashboard",  href: "/" },
+        { icon: ClipboardList, label: "Inquiries",  href: "/inquiries" },
+        { icon: Users,         label: "Patients",   href: "/patients" },
+        { icon: GitBranch,     label: "Pipeline",   href: "/pipeline" },
+      ],
+    },
+    {
+      label: "Business Development",
+      items: [
+        { icon: Building2,  label: "Referral Accounts", href: "/referral-accounts" },
+        { icon: Activity,   label: "Activity Feed",     href: "/bd-activity-feed" },
+        { icon: TrendingUp, label: "BD Reports",        href: "/bd-reports" },
+        { icon: BedDouble,  label: "Bed Board",         href: "/bed-board" },
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
+        { icon: BarChart2,  label: "Reports",     href: "/reports" },
+        { icon: TrendingUp, label: "Analytics",   href: "/analytics" },
+        { icon: Handshake,  label: "Referrals",   href: "/referrals" },
+        { icon: Brain,      label: "AI Insights", href: "/ai-insights" },
+      ],
+    },
+    ...(isAdmin ? [{
+      label: "System",
+      items: [{ icon: Settings, label: "Settings", href: "/settings" }],
+    }] : []),
+  ];
+
+  const mobileItems = [
+    { icon: Home,          label: "Home",     href: "/" },
+    { icon: ClipboardList, label: "Inquiries",href: "/inquiries" },
+    { icon: GitBranch,     label: "Pipeline", href: "/pipeline" },
+    { icon: Building2,     label: "BD",       href: "/referral-accounts" },
+    ...(isAdmin ? [{ icon: Settings, label: "Settings", href: "/settings" }] : []),
+  ];
+
+  const userInitials = user?.initials || user?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "U";
 
   return (
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen fixed left-0 top-0 text-sidebar-foreground shadow-xl z-20 transition-all">
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-sidebar-border/30">
+          <img src={logoImg} alt="AdmitSimple" className="h-8 object-contain" />
+        </div>
+
         <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-4">
           {navSections.map(section => (
             <div key={section.label}>
@@ -108,11 +113,11 @@ export function Sidebar() {
         <div className="p-4 border-t border-sidebar-border/40">
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
-              {user?.name.charAt(0) || "U"}
+              {userInitials}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-sidebar-foreground truncate capitalize">{user?.role}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate capitalize">{user?.role === "bd" ? "BD Rep" : user?.role === "admissions" ? "Admissions Rep" : user?.role}</p>
             </div>
             <button 
               onClick={() => logout()}

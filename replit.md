@@ -83,7 +83,8 @@ lib/
 11. **Insurance Verification (VOB)** — Per-inquiry VOB form with AI "Fill with AI" (paste text or upload image/PDF), in/out-of-network fields, pre-cert, quote info, and Cost Acceptance decision panel
 12. **Did Not Admit Workflow** — "Did Not Admit" modal with reason list + notes, sets inquiry to Non-Viable, shows red banner on detail page
 13. **Refer Out** — "Refer Out" modal with Text/Email method, AI-generated message, records referral out with amber badge
-14. **Settings** — Facility info, notifications, AI configuration
+14. **Settings** — Facility info, notifications, AI configuration (admin-only)
+15. **User Management** — Admin-only Users tab in Settings: list all users, create with auto-generated initials and password generator, edit role, disable/enable, reset password; role-based access control (Admin / Admissions Rep / BD Rep)
 
 ## BD Module (routes/bd.ts)
 
@@ -172,7 +173,18 @@ Loaded on first startup:
 - If activity has a `userId` linked, shows 2-letter initials with primary color badge
 - Seeded/legacy activities (no userId) show a plain Activity icon fallback
 
+## User Roles & RBAC
+
+- **admin** — Full access, User Management, Settings, can change pipeline stages
+- **admissions** — Full operational access (inquiries, patients, pipeline, VOB)
+- **bd** — BD reps: can create inquiries, cannot change inquiry status/pipeline, non-admit, or refer-out
+- Settings page (including Users tab) hidden from non-admin in sidebar
+- `requireAdmin` middleware: `artifacts/api-server/src/lib/requireAdmin.ts`
+- `isBdRep(req)` helper used in inquiries.ts to block status changes
+
 ## DB Migration Notes
 
-- Always use direct SQL for schema changes (`ALTER TABLE` / `CREATE TABLE`), never `drizzle-kit push` — it will try to drop `user_sessions` managed by connect-pg-simple
+- `drizzle-kit push --force` is safe to use — `tablesFilter: ["!user_sessions"]` in `lib/db/drizzle.config.ts` protects the `user_sessions` table from being dropped
+- The `user_sessions` table is managed by `connect-pg-simple`, NOT by Drizzle schema
+- If `user_sessions` is accidentally dropped, recreate with: `CREATE TABLE "user_sessions" ("sid" varchar NOT NULL COLLATE "default", "sess" json NOT NULL, "expire" timestamp(6) NOT NULL, CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("sid"))`
 - Pipeline status logic: inquiry `status` field stores exact stage name after drag; legacy statuses: `new`→"New Inquiry", `contacted`→"Initial Contact", `qualified`→"Insurance Verification"

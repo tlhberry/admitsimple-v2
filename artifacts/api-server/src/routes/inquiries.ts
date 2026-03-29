@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { inquiries, users, patients } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { isBdRep } from "../lib/requireAdmin";
 import { logAudit } from "../lib/logAudit";
 import archiver from "archiver";
 
@@ -150,6 +151,9 @@ router.put("/inquiries/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const data = req.body;
+    if (isBdRep(req) && data.status !== undefined) {
+      res.status(403).json({ error: "BD reps cannot change inquiry pipeline status" }); return;
+    }
     const update: any = { updatedAt: new Date() };
     const fields = [
       "firstName","lastName","phone","email","dob","insuranceProvider","insuranceMemberId",
@@ -424,6 +428,7 @@ router.put("/inquiries/:id/vob", async (req, res) => {
 // ─── Non-Admit / Did Not Admit ────────────────────────────────────────────────
 router.put("/inquiries/:id/non-admit", async (req, res) => {
   try {
+    if (isBdRep(req)) { res.status(403).json({ error: "BD reps cannot record non-admit decisions" }); return; }
     const { reason, notes } = req.body;
     if (!reason) { res.status(400).json({ error: "reason is required" }); return; }
     const [row] = await db.update(inquiries).set({
@@ -444,6 +449,7 @@ router.put("/inquiries/:id/non-admit", async (req, res) => {
 // ─── Refer Out ────────────────────────────────────────────────────────────────
 router.post("/inquiries/:id/refer-out", async (req, res) => {
   try {
+    if (isBdRep(req)) { res.status(403).json({ error: "BD reps cannot record refer-out decisions" }); return; }
     const { type, message } = req.body;
     if (!type || !message) { res.status(400).json({ error: "type and message are required" }); return; }
     const [row] = await db.update(inquiries).set({

@@ -6,21 +6,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check, RefreshCw } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check,
+  RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff,
+} from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 type SettingMap = Record<string, string>;
 
-const tabs = [
-  { id: "facility",      label: "Facility",      icon: Building },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "ai",            label: "AI Settings",   icon: Brain },
-  { id: "integrations",  label: "Integrations",  icon: Phone },
+const ROLES = [
+  { value: "admin",      label: "Admin",           desc: "Full system access, manages users" },
+  { value: "admissions", label: "Admissions Rep",  desc: "Full operational access" },
+  { value: "bd",         label: "BD Rep",           desc: "Referral sourcing & lead generation" },
 ];
 
+const roleLabel = (role: string) => ROLES.find(r => r.value === role)?.label ?? role;
+const roleBadgeCls = (role: string) => {
+  if (role === "admin")      return "bg-primary/15 text-primary border-primary/25";
+  if (role === "admissions") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
+  return "bg-amber-500/15 text-amber-400 border-amber-500/25";
+};
+
+function generatePassword(length = 12) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export default function Settings() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { data, isLoading } = useListSettings({ category: undefined });
   const [activeTab, setActiveTab] = useState("facility");
   const [values, setValues] = useState<SettingMap>({});
@@ -59,6 +80,14 @@ export default function Settings() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     set("ctm_webhook_secret", Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""));
   };
+
+  const tabs = [
+    { id: "facility",      label: "Facility",      icon: Building },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "ai",            label: "AI Settings",   icon: Brain },
+    { id: "integrations",  label: "Integrations",  icon: Phone },
+    ...(isAdmin ? [{ id: "users", label: "Users", icon: Users }] : []),
+  ];
 
   if (isLoading) return <Layout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
 
@@ -114,7 +143,7 @@ export default function Settings() {
                   ].map(f => (
                     <div key={f.key} className={f.key === "facility_address" ? "sm:col-span-2" : ""}>
                       <Label className={labelCls}>{f.label}</Label>
-                      <Input value={values[f.key] || ""} onChange={e => set(f.key, e.target.value)} type={f.type} className={fieldCls} />
+                      <Input value={values[f.key] || ""} onChange={e => set(f.key, e.target.value)} type={(f as any).type} className={fieldCls} />
                     </div>
                   ))}
                   <div className="sm:col-span-2">
@@ -195,7 +224,6 @@ export default function Settings() {
                   <p className="font-semibold text-emerald-400">How it works</p>
                   <p className="text-muted-foreground">When a call comes in, CTM sends caller info to this webhook and AdmitSimple automatically creates a new inquiry with the caller details, campaign source, and call notes.</p>
                 </div>
-
                 <div>
                   <Label className={labelCls}>Webhook URL</Label>
                   <p className="text-xs text-muted-foreground mb-2">Paste this into your CTM account under <strong className="text-foreground">Settings → Webhooks → Add Webhook</strong>.</p>
@@ -207,7 +235,6 @@ export default function Settings() {
                     </Button>
                   </div>
                 </div>
-
                 <div>
                   <Label className={labelCls}>Webhook Secret Token</Label>
                   <p className="text-xs text-muted-foreground mb-2">Set this same value in CTM as the <strong className="text-foreground">X-CTM-Token</strong> custom header.</p>
@@ -218,7 +245,6 @@ export default function Settings() {
                     </Button>
                   </div>
                 </div>
-
                 <div className="bg-muted/40 rounded-xl border border-border p-4 text-sm space-y-2">
                   <p className="font-semibold text-foreground">Fields mapped from CTM</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs font-mono text-muted-foreground">
@@ -230,7 +256,6 @@ export default function Settings() {
                     <span><strong className="text-foreground">recording_url</strong> → Notes</span>
                   </div>
                 </div>
-
                 <div className="flex justify-end">
                   <Button onClick={() => bulkUpdate.mutate({ data: { settings: [{ key: "ctm_webhook_secret", value: values["ctm_webhook_secret"] || "" }] } })} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                     {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -241,7 +266,9 @@ export default function Settings() {
             </Card>
           )}
 
-          {activeTab !== "integrations" && (
+          {activeTab === "users" && isAdmin && <UserManagement currentUserId={user?.id} />}
+
+          {activeTab !== "integrations" && activeTab !== "users" && (
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                 {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -254,3 +281,363 @@ export default function Settings() {
     </Layout>
   );
 }
+
+// ─── User Management Panel ────────────────────────────────────────────────────
+
+function UserManagement({ currentUserId }: { currentUserId?: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showAdd, setShowAdd] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
+  const [resetUser, setResetUser] = useState<any>(null);
+
+  const { data: userList = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+    queryFn: async () => {
+      const r = await fetch("/api/users", { credentials: "include" });
+      if (!r.ok) throw new Error("Failed to fetch users");
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+
+  const handleToggle = async (u: any) => {
+    try {
+      const resp = await fetch(`/api/users/${u.id}/toggle-active`, {
+        method: "PATCH", credentials: "include",
+      });
+      if (!resp.ok) throw new Error((await resp.json()).error);
+      invalidate();
+      toast({ title: u.isActive ? "User disabled" : "User re-enabled" });
+    } catch (e: any) { toast({ title: e.message || "Failed", variant: "destructive" }); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="rounded-2xl border-border">
+        <CardHeader className="border-b border-border pb-4 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2 text-foreground">
+            <Users className="w-4 h-4 text-primary" /> Team Members
+          </CardTitle>
+          <Button onClick={() => setShowAdd(true)} size="sm" className="h-8 px-4 rounded-xl gap-1.5 text-sm">
+            <Plus className="w-3.5 h-3.5" /> Add User
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : (
+            <div className="divide-y divide-border">
+              {userList.map((u: any) => (
+                <div key={u.id} className="flex items-center gap-4 px-5 py-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    {u.initials || u.name?.charAt(0) || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground text-sm">{u.name}</span>
+                      {u.id === currentUserId && (
+                        <span className="text-[10px] font-semibold text-muted-foreground border border-border px-1.5 py-0.5 rounded-md">You</span>
+                      )}
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", roleBadgeCls(u.role))}>
+                        {roleLabel(u.role)}
+                      </span>
+                      {!u.isActive && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-rose-500/10 text-rose-400 border-rose-500/25">Disabled</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{u.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setEditUser(u)}
+                      title="Edit role"
+                      className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setResetUser(u)}
+                      title="Reset password"
+                      className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </button>
+                    {u.id !== currentUserId && (
+                      <button
+                        onClick={() => handleToggle(u)}
+                        title={u.isActive ? "Disable user" : "Enable user"}
+                        className={cn(
+                          "p-2 rounded-lg border transition-colors",
+                          u.isActive
+                            ? "border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                            : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                        )}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AddUserModal open={showAdd} onClose={() => setShowAdd(false)} onCreated={() => { invalidate(); setShowAdd(false); }} />
+      <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSaved={() => { invalidate(); setEditUser(null); }} />
+      <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} onReset={() => setResetUser(null)} />
+    </div>
+  );
+}
+
+// ─── Add User Modal ───────────────────────────────────────────────────────────
+
+function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "admissions" });
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(v => ({ ...v, [k]: e.target.value }));
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.email || !form.password) {
+      toast({ title: "Name, email and password are required", variant: "destructive" }); return;
+    }
+    setSaving(true);
+    try {
+      const resp = await fetch("/api/users", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!resp.ok) throw new Error((await resp.json()).error);
+      toast({ title: `${form.name} added successfully` });
+      setForm({ name: "", email: "", password: "", role: "admissions" });
+      onCreated();
+    } catch (e: any) { toast({ title: e.message || "Failed to create user", variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+
+  const fieldCls = "mt-1.5 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground h-10";
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="bg-card border-border text-foreground max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <Plus className="w-5 h-5 text-primary" /> Add Team Member
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-sm font-medium text-foreground">Full Name *</Label>
+            <Input value={form.name} onChange={setF("name")} placeholder="e.g. Sarah Johnson" className={fieldCls} />
+          </div>
+          <div>
+            <Label className="text-sm font-medium text-foreground">Email *</Label>
+            <Input value={form.email} onChange={setF("email")} type="email" placeholder="sarah@facility.com" className={fieldCls} />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-sm font-medium text-foreground">Password *</Label>
+              <button
+                type="button"
+                onClick={() => setForm(v => ({ ...v, password: generatePassword() }))}
+                className="text-xs text-primary hover:text-primary/80 underline"
+              >
+                Generate
+              </button>
+            </div>
+            <div className="relative">
+              <Input
+                value={form.password}
+                onChange={setF("password")}
+                type={showPw ? "text" : "password"}
+                placeholder="Min 6 characters"
+                className={cn(fieldCls, "pr-10")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <Label className="text-sm font-medium text-foreground">Role *</Label>
+            <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
+              <SelectTrigger className="mt-1.5 rounded-xl bg-muted border-border text-foreground h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border text-foreground">
+                {ROLES.map(r => (
+                  <SelectItem key={r.value} value={r.value}>
+                    <div>
+                      <p className="font-medium">{r.label}</p>
+                      <p className="text-xs text-muted-foreground">{r.desc}</p>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} className="rounded-xl border-border text-foreground">Cancel</Button>
+          <Button onClick={handleSubmit} disabled={saving} className="rounded-xl gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Create User
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Edit User Modal ──────────────────────────────────────────────────────────
+
+function EditUserModal({ user, onClose, onSaved }: { user: any; onClose: () => void; onSaved: () => void }) {
+  const { toast } = useToast();
+  const [role, setRole] = useState(user?.role ?? "admissions");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (user) setRole(user.role); }, [user]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const resp = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (!resp.ok) throw new Error((await resp.json()).error);
+      toast({ title: "Role updated" });
+      onSaved();
+    } catch (e: any) { toast({ title: e.message || "Failed", variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="bg-card border-border text-foreground max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <Pencil className="w-4 h-4 text-primary" /> Edit {user?.name}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-2">
+          <Label className="text-sm font-medium text-foreground">Role</Label>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger className="mt-1.5 rounded-xl bg-muted border-border text-foreground h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border text-foreground">
+              {ROLES.map(r => (
+                <SelectItem key={r.value} value={r.value}>
+                  <div>
+                    <p className="font-medium">{r.label}</p>
+                    <p className="text-xs text-muted-foreground">{r.desc}</p>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} className="rounded-xl border-border text-foreground">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="rounded-xl gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            Save Role
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Reset Password Modal ─────────────────────────────────────────────────────
+
+function ResetPasswordModal({ user, onClose, onReset }: { user: any; onClose: () => void; onReset: () => void }) {
+  const { toast } = useToast();
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (!user) setPassword(""); }, [user]);
+
+  const handleReset = async () => {
+    if (password.length < 6) { toast({ title: "Password must be at least 6 characters", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      const resp = await fetch(`/api/users/${user.id}/reset-password`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (!resp.ok) throw new Error((await resp.json()).error);
+      toast({ title: `Password reset for ${user.name}` });
+      setPassword("");
+      onReset();
+    } catch (e: any) { toast({ title: e.message || "Failed", variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="bg-card border-border text-foreground max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <KeyRound className="w-4 h-4 text-amber-400" /> Reset Password — {user?.name}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-2 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <Label className="text-sm font-medium text-foreground">New Password</Label>
+            <button
+              type="button"
+              onClick={() => setPassword(generatePassword())}
+              className="text-xs text-primary hover:text-primary/80 underline"
+            >
+              Generate
+            </button>
+          </div>
+          <div className="relative">
+            <Input
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              type={showPw ? "text" : "password"}
+              placeholder="Min 6 characters"
+              className="rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground h-10 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} className="rounded-xl border-border text-foreground">Cancel</Button>
+          <Button onClick={handleReset} disabled={saving} className="rounded-xl gap-2 bg-amber-600 hover:bg-amber-700 text-white border-0">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+            Reset Password
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

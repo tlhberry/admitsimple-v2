@@ -23,13 +23,18 @@ router.post("/auth/login", async (req, res) => {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
+    if (user.isActive === false) {
+      res.status(403).json({ error: "Your account has been disabled. Please contact an administrator." });
+      return;
+    }
     const sess = req.session as any;
     sess.userId = user.id;
     sess.username = user.username;
     sess.name = user.name;
     sess.email = user.email;
     sess.role = user.role;
-    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt });
+    sess.initials = user.initials;
+    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, createdAt: user.createdAt });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -48,7 +53,7 @@ router.get("/auth/me", (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  res.json({ id: sess.userId, username: sess.username, name: sess.name, email: sess.email, role: sess.role });
+  res.json({ id: sess.userId, username: sess.username, name: sess.name, email: sess.email, role: sess.role, initials: sess.initials });
 });
 
 export default router;

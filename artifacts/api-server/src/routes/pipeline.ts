@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { pipelineStages, inquiries, users } from "@workspace/db/schema";
 import { eq, asc, desc, notInArray } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { requireAdmin } from "../lib/requireAdmin";
 
 const router = Router();
 router.use(requireAuth);
@@ -86,7 +87,7 @@ router.get("/pipeline/inquiries", async (req, res) => {
   }
 });
 
-router.post("/pipeline/stages", async (req, res) => {
+router.post("/pipeline/stages", requireAdmin, async (req, res) => {
   try {
     const data = req.body;
     const [row] = await db.insert(pipelineStages).values({
@@ -102,7 +103,7 @@ router.post("/pipeline/stages", async (req, res) => {
   }
 });
 
-router.put("/pipeline/stages/reorder", async (req, res) => {
+router.put("/pipeline/stages/reorder", requireAdmin, async (req, res) => {
   try {
     const { stages } = req.body;
     for (const s of stages) {
@@ -115,7 +116,7 @@ router.put("/pipeline/stages/reorder", async (req, res) => {
   }
 });
 
-router.put("/pipeline/stages/:id", async (req, res) => {
+router.put("/pipeline/stages/:id", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const data = req.body;
@@ -134,7 +135,7 @@ router.put("/pipeline/stages/:id", async (req, res) => {
   }
 });
 
-router.delete("/pipeline/stages/:id", async (req, res) => {
+router.delete("/pipeline/stages/:id", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(pipelineStages).where(eq(pipelineStages.id, id));
