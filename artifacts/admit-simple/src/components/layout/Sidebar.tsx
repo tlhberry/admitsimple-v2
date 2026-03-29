@@ -72,16 +72,6 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen fixed left-0 top-0 text-sidebar-foreground shadow-xl z-20 transition-all">
-        {/* Logo */}
-        <div className="px-3 border-b border-sidebar-border/40 flex items-center justify-center overflow-hidden" style={{ height: "100px" }}>
-          <img
-            src={logoImg}
-            alt="AdmitSimple"
-            className="w-full object-cover object-center"
-            style={{ height: "100px", mixBlendMode: "screen" }}
-          />
-        </div>
-        
         <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-4">
           {navSections.map(section => (
             <div key={section.label}>
