@@ -11,9 +11,11 @@ import referralsRouter from "./referrals";
 import pipelineRouter from "./pipeline";
 import analyticsRouter from "./analytics";
 import aiRouter from "./ai";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
+router.use(webhooksRouter);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(usersRouter);
