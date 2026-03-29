@@ -1,0 +1,19 @@
+packages:
+  "react-markdown": "Render AI markdown responses cleanly"
+  "recharts": "Render analytics and dashboard charts"
+  "jspdf": "Export reports to PDF"
+  "html2canvas": "Capture report DOM for PDF export"
+  "@hello-pangea/dnd": "Drag and drop Kanban board for pipeline"
+  "date-fns": "Format and manipulate dates"
+  "react-hook-form": "Form state management"
+  "@hookform/resolvers": "Zod validation resolver for forms"
+  "zod": "Schema validation for forms"
+
+images:
+  - path: "artifacts/admit-simple/public/images/login-bg.png"
+    description: "Abstract, very subtle, professional geometric background in deep navy blue and soft medical blue, minimal and clean"
+    aspect_ratio: "16:9"
+
+notes:
+  - Using generated hooks from @workspace/api-client-react
+  - Session-based authentication via /api/auth/me

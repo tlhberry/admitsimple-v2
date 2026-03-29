@@ -1,8 +1,30 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
+import usersRouter from "./users";
+import inquiriesRouter from "./inquiries";
+import patientsRouter from "./patients";
+import activitiesRouter from "./activities";
+import reportsRouter from "./reports";
+import settingsRouter from "./settings";
+import referralsRouter from "./referrals";
+import pipelineRouter from "./pipeline";
+import analyticsRouter from "./analytics";
+import aiRouter from "./ai";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
+router.use(usersRouter);
+router.use(inquiriesRouter);
+router.use(patientsRouter);
+router.use(activitiesRouter);
+router.use(reportsRouter);
+router.use(settingsRouter);
+router.use(referralsRouter);
+router.use(pipelineRouter);
+router.use(analyticsRouter);
+router.use(aiRouter);
 
 export default router;

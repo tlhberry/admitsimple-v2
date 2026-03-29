@@ -1,0 +1,885 @@
+REPLIT AGENT PROMPT — AdmitSimple: HIPAA-Ready Admissions CRM for Treatment Centers
+
+PROJECT OVERVIEW
+Build a full-stack, mobile-first Admissions CRM for addiction treatment centers called AdmitSimple. This is a standalone, client-owned product (not SaaS) — each treatment center gets their own isolated deployment they fully own. It must be production-ready on first build, HIPAA-conscious in its architecture, and deeply integrated with Anthropic Claude AI throughout the workflow.
+The app must look polished and professional on mobile first, work perfectly on desktop, and feel like a modern healthcare CRM. Match the following design system exactly: dark navy sidebar, clean white/light gray content area, card-based layouts, blue primary accent (#3B82F6), subtle shadows, and smooth transitions. The navigation and overall UX must remain consistent with what is described below.
+
+TECH STACK (EXACT)
+
+Runtime: Node.js 20+ with TypeScript
+Framework: Express.js (server) + React 18 (client, Vite bundler)
+Database: PostgreSQL via Drizzle ORM (use DATABASE_URL env var — Replit provides this natively)
+AI: Anthropic Claude SDK (@anthropic-ai/sdk) — model claude-opus-4-5 for all AI features
+Auth: Session-based auth with express-session + bcryptjs for password hashing
+File handling: multer for screenshot/image uploads
+Styling: Tailwind CSS + shadcn/ui components
+State: TanStack Query (React Query) for all data fetching
+Forms: React Hook Form + Zod validation
+Charts: Recharts for all analytics/reporting charts
+Date handling: date-fns
+PDF: jspdf + html2canvas for report export
+Environment: All secrets via .env — DATABASE_URL, ANTHROPIC_API_KEY, SESSION_SECRET
+
+
+DATABASE SCHEMA (Drizzle ORM — create all tables on startup)
+typescript// All tables must use Drizzle ORM with PostgreSQL
+
+// users table
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: varchar('username', { length: 100 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  role: varchar('role', { length: 50 }).notNull().default('staff'), // 'admin', 'staff', 'clinical'
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// inquiries table (new leads / intake)
+export const inquiries = pgTable('inquiries', {
+  id: serial('id').primaryKey(),
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  phone: varchar('phone', { length: 30 }),
+  email: varchar('email', { length: 255 }),
+  dob: varchar('dob', { length: 20 }),
+  insuranceProvider: varchar('insurance_provider', { length: 255 }),
+  insuranceMemberId: varchar('insurance_member_id', { length: 100 }),
+  primaryDiagnosis: text('primary_diagnosis'),
+  substanceHistory: text('substance_history'),
+  medicalHistory: text('medical_history'),
+  mentalHealthHistory: text('mental_health_history'),
+  levelOfCare: varchar('level_of_care', { length: 100 }), // 'Detox', 'RTC', 'PHP', 'IOP', 'OP'
+  referralSource: varchar('referral_source', { length: 255 }),
+  referralContact: varchar('referral_contact', { length: 255 }),
+  assignedTo: integer('assigned_to').references(() => users.id),
+  status: varchar('status', { length: 50 }).notNull().default('new'), // 'new', 'contacted', 'qualified', 'admitted', 'declined', 'lost'
+  priority: varchar('priority', { length: 20 }).default('medium'), // 'high', 'medium', 'low'
+  notes: text('notes'),
+  aiParsedData: jsonb('ai_parsed_data'), // stores Claude's extracted data from screenshots
+  parsedAt: timestamp('parsed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// patients table (admitted patients)
+export const patients = pgTable('patients', {
+  id: serial('id').primaryKey(),
+  inquiryId: integer('inquiry_id').references(() => inquiries.id),
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  phone: varchar('phone', { length: 30 }),
+  email: varchar('email', { length: 255 }),
+  dob: varchar('dob', { length: 20 }),
+  insuranceProvider: varchar('insurance_provider', { length: 255 }),
+  insuranceMemberId: varchar('insurance_member_id', { length: 100 }),
+  levelOfCare: varchar('level_of_care', { length: 100 }),
+  admitDate: timestamp('admit_date'),
+  dischargeDate: timestamp('discharge_date'),
+  currentStage: varchar('current_stage', { length: 100 }),
+  assignedClinician: integer('assigned_clinician').references(() => users.id),
+  assignedAdmissions: integer('assigned_admissions').references(() => users.id),
+  status: varchar('status', { length: 50 }).notNull().default('active'), // 'active', 'discharged', 'transferred'
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// pipeline_stages table
+export const pipelineStages = pgTable('pipeline_stages', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  order: integer('order').notNull(),
+  color: varchar('color', { length: 50 }).default('#3B82F6'),
+  description: text('description'),
+  isActive: boolean('is_active').default(true),
+});
+
+// activities table (calls, notes, tasks, emails)
+export const activities = pgTable('activities', {
+  id: serial('id').primaryKey(),
+  inquiryId: integer('inquiry_id').references(() => inquiries.id),
+  patientId: integer('patient_id').references(() => patients.id),
+  userId: integer('user_id').references(() => users.id),
+  type: varchar('type', { length: 50 }).notNull(), // 'call', 'note', 'email', 'task', 'sms'
+  subject: varchar('subject', { length: 255 }),
+  body: text('body'),
+  outcome: varchar('outcome', { length: 100 }),
+  scheduledAt: timestamp('scheduled_at'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// reports table
+export const reports = pgTable('reports', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  type: varchar('type', { length: 100 }).notNull(), // 'admissions', 'referral', 'outcomes', 'financial', 'custom'
+  generatedBy: integer('generated_by').references(() => users.id),
+  dateRangeStart: timestamp('date_range_start'),
+  dateRangeEnd: timestamp('date_range_end'),
+  parameters: jsonb('parameters'),
+  aiNarrative: text('ai_narrative'), // Claude-generated narrative
+  reportData: jsonb('report_data'), // raw data snapshot
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// settings table (key-value store for facility settings)
+export const settings = pgTable('settings', {
+  id: serial('id').primaryKey(),
+  key: varchar('key', { length: 100 }).notNull().unique(),
+  value: text('value'),
+  category: varchar('category', { length: 50 }), // 'facility', 'notifications', 'integrations', 'ai'
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// referral_sources table
+export const referralSources = pgTable('referral_sources', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 100 }), // 'hospital', 'therapist', 'detox', 'self', 'insurance', 'other'
+  contact: varchar('contact', { length: 255 }),
+  phone: varchar('phone', { length: 30 }),
+  email: varchar('email', { length: 255 }),
+  address: text('address'),
+  notes: text('notes'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// insurance_verifications table
+export const insuranceVerifications = pgTable('insurance_verifications', {
+  id: serial('id').primaryKey(),
+  inquiryId: integer('inquiry_id').references(() => inquiries.id),
+  patientId: integer('patient_id').references(() => patients.id),
+  provider: varchar('provider', { length: 255 }),
+  memberId: varchar('member_id', { length: 100 }),
+  groupNumber: varchar('group_number', { length: 100 }),
+  deductible: varchar('deductible', { length: 50 }),
+  deductibleMet: varchar('deductible_met', { length: 50 }),
+  outOfPocket: varchar('out_of_pocket', { length: 50 }),
+  coverageDetails: text('coverage_details'),
+  verifiedBy: integer('verified_by').references(() => users.id),
+  verifiedAt: timestamp('verified_at'),
+  status: varchar('status', { length: 50 }).default('pending'), // 'pending', 'verified', 'denied'
+  createdAt: timestamp('created_at').defaultNow(),
+});
+```
+
+Seed the database on first run with:
+- Default admin user: username `admin`, password `admin123`, name `Administrator`
+- 5 default pipeline stages: `New Inquiry` (1), `Initial Contact` (2), `Insurance Verification` (3), `Clinical Assessment` (4), `Admissions Decision` (5)
+- Default facility settings for name, phone, address, bed capacity
+- 3-4 sample referral sources
+- 5-8 sample inquiries with varied statuses to populate the dashboard
+
+---
+
+## APPLICATION ARCHITECTURE
+
+### Server Structure
+```
+server/
+  index.ts          — Express app, session, middleware, route registration
+  db.ts             — Drizzle + PostgreSQL connection
+  schema.ts         — All Drizzle table definitions
+  routes/
+    authRoutes.ts        — Login, logout, session check
+    inquiryRoutes.ts     — CRUD for inquiries
+    patientRoutes.ts     — CRUD for patients
+    activityRoutes.ts    — Activities/notes/calls
+    reportRoutes.ts      — Report generation and retrieval
+    settingsRoutes.ts    — Facility settings
+    referralRoutes.ts    — Referral sources
+    pipelineRoutes.ts    — Pipeline stage management
+    aiRoutes.ts          — ALL Claude AI endpoints (detailed below)
+    analyticsRoutes.ts   — Dashboard stats and chart data
+
+client/
+  src/
+    main.tsx
+    App.tsx            — Router setup
+    components/
+      Layout.tsx         — Sidebar + mobile nav shell
+      Sidebar.tsx        — Left nav (desktop)
+      MobileNav.tsx      — Bottom tab nav (mobile)
+      ui/                — shadcn/ui components
+    pages/
+      Login.tsx
+      Dashboard.tsx
+      Inquiries.tsx      — Inquiry list + new inquiry form with AI parser
+      InquiryDetail.tsx  — Single inquiry view with activities
+      Patients.tsx
+      PatientDetail.tsx
+      Pipeline.tsx       — Kanban board view
+      Reports.tsx        — Reports list + AI report builder
+      Analytics.tsx      — Charts and KPIs
+      Referrals.tsx      — Referral source management
+      Settings.tsx       — Facility settings with all tabs
+      AIInsights.tsx     — Standalone AI insights page
+    hooks/
+      useAuth.ts
+      useInquiries.ts
+      usePatients.ts
+      useAnalytics.ts
+    lib/
+      queryClient.ts
+      api.ts
+
+NAVIGATION & LAYOUT
+Desktop Sidebar (left, 240px wide, dark navy #0F172A)
+Navigation items in order:
+
+🏠 Dashboard
+📋 Inquiries
+👥 Patients
+🔄 Pipeline
+📊 Reports
+📈 Analytics
+🤝 Referrals
+🤖 AI Insights
+⚙️ Settings
+
+Show facility name at top of sidebar, user avatar + name + role at bottom with logout button.
+Mobile Bottom Navigation (fixed, shows 5 most important)
+
+Dashboard, Inquiries, Pipeline, Reports, Settings
+
+Mobile Top Bar
+Show page title + hamburger menu for full nav drawer.
+All pages must be fully responsive. Cards stack vertically on mobile. Tables become scrollable cards on mobile.
+
+PAGES — DETAILED SPECIFICATIONS
+1. LOGIN PAGE
+
+Centered card with facility logo placeholder
+Username + password fields
+"Sign In" button
+Show error on invalid credentials
+Redirect to Dashboard on success
+Store session cookie
+
+2. DASHBOARD
+Display these KPI cards at top (2x2 grid on mobile, 4-across on desktop):
+
+Today's Inquiries (count of inquiries created today)
+This Week's Admissions (count admitted this week)
+Census (count of active patients)
+Conversion Rate (admitted / total inquiries this month, as %)
+
+Below KPIs, show:
+
+Recent Inquiries table (last 10, with name, status badge, assigned to, created date, action button)
+Pipeline Overview (horizontal bar or donut chart showing inquiry counts by stage)
+Inquiries by Day line chart (last 30 days)
+Referral Source Breakdown pie chart (this month)
+
+All data fetched from /api/analytics/dashboard endpoint.
+3. INQUIRIES PAGE
+List view:
+
+Search bar (searches name, phone, email)
+Filter dropdowns: Status, Assigned To, Level of Care, Priority, Date Range
+Sortable columns: Name, Status, Priority, Created Date
+Each row: Name, Phone, Status badge (color-coded), Priority badge, Assigned To, Level of Care, Created Date, Actions (View, Edit, Delete)
+Mobile: Card-based list instead of table
+Floating "+" button (bottom right on mobile, top right on desktop) to open New Inquiry form
+
+New Inquiry Form (modal/drawer):
+This is where the AI Screenshot Parser lives (see AI Features section).
+Form fields:
+
+First Name*, Last Name*
+Phone, Email
+Date of Birth
+Insurance Provider, Member ID
+Primary Diagnosis (textarea)
+Substance Use History (textarea)
+Medical History (textarea)
+Mental Health History (textarea)
+Level of Care (select: Detox, RTC, PHP, IOP, OP)
+Referral Source (select from referral_sources table)
+Assigned To (select from users)
+Priority (High/Medium/Low)
+Status (default: New)
+Notes (textarea)
+
+AI Screenshot Parser (inside New Inquiry form, at the top):
+
+Upload zone with drag-and-drop: "Upload a referral screenshot, fax, or document to auto-fill this form"
+Accepts: PNG, JPG, PDF screenshots, JPEG
+On upload: shows preview thumbnail, "Parsing with AI..." spinner
+Calls POST /api/ai/parse-intake with the image
+On success: auto-fills all matching form fields with extracted data
+Shows a green banner: "AI extracted [N] fields from your document. Please review and confirm."
+Fields that were auto-filled get a subtle blue highlight with an AI badge
+User can edit any auto-filled field before saving
+
+4. INQUIRY DETAIL PAGE
+Full page view of a single inquiry:
+
+Header: Patient name, status badge, priority badge, created date, assigned user
+Action buttons: Edit, Convert to Patient, Add Activity, Change Status
+Tabs:
+
+Overview: All inquiry fields in read-only cards (2-column layout)
+Activities: Timeline of all calls/notes/emails/tasks with Add Activity button
+Insurance: Insurance verification details + verification form
+AI Notes: Claude-generated summary of the inquiry (auto-generates on view if not cached)
+
+
+
+5. PATIENTS PAGE
+Similar to Inquiries but for admitted patients:
+
+Filter by: Level of Care, Status, Assigned Clinician, Admit Date Range
+Table/card view with: Name, Level of Care, Admit Date, Census Days, Assigned Clinician, Status
+"Admit New Patient" button
+
+6. PATIENT DETAIL PAGE
+
+Same tab structure as Inquiry Detail
+Tabs: Overview, Activities, Insurance, Clinical Notes, Discharge Planning
+Show length of stay calculation
+Discharge planning section with target discharge date
+
+7. PIPELINE PAGE (KANBAN)
+Drag-and-drop Kanban board:
+
+Each column = one pipeline stage
+Cards show: Patient/Inquiry name, priority badge, assigned user avatar, days in stage
+Drag cards between columns to change stage (updates status/stage in DB)
+Column header shows count of cards
+"+" button in each column to add new inquiry directly to that stage
+Mobile: horizontal scrolling Kanban or toggle to list view
+
+AI Pipeline Optimizer button (floating button labeled "AI Optimize" or wand icon):
+
+Opens a panel/modal showing AI suggestions for moving stale inquiries forward
+Calls POST /api/ai/pipeline-optimize with current pipeline data
+Shows Claude's prioritized action list per inquiry
+
+8. REPORTS PAGE
+This is where the AI Report Builder lives.
+Reports list:
+
+Table of previously generated reports: Title, Type, Date Range, Generated By, Created Date, Actions (View, Download PDF)
+"Generate New Report" button
+
+AI Report Builder (modal/drawer — triggered by "Generate New Report"):
+
+Step 1 — Report Type: Select from
+
+Admissions Summary
+Referral Source Analysis
+Conversion Funnel
+Clinical Outcomes
+Insurance & Revenue
+Custom (describe what you want)
+
+
+Step 2 — Date Range: Start and End date pickers
+Step 3 — Parameters: Level of care filter, assigned staff filter (optional)
+Step 4 — "Generate Report with AI" button
+
+Shows animated progress: "Gathering data... Analyzing trends... Writing narrative..."
+Calls POST /api/ai/reports with report type + date range + aggregated data
+Returns: Claude-written narrative + key metrics + recommendations
+
+
+Step 5 — Report View:
+
+Title + date range header
+KPI summary cards (pulled from data)
+Relevant charts (bar, line, pie — rendered with Recharts)
+Claude's narrative text (formatted with headings, bullet points)
+Recommendations section (highlighted in a blue card)
+"Download as PDF" button (uses html2canvas + jspdf)
+"Save Report" button (saves to reports table)
+
+
+
+9. ANALYTICS PAGE
+Standalone analytics dashboard with date range picker at top.
+Charts (all use Recharts):
+
+Admissions Over Time — line chart, daily/weekly toggle
+Inquiries by Status — donut chart
+Conversion Funnel — funnel chart (Inquiries → Contacted → Qualified → Admitted)
+Referral Source Performance — horizontal bar chart (inquiry count + conversion rate per source)
+Level of Care Distribution — pie chart
+Average Time to Admit — KPI card + trend line
+Staff Performance — bar chart (inquiries handled per staff member)
+Payer Mix — pie chart (insurance providers)
+
+All data from /api/analytics/charts?startDate=&endDate= endpoint.
+AI Insights button on this page:
+
+Floating "Get AI Insights" button
+Calls POST /api/ai/insights with current analytics data
+Shows a drawer/panel with Claude's analysis of trends, anomalies, and recommendations
+
+10. REFERRALS PAGE
+
+Table of all referral sources with: Name, Type, Contact, Phone, Active inquiries count, Conversion rate, Actions
+Add/Edit/Deactivate referral sources
+AI Referral Insights button:
+
+Calls POST /api/ai/referral-insights with referral performance data
+Shows Claude's analysis: which sources are highest quality, which need relationship attention, growth opportunities
+
+
+
+11. AI INSIGHTS PAGE (dedicated page)
+This is a hub for all AI-powered insights:
+Sections:
+
+Census & Admissions Trends — "Analyze Trends" button → calls /api/ai/insights
+Referral Performance — "Analyze Referrals" button → calls /api/ai/referral-insights
+Pipeline Health — "Optimize Pipeline" button → calls /api/ai/pipeline-optimize
+Custom Analysis — Text input: "Ask Claude anything about your admissions data..." → calls /api/ai/custom-query
+
+Each section shows:
+
+A "Generate" button
+Loading state with thinking animation
+Claude's response rendered as formatted markdown (use react-markdown)
+Timestamp of last generation
+"Regenerate" button
+
+12. SETTINGS PAGE
+Tabbed settings page:
+Tab 1: Facility
+
+Facility Name
+Phone, Fax
+Address (multi-line)
+Email
+Bed Capacity
+License Number
+NPI Number
+Time Zone (select)
+Logo upload (image preview)
+
+Tab 2: Users & Staff
+
+Table of users: Name, Username, Role, Email, Status
+Invite/Add User button (creates new user with temp password)
+Edit/Deactivate user
+Role options: Admin, Staff, Clinical
+
+Tab 3: Pipeline Stages
+
+Draggable list of pipeline stages
+Edit stage name, color
+Add new stage
+Reorder via drag
+
+Tab 4: Notifications
+
+Toggle switches for:
+
+Email on new inquiry
+Email on status change
+Daily digest
+Assignment notifications
+
+
+SMTP settings (host, port, from email, password)
+
+Tab 5: Integrations
+
+Fields for future integrations (display-only placeholders):
+
+EHR Integration (coming soon)
+Billing Integration (coming soon)
+
+
+Webhook URL field
+API key display (for external access)
+
+Tab 6: AI Configuration
+
+Anthropic API Key field (shows masked, with Test Connection button)
+AI model selector (pre-selected: claude-opus-4-5)
+Toggle: Enable AI auto-summarize on new inquiry
+Toggle: Enable AI pipeline suggestions
+Data usage notice: "All data processed by Claude AI is subject to Anthropic's privacy policy. No PHI is stored by Anthropic."
+
+
+AI FEATURES — DETAILED IMPLEMENTATION
+All AI features use @anthropic-ai/sdk with model claude-opus-4-5. All routes live in server/routes/aiRoutes.ts. Require authentication on all AI routes.
+AI Route 1: Screenshot / Document Parser
+Endpoint: POST /api/ai/parse-intake
+Input: multipart/form-data with field document (image file)
+Process:
+
+Receive image via multer (store in memory, max 10MB)
+Convert to base64
+Call Claude with vision:
+
+typescriptconst response = await anthropic.messages.create({
+  model: 'claude-opus-4-5',
+  max_tokens: 2000,
+  messages: [{
+    role: 'user',
+    content: [
+      {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: req.file.mimetype as any,
+          data: base64Image,
+        },
+      },
+      {
+        type: 'text',
+        text: `You are a medical intake specialist for an addiction treatment center. 
+        Extract all patient information from this document/screenshot and return it as JSON.
+        Extract these fields if present:
+        - firstName, lastName
+        - phone, email
+        - dob (date of birth, format MM/DD/YYYY)
+        - insuranceProvider, insuranceMemberId
+        - primaryDiagnosis
+        - substanceHistory
+        - medicalHistory
+        - mentalHealthHistory
+        - levelOfCare (one of: Detox, RTC, PHP, IOP, OP)
+        - referralSource
+        - notes
+
+        Return ONLY valid JSON with these field names. Use null for fields not found.
+        Do not include any explanation, only the JSON object.`
+      }
+    ],
+  }],
+});
+
+Parse Claude's JSON response
+Return extracted fields to client
+Save parsed data + timestamp to inquiry's aiParsedData and parsedAt fields
+
+AI Route 2: AI Insights (Admissions & Trends)
+Endpoint: POST /api/ai/insights
+Input: JSON body with analytics summary data (totals, conversion rates, trends)
+Process:
+
+Query DB for last 30/90 days of inquiry + admission data (aggregate counts)
+Send aggregated data (NOT individual PHI) to Claude:
+
+typescriptconst prompt = `You are an admissions analytics expert for an addiction treatment center.
+Analyze this admissions data and provide actionable insights.
+
+Data: ${JSON.stringify(aggregatedData)}
+
+Provide:
+1. Key trends you notice (positive and negative)
+2. Conversion rate analysis
+3. Capacity and census insights
+4. 3-5 specific, actionable recommendations to improve admissions outcomes
+5. Any red flags or areas of concern
+
+Format your response with clear sections and bullet points. Be specific and data-driven.`;
+
+Return Claude's analysis as text
+
+AI Route 3: Referral Insights
+Endpoint: POST /api/ai/referral-insights
+Input: JSON with referral source performance metrics
+Process:
+
+Query DB for referral source metrics (inquiry count, conversion rate, avg time to admit per source)
+Send to Claude with prompt about referral relationship optimization
+Claude returns: ranked source analysis, relationship recommendations, outreach priorities
+
+AI Route 4: Pipeline Optimizer
+Endpoint: POST /api/ai/pipeline-optimize
+Input: JSON with current pipeline state (inquiry counts per stage, avg days in stage, stale items)
+Process:
+
+Query DB for current pipeline — inquiries per stage, days since last activity, assigned user
+Send to Claude (no PHI — use inquiry IDs and aggregate info only):
+
+typescriptconst prompt = `You are an admissions pipeline optimizer for an addiction treatment center.
+Review this pipeline data and provide specific action recommendations.
+
+Pipeline data: ${JSON.stringify(pipelineData)}
+
+For each stage:
+- Identify bottlenecks (high volume or long dwell time)
+- Suggest specific next actions for stale inquiries
+- Recommend process improvements
+
+Return your response as JSON with this structure:
+{
+  "bottlenecks": [{"stage": "...", "issue": "...", "recommendation": "..."}],
+  "urgentActions": [{"inquiryId": N, "action": "...", "reason": "..."}],
+  "processImprovements": ["...", "..."],
+  "overallHealthScore": 85,
+  "summary": "..."
+}`;
+
+Return structured JSON response
+
+AI Route 5: AI Report Builder
+Endpoint: POST /api/ai/reports
+Input: JSON with { reportType, dateRangeStart, dateRangeEnd, aggregatedData }
+Process:
+
+Accept report parameters
+Query DB for relevant aggregated statistics for the date range (no individual PHI — only aggregate counts, rates, averages)
+Send to Claude:
+
+typescriptconst prompt = `You are a healthcare admissions analyst for an addiction treatment center.
+Generate a professional ${reportType} report for the period ${dateRangeStart} to ${dateRangeEnd}.
+
+Aggregated data: ${JSON.stringify(data)}
+
+Write a professional report with:
+1. Executive Summary (2-3 sentences)
+2. Key Findings (3-5 bullet points with specific numbers)
+3. Trend Analysis (what changed vs prior period)
+4. Referral Source Performance (if applicable)
+5. Recommendations (3-5 specific, actionable items)
+6. Conclusion
+
+Use professional healthcare/clinical language. Be specific and cite the numbers from the data.
+Format with clear headings using markdown.`;
+
+Save report to DB with Claude's narrative + raw data snapshot
+Return report object with narrative + data for rendering
+
+AI Route 6: Inquiry Auto-Summary
+Endpoint: POST /api/ai/summarize-inquiry
+Input: { inquiryId }
+Process:
+
+Fetch inquiry data (use only clinical/intake info, no full PII in prompt)
+Generate a clinical intake summary:
+
+typescriptconst prompt = `Summarize this addiction treatment inquiry for clinical review.
+Create a brief clinical summary suitable for treatment team review.
+
+Inquiry data: ${JSON.stringify(clinicalData)}
+
+Write 2-3 paragraphs covering:
+- Clinical presentation and primary concerns
+- Insurance and financial situation
+- Recommended level of care and rationale
+- Next steps for the admissions team
+
+Use clinical language appropriate for a treatment team.`;
+
+Return summary and cache it in the inquiry record (in notes or a dedicated field)
+
+AI Route 7: Custom Query
+Endpoint: POST /api/ai/custom-query
+Input: { question: string }
+Process:
+
+Query DB for overall stats (aggregate only)
+Send stats + user's question to Claude:
+
+typescriptconst prompt = `You are an AI assistant for an addiction treatment center admissions team.
+You have access to the following aggregate facility data:
+${JSON.stringify(facilityStats)}
+
+The user asks: "${question}"
+
+Answer their question using the data where relevant. If you cannot answer from the data provided,
+say so and explain what additional data would help. Always be helpful and actionable.`;
+
+Return Claude's answer
+
+
+HIPAA-CONSCIOUS DESIGN REQUIREMENTS
+These are architectural decisions that make the platform HIPAA-ready (note: full HIPAA compliance requires additional BAA agreements and infrastructure — this is the technical foundation):
+
+No PHI in AI prompts by default: When sending data to Claude, always aggregate first. Use patient IDs and counts, not names/DOBs/SSNs. The exception is the screenshot parser (where Claude processes intake documents) — include a clear consent notice in the UI.
+Session security: Use express-session with httpOnly: true, secure: true (in production), sameSite: 'strict'. Session timeout after 30 minutes of inactivity.
+Password hashing: Always use bcryptjs with salt rounds ≥ 12.
+Audit logging: Log all data access events (who accessed what, when) to a audit_logs table. Include: userId, action, resourceType, resourceId, ipAddress, timestamp.
+Role-based access:
+
+Admin: full access to all features including settings and user management
+Staff: access to inquiries, patients, pipeline, reports, analytics
+Clinical: read-only on inquiries, full access to patients and clinical notes
+
+
+Data isolation: All queries must filter by the facility. Built for multi-tenant if needed (add facilityId column to all tables for future multi-tenant support, default to 1).
+Input validation: Use Zod schemas for all API inputs. Sanitize all user inputs. Never expose raw SQL errors to the client.
+AI Data Notice: Show a notice on all AI features: "Data sent to Claude AI is aggregated and de-identified where possible. Do not include SSNs or sensitive financial data in free-text fields."
+
+
+UI/UX DESIGN SPECIFICATIONS
+Color Palette
+css--primary: #3B82F6;        /* Blue - buttons, links, active states */
+--primary-dark: #1D4ED8;   /* Darker blue for hover */
+--sidebar-bg: #0F172A;     /* Dark navy sidebar */
+--sidebar-text: #94A3B8;   /* Muted sidebar text */
+--sidebar-active: #1E293B; /* Active sidebar item bg */
+--content-bg: #F8FAFC;     /* Page background */
+--card-bg: #FFFFFF;        /* Card background */
+--border: #E2E8F0;         /* Borders */
+--text-primary: #1E293B;   /* Primary text */
+--text-muted: #64748B;     /* Muted text */
+
+/* Status badge colors */
+--status-new: #EFF6FF / #3B82F6;
+--status-contacted: #FFF7ED / #F97316;
+--status-qualified: #F0FDF4 / #22C55E;
+--status-admitted: #ECFDF5 / #10B981;
+--status-declined: #FFF1F2 / #F43F5E;
+--status-lost: #F8FAFC / #94A3B8;
+```
+
+### Typography
+- Font: Inter (Google Fonts)
+- Headings: 600 weight
+- Body: 400 weight
+- Small/labels: 500 weight, text-sm
+
+### Component Standards
+- **Cards**: white bg, 8px border radius, 1px border #E2E8F0, shadow-sm
+- **Buttons**: Primary = blue filled, Secondary = white with border, Danger = red filled
+- **Inputs**: 1px border, 6px border radius, focus ring blue
+- **Badges**: Pill shape, colored background + text
+- **Tables**: Striped rows, hover highlight, sticky header on scroll
+- **Modals**: Center overlay (desktop), bottom sheet drawer (mobile)
+- **Loading states**: Skeleton loaders (not spinners) for data
+- **Empty states**: Friendly illustration or icon + descriptive text + action button
+
+### Mobile-Specific
+- Bottom navigation bar (5 tabs) fixed to viewport bottom
+- All modals become full-height bottom drawers
+- Cards stack vertically with 16px gap
+- Touch targets minimum 44x44px
+- Tables become horizontally scrollable card lists
+- Floating action button (FAB) bottom-right for primary action on each page
+
+---
+
+## API ROUTE STRUCTURE (complete list)
+```
+Authentication:
+POST   /api/auth/login
+POST   /api/auth/logout
+GET    /api/auth/me
+
+Inquiries:
+GET    /api/inquiries           — list with filters/search
+POST   /api/inquiries           — create new
+GET    /api/inquiries/:id       — get single
+PUT    /api/inquiries/:id       — update
+DELETE /api/inquiries/:id       — soft delete
+POST   /api/inquiries/:id/convert — convert to patient
+
+Patients:
+GET    /api/patients
+POST   /api/patients
+GET    /api/patients/:id
+PUT    /api/patients/:id
+DELETE /api/patients/:id
+
+Activities:
+GET    /api/activities?inquiryId=&patientId=
+POST   /api/activities
+PUT    /api/activities/:id
+DELETE /api/activities/:id
+
+Reports:
+GET    /api/reports
+POST   /api/reports
+GET    /api/reports/:id
+DELETE /api/reports/:id
+
+Settings:
+GET    /api/settings
+PUT    /api/settings
+GET    /api/settings/:key
+PUT    /api/settings/:key
+
+Referrals:
+GET    /api/referrals
+POST   /api/referrals
+PUT    /api/referrals/:id
+DELETE /api/referrals/:id
+
+Pipeline:
+GET    /api/pipeline/stages
+POST   /api/pipeline/stages
+PUT    /api/pipeline/stages/:id
+PUT    /api/pipeline/stages/reorder
+DELETE /api/pipeline/stages/:id
+
+Analytics:
+GET    /api/analytics/dashboard   — KPI cards data
+GET    /api/analytics/charts      — Chart data (accepts ?startDate=&endDate=)
+
+Users:
+GET    /api/users
+POST   /api/users
+PUT    /api/users/:id
+DELETE /api/users/:id
+
+AI:
+POST   /api/ai/parse-intake          — screenshot parser (multipart)
+POST   /api/ai/insights              — admissions trend insights
+POST   /api/ai/referral-insights     — referral source analysis
+POST   /api/ai/pipeline-optimize     — pipeline optimizer
+POST   /api/ai/reports               — AI report builder
+POST   /api/ai/summarize-inquiry     — auto-summarize single inquiry
+POST   /api/ai/custom-query          — free-form question answering
+```
+
+---
+
+## ENVIRONMENT VARIABLES REQUIRED
+```
+DATABASE_URL=          # PostgreSQL connection string (Replit provides this)
+ANTHROPIC_API_KEY=     # Your Anthropic API key (claude-opus-4-5)
+SESSION_SECRET=        # Random string for session signing (generate random 64-char string)
+NODE_ENV=development   # or production
+PORT=5000
+
+PACKAGE.JSON DEPENDENCIES
+json{
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@neondatabase/serverless": "^0.9.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.31.0",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.6",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "drizzle-kit": "^0.22.0",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development tsx watch server/index.ts & vite",
+    "build": "tsc && vite build",
+    "start": "node dist/index.js",
+    "db:push": "drizzle-kit push",
+    "db:

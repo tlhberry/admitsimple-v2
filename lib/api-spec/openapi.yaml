@@ -1,22 +1,42 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AdmitSimple HIPAA-Conscious Admissions CRM API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: inquiries
+    description: Inquiry/lead management
+  - name: patients
+    description: Admitted patient management
+  - name: activities
+    description: Activities and notes
+  - name: reports
+    description: Reports
+  - name: settings
+    description: Facility settings
+  - name: referrals
+    description: Referral sources
+  - name: pipeline
+    description: Pipeline stage management
+  - name: analytics
+    description: Analytics and reporting
+  - name: ai
+    description: AI-powered features
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +44,970 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSession"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSession"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /inquiries:
+    get:
+      operationId: listInquiries
+      tags: [inquiries]
+      summary: List inquiries with optional filters
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: assignedTo
+          in: query
+          schema:
+            type: integer
+        - name: levelOfCare
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of inquiries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Inquiry"
+    post:
+      operationId: createInquiry
+      tags: [inquiries]
+      summary: Create a new inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInquiryBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inquiry"
+
+  /inquiries/{id}:
+    get:
+      operationId: getInquiry
+      tags: [inquiries]
+      summary: Get single inquiry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Inquiry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inquiry"
+    put:
+      operationId: updateInquiry
+      tags: [inquiries]
+      summary: Update inquiry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInquiryBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inquiry"
+    delete:
+      operationId: deleteInquiry
+      tags: [inquiries]
+      summary: Delete inquiry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /inquiries/{id}/convert:
+    post:
+      operationId: convertInquiryToPatient
+      tags: [inquiries]
+      summary: Convert inquiry to patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertInquiryBody"
+      responses:
+        "201":
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List patients
+      parameters:
+        - name: levelOfCare
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: assignedClinician
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Create a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    put:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    delete:
+      operationId: deletePatient
+      tags: [patients]
+      summary: Delete patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /activities:
+    get:
+      operationId: listActivities
+      tags: [activities]
+      summary: List activities
+      parameters:
+        - name: inquiryId
+          in: query
+          schema:
+            type: integer
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+    post:
+      operationId: createActivity
+      tags: [activities]
+      summary: Create activity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateActivityBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+
+  /activities/{id}:
+    put:
+      operationId: updateActivity
+      tags: [activities]
+      summary: Update activity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActivityBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+    delete:
+      operationId: deleteActivity
+      tags: [activities]
+      summary: Delete activity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List reports
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Create/save a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /settings:
+    get:
+      operationId: listSettings
+      tags: [settings]
+      summary: Get all settings
+      responses:
+        "200":
+          description: Settings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+    put:
+      operationId: bulkUpdateSettings
+      tags: [settings]
+      summary: Bulk update settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkSettingsBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /settings/{key}:
+    get:
+      operationId: getSetting
+      tags: [settings]
+      summary: Get a single setting
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+    put:
+      operationId: updateSetting
+      tags: [settings]
+      summary: Update a single setting
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+
+  /referrals:
+    get:
+      operationId: listReferrals
+      tags: [referrals]
+      summary: List referral sources
+      responses:
+        "200":
+          description: Referral sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferralSource"
+    post:
+      operationId: createReferral
+      tags: [referrals]
+      summary: Create referral source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReferralBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralSource"
+
+  /referrals/{id}:
+    put:
+      operationId: updateReferral
+      tags: [referrals]
+      summary: Update referral source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReferralBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralSource"
+    delete:
+      operationId: deleteReferral
+      tags: [referrals]
+      summary: Delete referral source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /pipeline/stages:
+    get:
+      operationId: listPipelineStages
+      tags: [pipeline]
+      summary: List pipeline stages
+      responses:
+        "200":
+          description: Pipeline stages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PipelineStage"
+    post:
+      operationId: createPipelineStage
+      tags: [pipeline]
+      summary: Create pipeline stage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePipelineStageBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineStage"
+
+  /pipeline/stages/reorder:
+    put:
+      operationId: reorderPipelineStages
+      tags: [pipeline]
+      summary: Reorder pipeline stages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderStagesBody"
+      responses:
+        "200":
+          description: Reordered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /pipeline/stages/{id}:
+    put:
+      operationId: updatePipelineStage
+      tags: [pipeline]
+      summary: Update pipeline stage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePipelineStageBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineStage"
+    delete:
+      operationId: deletePipelineStage
+      tags: [pipeline]
+      summary: Delete pipeline stage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /pipeline/inquiries:
+    get:
+      operationId: getPipelineInquiries
+      tags: [pipeline]
+      summary: Get inquiries grouped by pipeline stage
+      responses:
+        "200":
+          description: Pipeline with inquiries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PipelineColumn"
+
+  /analytics/dashboard:
+    get:
+      operationId: getDashboardAnalytics
+      tags: [analytics]
+      summary: Get dashboard KPI and chart data
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /analytics/charts:
+    get:
+      operationId: getChartData
+      tags: [analytics]
+      summary: Get chart data for analytics page
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChartData"
+
+  /ai/insights:
+    post:
+      operationId: getAiInsights
+      tags: [ai]
+      summary: Get AI admissions trend insights
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiInsightsBody"
+      responses:
+        "200":
+          description: AI insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTextResponse"
+
+  /ai/referral-insights:
+    post:
+      operationId: getAiReferralInsights
+      tags: [ai]
+      summary: Get AI referral source insights
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiInsightsBody"
+      responses:
+        "200":
+          description: AI referral insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTextResponse"
+
+  /ai/pipeline-optimize:
+    post:
+      operationId: getAiPipelineOptimization
+      tags: [ai]
+      summary: Get AI pipeline optimization suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiInsightsBody"
+      responses:
+        "200":
+          description: Pipeline optimization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiPipelineResponse"
+
+  /ai/reports:
+    post:
+      operationId: generateAiReport
+      tags: [ai]
+      summary: Generate AI report narrative
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiReportBody"
+      responses:
+        "200":
+          description: AI report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiReportResponse"
+
+  /ai/summarize-inquiry:
+    post:
+      operationId: summarizeInquiry
+      tags: [ai]
+      summary: AI summarize inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummarizeInquiryBody"
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTextResponse"
+
+  /ai/custom-query:
+    post:
+      operationId: aiCustomQuery
+      tags: [ai]
+      summary: Free-form AI question answering
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiCustomQueryBody"
+      responses:
+        "200":
+          description: AI answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTextResponse"
+
+  /ai/parse-intake:
+    post:
+      operationId: parseIntakeDocument
+      tags: [ai]
+      summary: Parse intake screenshot/document with AI
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Parsed intake fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedIntakeData"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1018,1134 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    UserSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - name
+        - email
+        - role
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - name
+        - email
+        - role
+
+    CreateUserBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+      required:
+        - username
+        - password
+        - name
+        - email
+        - role
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        password:
+          type: string
+
+    Inquiry:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        dob:
+          type: string
+          nullable: true
+        insuranceProvider:
+          type: string
+          nullable: true
+        insuranceMemberId:
+          type: string
+          nullable: true
+        primaryDiagnosis:
+          type: string
+          nullable: true
+        substanceHistory:
+          type: string
+          nullable: true
+        medicalHistory:
+          type: string
+          nullable: true
+        mentalHealthHistory:
+          type: string
+          nullable: true
+        levelOfCare:
+          type: string
+          nullable: true
+        referralSource:
+          type: string
+          nullable: true
+        referralContact:
+          type: string
+          nullable: true
+        assignedTo:
+          type: integer
+          nullable: true
+        assignedToName:
+          type: string
+          nullable: true
+        status:
+          type: string
+        priority:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        aiParsedData:
+          type: object
+          nullable: true
+        parsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateInquiryBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        dob:
+          type: string
+        insuranceProvider:
+          type: string
+        insuranceMemberId:
+          type: string
+        primaryDiagnosis:
+          type: string
+        substanceHistory:
+          type: string
+        medicalHistory:
+          type: string
+        mentalHealthHistory:
+          type: string
+        levelOfCare:
+          type: string
+        referralSource:
+          type: string
+        referralContact:
+          type: string
+        assignedTo:
+          type: integer
+        status:
+          type: string
+        priority:
+          type: string
+        notes:
+          type: string
+      required:
+        - firstName
+        - lastName
+
+    UpdateInquiryBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        dob:
+          type: string
+        insuranceProvider:
+          type: string
+        insuranceMemberId:
+          type: string
+        primaryDiagnosis:
+          type: string
+        substanceHistory:
+          type: string
+        medicalHistory:
+          type: string
+        mentalHealthHistory:
+          type: string
+        levelOfCare:
+          type: string
+        referralSource:
+          type: string
+        referralContact:
+          type: string
+        assignedTo:
+          type: integer
+        status:
+          type: string
+        priority:
+          type: string
+        notes:
+          type: string
+
+    ConvertInquiryBody:
+      type: object
+      properties:
+        admitDate:
+          type: string
+          format: date-time
+        levelOfCare:
+          type: string
+        assignedClinician:
+          type: integer
+        notes:
+          type: string
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        inquiryId:
+          type: integer
+          nullable: true
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        dob:
+          type: string
+          nullable: true
+        insuranceProvider:
+          type: string
+          nullable: true
+        insuranceMemberId:
+          type: string
+          nullable: true
+        levelOfCare:
+          type: string
+          nullable: true
+        admitDate:
+          type: string
+          format: date-time
+          nullable: true
+        dischargeDate:
+          type: string
+          format: date-time
+          nullable: true
+        currentStage:
+          type: string
+          nullable: true
+        assignedClinician:
+          type: integer
+          nullable: true
+        assignedClinicianName:
+          type: string
+          nullable: true
+        assignedAdmissions:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - createdAt
+        - updatedAt
+
+    CreatePatientBody:
+      type: object
+      properties:
+        inquiryId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        dob:
+          type: string
+        insuranceProvider:
+          type: string
+        insuranceMemberId:
+          type: string
+        levelOfCare:
+          type: string
+        admitDate:
+          type: string
+        assignedClinician:
+          type: integer
+        notes:
+          type: string
+      required:
+        - firstName
+        - lastName
+
+    UpdatePatientBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        dob:
+          type: string
+        insuranceProvider:
+          type: string
+        insuranceMemberId:
+          type: string
+        levelOfCare:
+          type: string
+        admitDate:
+          type: string
+        dischargeDate:
+          type: string
+        currentStage:
+          type: string
+        assignedClinician:
+          type: integer
+        assignedAdmissions:
+          type: integer
+        status:
+          type: string
+        notes:
+          type: string
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: integer
+        inquiryId:
+          type: integer
+          nullable: true
+        patientId:
+          type: integer
+          nullable: true
+        userId:
+          type: integer
+          nullable: true
+        userName:
+          type: string
+          nullable: true
+        type:
+          type: string
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        outcome:
+          type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - createdAt
+
+    CreateActivityBody:
+      type: object
+      properties:
+        inquiryId:
+          type: integer
+        patientId:
+          type: integer
+        type:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        outcome:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - type
+
+    UpdateActivityBody:
+      type: object
+      properties:
+        type:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        outcome:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+        generatedBy:
+          type: integer
+          nullable: true
+        generatedByName:
+          type: string
+          nullable: true
+        dateRangeStart:
+          type: string
+          format: date-time
+          nullable: true
+        dateRangeEnd:
+          type: string
+          format: date-time
+          nullable: true
+        parameters:
+          type: object
+          nullable: true
+        aiNarrative:
+          type: string
+          nullable: true
+        reportData:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - type
+        - createdAt
+
+    CreateReportBody:
+      type: object
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+        dateRangeStart:
+          type: string
+        dateRangeEnd:
+          type: string
+        parameters:
+          type: object
+        aiNarrative:
+          type: string
+        reportData:
+          type: object
+      required:
+        - title
+        - type
+
+    Setting:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        value:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - key
+
+    UpdateSettingBody:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+
+    BulkSettingsBody:
+      type: object
+      properties:
+        settings:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+            required:
+              - key
+              - value
+      required:
+        - settings
+
+    ReferralSource:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          nullable: true
+        contact:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        inquiryCount:
+          type: integer
+        conversionRate:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - isActive
+        - createdAt
+
+    CreateReferralBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        contact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
+      required:
+        - name
+
+    UpdateReferralBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        contact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
+        isActive:
+          type: boolean
+
+    PipelineStage:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        order:
+          type: integer
+        color:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - name
+        - order
+        - isActive
+
+    CreatePipelineStageBody:
+      type: object
+      properties:
+        name:
+          type: string
+        order:
+          type: integer
+        color:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+        - order
+
+    UpdatePipelineStageBody:
+      type: object
+      properties:
+        name:
+          type: string
+        order:
+          type: integer
+        color:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    ReorderStagesBody:
+      type: object
+      properties:
+        stages:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              order:
+                type: integer
+            required:
+              - id
+              - order
+      required:
+        - stages
+
+    PipelineCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+          nullable: true
+        assignedTo:
+          type: integer
+          nullable: true
+        assignedToName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        daysInStage:
+          type: integer
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - createdAt
+        - daysInStage
+
+    PipelineColumn:
+      type: object
+      properties:
+        stage:
+          $ref: "#/components/schemas/PipelineStage"
+        inquiries:
+          type: array
+          items:
+            $ref: "#/components/schemas/PipelineCard"
+      required:
+        - stage
+        - inquiries
+
+    DashboardKPI:
+      type: object
+      properties:
+        todaysInquiries:
+          type: integer
+        weeksAdmissions:
+          type: integer
+        census:
+          type: integer
+        conversionRate:
+          type: number
+      required:
+        - todaysInquiries
+        - weeksAdmissions
+        - census
+        - conversionRate
+
+    InquiryByDay:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+      required:
+        - date
+        - count
+
+    StatusBreakdown:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+      required:
+        - status
+        - count
+
+    ReferralBreakdown:
+      type: object
+      properties:
+        source:
+          type: string
+        count:
+          type: integer
+      required:
+        - source
+        - count
+
+    DashboardData:
+      type: object
+      properties:
+        kpi:
+          $ref: "#/components/schemas/DashboardKPI"
+        recentInquiries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inquiry"
+        inquiriesByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/InquiryByDay"
+        statusBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusBreakdown"
+        referralBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferralBreakdown"
+      required:
+        - kpi
+        - recentInquiries
+        - inquiriesByDay
+        - statusBreakdown
+        - referralBreakdown
+
+    ChartData:
+      type: object
+      properties:
+        admissionsOverTime:
+          type: array
+          items:
+            $ref: "#/components/schemas/InquiryByDay"
+        inquiriesByStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusBreakdown"
+        conversionFunnel:
+          type: array
+          items:
+            type: object
+            properties:
+              stage:
+                type: string
+              count:
+                type: integer
+            required:
+              - stage
+              - count
+        referralPerformance:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              inquiries:
+                type: integer
+              admitted:
+                type: integer
+              conversionRate:
+                type: number
+            required:
+              - source
+              - inquiries
+              - admitted
+              - conversionRate
+        levelOfCareDistribution:
+          type: array
+          items:
+            type: object
+            properties:
+              levelOfCare:
+                type: string
+              count:
+                type: integer
+            required:
+              - levelOfCare
+              - count
+        staffPerformance:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              inquiries:
+                type: integer
+            required:
+              - name
+              - inquiries
+        payerMix:
+          type: array
+          items:
+            type: object
+            properties:
+              provider:
+                type: string
+              count:
+                type: integer
+            required:
+              - provider
+              - count
+      required:
+        - admissionsOverTime
+        - inquiriesByStatus
+        - conversionFunnel
+        - referralPerformance
+        - levelOfCareDistribution
+        - staffPerformance
+        - payerMix
+
+    AiInsightsBody:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: string
+
+    AiTextResponse:
+      type: object
+      properties:
+        text:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - text
+        - generatedAt
+
+    AiPipelineResponse:
+      type: object
+      properties:
+        bottlenecks:
+          type: array
+          items:
+            type: object
+            properties:
+              stage:
+                type: string
+              issue:
+                type: string
+              recommendation:
+                type: string
+        urgentActions:
+          type: array
+          items:
+            type: object
+            properties:
+              inquiryId:
+                type: integer
+              action:
+                type: string
+              reason:
+                type: string
+        processImprovements:
+          type: array
+          items:
+            type: string
+        overallHealthScore:
+          type: integer
+        summary:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - bottlenecks
+        - urgentActions
+        - processImprovements
+        - overallHealthScore
+        - summary
+        - generatedAt
+
+    AiReportBody:
+      type: object
+      properties:
+        reportType:
+          type: string
+        dateRangeStart:
+          type: string
+        dateRangeEnd:
+          type: string
+        levelOfCare:
+          type: string
+        assignedStaff:
+          type: integer
+      required:
+        - reportType
+        - dateRangeStart
+        - dateRangeEnd
+
+    AiReportResponse:
+      type: object
+      properties:
+        narrative:
+          type: string
+        reportData:
+          type: object
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - narrative
+        - reportData
+        - generatedAt
+
+    SummarizeInquiryBody:
+      type: object
+      properties:
+        inquiryId:
+          type: integer
+      required:
+        - inquiryId
+
+    AiCustomQueryBody:
+      type: object
+      properties:
+        question:
+          type: string
+      required:
+        - question
+
+    ParsedIntakeData:
+      type: object
+      properties:
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        dob:
+          type: string
+          nullable: true
+        insuranceProvider:
+          type: string
+          nullable: true
+        insuranceMemberId:
+          type: string
+          nullable: true
+        primaryDiagnosis:
+          type: string
+          nullable: true
+        substanceHistory:
+          type: string
+          nullable: true
+        medicalHistory:
+          type: string
+          nullable: true
+        mentalHealthHistory:
+          type: string
+          nullable: true
+        levelOfCare:
+          type: string
+          nullable: true
+        referralSource:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        fieldsExtracted:
+          type: integer
+      required:
+        - fieldsExtracted
