@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import logoImg from "@assets/0C81D426-83A5-43FF-9228-B4A59CE7AF61_1774786596683.jpeg";
+import logoImg from "@assets/ChatGPT_Image_Mar_29,_2026,_08_28_12_AM_1774787305208.png";
 
 export default function Login() {
   const [username, setUsername] = useState("admin");
@@ -25,12 +25,13 @@ export default function Login() {
       </div>
 
       <div className="w-[90%] max-w-md z-10">
-        {/* Logo card */}
+        {/* Logo */}
         <div className="flex justify-center mb-8">
           <img
             src={logoImg}
             alt="AdmitSimple"
-            className="h-16 w-auto object-contain rounded-xl"
+            className="h-36 w-auto object-contain"
+            style={{ mixBlendMode: "screen" }}
           />
         </div>
 

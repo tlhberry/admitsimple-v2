@@ -13,7 +13,7 @@ import {
   LogOut
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import logoImg from "@assets/0C81D426-83A5-43FF-9228-B4A59CE7AF61_1774786596683.jpeg";
+import logoImg from "@assets/ChatGPT_Image_Mar_29,_2026,_08_28_12_AM_1774787305208.png";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/" },
@@ -36,11 +36,12 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen fixed left-0 top-0 text-sidebar-foreground shadow-xl z-20 transition-all">
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-sidebar-border/40">
+        <div className="px-4 py-4 border-b border-sidebar-border/40">
           <img
             src={logoImg}
             alt="AdmitSimple"
-            className="h-8 w-auto object-contain"
+            className="h-16 w-full object-contain object-left"
+            style={{ mixBlendMode: "screen" }}
           />
         </div>
         
