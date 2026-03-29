@@ -427,6 +427,13 @@ COMMON QUERY PATTERNS:
 - "top referral sources" → SELECT referral_source, COUNT(*) FROM inquiries GROUP BY referral_source ORDER BY count DESC
 - "by rep" → JOIN users on the relevant user FK, GROUP BY users.name
 
+NAVIGATION RULE (very important):
+- When the query returns individual patient or inquiry rows (not aggregates/counts), ALWAYS include the relevant inquiry ID so users can navigate to it.
+- For patients: always SELECT p.inquiry_id, p.first_name, p.last_name, ... FROM patients p ...
+- For inquiries: always SELECT i.id AS inquiry_id, i.first_name, i.last_name, ... FROM inquiries i ...
+- Column must be named exactly "inquiry_id" so the UI can detect it.
+- For aggregate/count queries (GROUP BY), do NOT include inquiry_id.
+
 Return ONLY the SQL query. No explanation. No markdown. No code fences.`;
 
 router.post("/ai/report", async (req, res) => {

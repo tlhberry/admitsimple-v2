@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, FileText, Sparkles, Trash2, Brain, Download, Search, TableIcon } from "lucide-react";
+import { Loader2, FileText, Sparkles, Trash2, Brain, Download, Search, TableIcon, ExternalLink } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { useLocation } from "wouter";
 
 export default function Reports() {
   const { data: reports, isLoading } = useListReports();
@@ -18,6 +19,7 @@ export default function Reports() {
   const [isGenerating, setIsGenerating] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   // Natural language report builder
   const [nlPrompt, setNlPrompt] = useState("");
@@ -195,23 +197,45 @@ export default function Reports() {
                   <table className="w-full text-left text-sm">
                     <thead className="bg-muted/60 text-muted-foreground border-b border-border">
                       <tr>
-                        {nlResult.columns.map(col => (
+                        {nlResult.columns.filter(col => col !== "inquiry_id").map(col => (
                           <th key={col} className="px-5 py-3 font-semibold whitespace-nowrap">
                             {col.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                           </th>
                         ))}
+                        {nlResult.columns.includes("inquiry_id") && (
+                          <th className="px-3 py-3 w-8 text-primary/60 font-semibold text-xs">→</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-card">
-                      {nlResult.rows.map((row, i) => (
-                        <tr key={i} className="hover:bg-muted/20 transition-colors">
-                          {row.map((cell, j) => (
-                            <td key={j} className="px-5 py-3 text-foreground whitespace-nowrap">
-                              {cell === null || cell === undefined ? <span className="text-muted-foreground">—</span> : String(cell)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
+                      {nlResult.rows.map((row, i) => {
+                        const inquiryIdIdx = nlResult.columns.indexOf("inquiry_id");
+                        const inquiryId = inquiryIdIdx >= 0 ? row[inquiryIdIdx] : null;
+                        const isClickable = inquiryId != null;
+                        return (
+                          <tr
+                            key={i}
+                            onClick={() => isClickable && navigate(`/inquiries/${inquiryId}`)}
+                            className={`transition-colors group ${isClickable ? "cursor-pointer hover:bg-primary/8" : "hover:bg-muted/20"}`}
+                          >
+                            {row.map((cell, j) => {
+                              if (nlResult.columns[j] === "inquiry_id") return null;
+                              return (
+                                <td key={j} className="px-5 py-3 text-foreground whitespace-nowrap">
+                                  {cell === null || cell === undefined
+                                    ? <span className="text-muted-foreground">—</span>
+                                    : String(cell)}
+                                </td>
+                              );
+                            })}
+                            {isClickable && (
+                              <td className="px-3 py-3 w-8">
+                                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
