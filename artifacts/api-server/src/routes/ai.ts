@@ -373,6 +373,90 @@ say so and explain what additional data would help. Always be helpful and action
   }
 });
 
+// ─── VOB AI Parse ─────────────────────────────────────────────────────────────
+
+router.post("/ai/vob-parse", upload.single("image"), async (req, res) => {
+  try {
+    const text = req.body?.text as string | undefined;
+    const imageFile = req.file;
+
+    if (!text && !imageFile) {
+      res.status(400).json({ error: "Provide text or image" });
+      return;
+    }
+
+    const systemPrompt = `You are an insurance verification specialist for an addiction treatment center.
+Extract structured VOB (Verification of Benefits) data from the provided document.
+
+Return ONLY valid JSON with this exact structure (use empty string "" for unknown fields):
+{
+  "inNetworkDeductible": "",
+  "inNetworkDeductibleMet": "",
+  "inNetworkOopMax": "",
+  "inNetworkOopMet": "",
+  "inNetworkCoinsurance": "",
+  "inNetworkCopay": "",
+  "hasOon": "Yes",
+  "oonDeductible": "",
+  "oonDeductibleMet": "",
+  "oonOopMax": "",
+  "oonOopMet": "",
+  "oonCoinsurance": "",
+  "preCertRequired": "No",
+  "preAuthRequired": "No",
+  "preCertDetails": "",
+  "substanceUseBenefits": "",
+  "mentalHealthBenefits": "",
+  "geographicRestrictions": "",
+  "additionalNotes": "",
+  "coverageSummary": "",
+  "quotedCost": "",
+  "clientResponsibility": "",
+  "facilityType": ""
+}
+
+Return ONLY the JSON object. No markdown, no explanation.`;
+
+    const messageContent: any[] = [];
+
+    if (imageFile) {
+      messageContent.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: imageFile.mimetype,
+          data: imageFile.buffer.toString("base64"),
+        },
+      });
+    }
+
+    if (text) {
+      messageContent.push({ type: "text", text: `VOB Document:\n\n${text}` });
+    } else {
+      messageContent.push({ type: "text", text: "Extract all VOB information from this image." });
+    }
+
+    const aiResponse = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 800,
+      system: systemPrompt,
+      messages: [{ role: "user", content: messageContent }],
+    });
+
+    const raw = (aiResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
+    const clean = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
+
+    let parsed: any;
+    try { parsed = JSON.parse(clean); }
+    catch { parsed = {}; }
+
+    res.json(parsed);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "VOB parse failed" });
+  }
+});
+
 // ─── Bed Board AI ────────────────────────────────────────────────────────────
 
 router.post("/ai/bedboard", async (req, res) => {

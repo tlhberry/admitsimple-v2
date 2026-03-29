@@ -60,6 +60,13 @@ export const inquiries = pgTable("inquiries", {
   preAssessmentCompleted: varchar("pre_assessment_completed", { length: 10 }).default("no"),
   preAssessmentDate: timestamp("pre_assessment_date"),
   preAssessmentNotes: text("pre_assessment_notes"),
+  vobData: jsonb("vob_data"),
+  costAcceptance: varchar("cost_acceptance", { length: 50 }),
+  nonAdmitReason: varchar("non_admit_reason", { length: 255 }),
+  nonAdmitNotes: text("non_admit_notes"),
+  referralOutAt: timestamp("referral_out_at"),
+  referralOutType: varchar("referral_out_type", { length: 20 }),
+  referralOutMessage: text("referral_out_message"),
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });

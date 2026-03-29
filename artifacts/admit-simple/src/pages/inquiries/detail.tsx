@@ -5,15 +5,43 @@ import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check } from "lucide-react";
+import {
+  ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity,
+  Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check,
+  ShieldCheck, XCircle, SendHorizontal, AlertTriangle,
+} from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { useState } from "react";
 import { PreAssessmentSection } from "@/components/PreAssessmentForms";
+import { VOBForm } from "@/components/VOBForm";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+
+const NON_ADMIT_REASONS = [
+  "Insurance – Denied/No Coverage",
+  "Insurance – Cannot Afford Copay/Deductible",
+  "Financial – Cannot Afford Self-Pay",
+  "Clinical – Not Appropriate Level of Care",
+  "Clinical – Medical Complexity",
+  "Clinical – Psychiatric Complexity",
+  "Client – Changed Mind",
+  "Client – Not Ready",
+  "Client – Chose Another Facility",
+  "Client – No Response / Lost Contact",
+  "Capacity – No Available Beds",
+  "Geographic – Outside Service Area",
+  "Legal – Pending Legal Issues",
+  "Family – Refused Treatment",
+  "Other",
+];
 
 export default function InquiryDetail() {
   const params = useParams<{ id: string }>();
@@ -33,6 +61,19 @@ export default function InquiryDetail() {
   const [editingLeadSource, setEditingLeadSource] = useState(false);
   const [leadSourceEdit, setLeadSourceEdit] = useState({ referralSource: "", searchKeywords: "" });
   const [savingLeadSource, setSavingLeadSource] = useState(false);
+
+  // Non-Admit modal
+  const [showNonAdmit, setShowNonAdmit] = useState(false);
+  const [nonAdmitReason, setNonAdmitReason] = useState("none");
+  const [nonAdmitNotes, setNonAdmitNotes] = useState("");
+  const [submittingNonAdmit, setSubmittingNonAdmit] = useState(false);
+
+  // Refer Out modal
+  const [showReferOut, setShowReferOut] = useState(false);
+  const [referOutType, setReferOutType] = useState("none");
+  const [referOutMessage, setReferOutMessage] = useState("");
+  const [generatingMsg, setGeneratingMsg] = useState(false);
+  const [submittingReferOut, setSubmittingReferOut] = useState(false);
 
   const { data: referralSources = [] } = useQuery<any[]>({
     queryKey: ["/api/referrals"],
@@ -69,8 +110,89 @@ export default function InquiryDetail() {
     }
   };
 
+  const handleNonAdmitSubmit = async () => {
+    if (nonAdmitReason === "none") {
+      toast({ title: "Please select a reason", variant: "destructive" }); return;
+    }
+    setSubmittingNonAdmit(true);
+    try {
+      const resp = await fetch(`/api/inquiries/${id}/non-admit`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: nonAdmitReason, notes: nonAdmitNotes }),
+      });
+      if (!resp.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/inquiries"] });
+      await refetch();
+      setShowNonAdmit(false);
+      setNonAdmitReason("none");
+      setNonAdmitNotes("");
+      toast({ title: "Inquiry marked as Did Not Admit" });
+    } catch {
+      toast({ title: "Failed to record", variant: "destructive" });
+    } finally {
+      setSubmittingNonAdmit(false);
+    }
+  };
+
+  const handleGenerateReferOutMessage = async () => {
+    setGeneratingMsg(true);
+    try {
+      const resp = await fetch("/api/ai/chat", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `Write a brief, professional ${referOutType === "text" ? "text message" : "email"} to refer a patient to another treatment facility.
+Patient: ${(inquiry as any)?.firstName} ${(inquiry as any)?.lastName}
+Insurance: ${(inquiry as any)?.insuranceProvider || "Unknown"}
+Reason for refer-out: ${(inquiry as any)?.nonAdmitReason || "Unable to accommodate at this time"}
+
+Keep it warm, concise, and professional. Include a request for the other facility to reach out directly.`,
+        }),
+      });
+      if (!resp.ok) throw new Error();
+      const data = await resp.json();
+      setReferOutMessage(data.text || "");
+    } catch {
+      toast({ title: "Could not generate message", variant: "destructive" });
+    } finally {
+      setGeneratingMsg(false);
+    }
+  };
+
+  const handleReferOutSubmit = async () => {
+    if (referOutType === "none" || !referOutMessage.trim()) {
+      toast({ title: "Select type and enter a message", variant: "destructive" }); return;
+    }
+    setSubmittingReferOut(true);
+    try {
+      const resp = await fetch(`/api/inquiries/${id}/refer-out`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: referOutType, message: referOutMessage }),
+      });
+      if (!resp.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      await refetch();
+      setShowReferOut(false);
+      setReferOutType("none");
+      setReferOutMessage("");
+      toast({ title: "Referral out recorded" });
+    } catch {
+      toast({ title: "Failed to record", variant: "destructive" });
+    } finally {
+      setSubmittingReferOut(false);
+    }
+  };
+
   const tabs = [
     "overview",
+    "vob",
     ...(isPreAssessment ? ["pre_assessment"] : []),
     "activities",
     "clinical_ai",
@@ -117,9 +239,14 @@ export default function InquiryDetail() {
   if (isLoading) return <Layout><div className="flex justify-center p-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
   if (!inquiry) return <Layout><div className="text-muted-foreground p-8">Not found</div></Layout>;
 
+  const inq = inquiry as any;
+  const isNonViable = inq.status === "Non-Viable";
+  const hasReferralOut = !!inq.referralOutAt;
+
   const tabLabel = (tab: string) => {
     if (tab === "pre_assessment") return "Pre-Assessment";
     if (tab === "clinical_ai") return "Clinical AI";
+    if (tab === "vob") return "Insurance / VOB";
     return tab.charAt(0).toUpperCase() + tab.slice(1);
   };
 
@@ -134,11 +261,11 @@ export default function InquiryDetail() {
         <div className="absolute top-0 left-0 w-1.5 h-full bg-primary rounded-l-2xl" />
         <div className="pl-2">
           <div className="flex flex-wrap items-center gap-3 mb-3">
-            <h1 className="text-2xl font-bold text-foreground">{inquiry.firstName} {inquiry.lastName}</h1>
-            <span className={cn("px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border", getStatusColor(inquiry.status))}>
-              {inquiry.status}
+            <h1 className="text-2xl font-bold text-foreground">{inq.firstName} {inq.lastName}</h1>
+            <span className={cn("px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border", getStatusColor(inq.status))}>
+              {inq.status}
             </span>
-            {inquiry.priority === "High" && (
+            {inq.priority === "High" && (
               <span className="bg-rose-500/20 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Urgent</span>
             )}
             {isPreAssessment && (
@@ -146,26 +273,79 @@ export default function InquiryDetail() {
                 <ClipboardCheck className="w-3 h-3" /> Forms Required
               </span>
             )}
-            {inquiry.preAssessmentCompleted === "yes" && (
+            {inq.preAssessmentCompleted === "yes" && (
               <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3" /> Pre-Assessment Done
               </span>
             )}
+            {inq.costAcceptance === "accepted" && (
+              <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-3 h-3" /> Cost Accepted
+              </span>
+            )}
+            {isNonViable && (
+              <span className="bg-rose-500/15 text-rose-400 border border-rose-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <XCircle className="w-3 h-3" /> Non-Viable
+              </span>
+            )}
+            {hasReferralOut && (
+              <span className="bg-amber-500/15 text-amber-400 border border-amber-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <SendHorizontal className="w-3 h-3" /> Referred Out
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
-            {inquiry.phone && <div className="flex items-center gap-1.5"><Phone className="w-4 h-4" />{inquiry.phone}</div>}
-            {inquiry.email && <div className="flex items-center gap-1.5"><Mail className="w-4 h-4" />{inquiry.email}</div>}
-            <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />Added {formatDate(inquiry.createdAt)}</div>
+            {inq.phone && <div className="flex items-center gap-1.5"><Phone className="w-4 h-4" />{inq.phone}</div>}
+            {inq.email && <div className="flex items-center gap-1.5"><Mail className="w-4 h-4" />{inq.email}</div>}
+            <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />Added {formatDate(inq.createdAt)}</div>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="rounded-xl h-10 border-border text-foreground hover:bg-muted">Add Activity</Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowNonAdmit(true)}
+            className="rounded-xl h-10 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 gap-2"
+          >
+            <XCircle className="w-4 h-4" /> Did Not Admit
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowReferOut(true)}
+            className="rounded-xl h-10 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-2"
+          >
+            <SendHorizontal className="w-4 h-4" /> Refer Out
+          </Button>
           <Button onClick={handleConvert} disabled={convertToPatient.isPending} className="rounded-xl h-10 bg-emerald-600 hover:bg-emerald-700 text-white border-0">
             {convertToPatient.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
             Convert to Patient
           </Button>
         </div>
       </div>
+
+      {/* Non-Viable Banner */}
+      {isNonViable && inq.nonAdmitReason && (
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/8 p-4 mb-6 flex items-start gap-3">
+          <XCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-rose-400 text-sm">Did Not Admit</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{inq.nonAdmitReason}</p>
+            {inq.nonAdmitNotes && <p className="text-sm text-muted-foreground mt-1 italic">{inq.nonAdmitNotes}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Referral Out Banner */}
+      {hasReferralOut && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 p-4 mb-6 flex items-start gap-3">
+          <SendHorizontal className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-amber-400 text-sm">
+              Referred Out via {inq.referralOutType === "text" ? "Text" : "Email"} — {formatDate(inq.referralOutAt)}
+            </p>
+            {inq.referralOutMessage && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{inq.referralOutMessage}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-border mb-6 overflow-x-auto">
@@ -181,13 +361,14 @@ export default function InquiryDetail() {
             )}
           >
             {tab === "pre_assessment" && <ClipboardCheck className="w-3.5 h-3.5" />}
+            {tab === "vob" && <ShieldCheck className="w-3.5 h-3.5" />}
             {tabLabel(tab)}
           </button>
         ))}
       </div>
 
-      <div className={cn("grid gap-6", activeTab === "pre_assessment" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
-        <div className={cn("space-y-5", activeTab === "pre_assessment" ? "" : "lg:col-span-2")}>
+      <div className={cn("grid gap-6", (activeTab === "pre_assessment" || activeTab === "vob") ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
+        <div className={cn("space-y-5", (activeTab === "pre_assessment" || activeTab === "vob") ? "" : "lg:col-span-2")}>
           {activeTab === "overview" && (
             <>
               <Card className="rounded-2xl border-border">
@@ -198,11 +379,11 @@ export default function InquiryDetail() {
                 </CardHeader>
                 <CardContent className="p-5">
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <DataPoint label="Level of Care" value={inquiry.levelOfCare} />
-                    <DataPoint label="Date of Birth" value={inquiry.dob} />
-                    <DataPoint label="Insurance Provider" value={inquiry.insuranceProvider} />
-                    <DataPoint label="Member ID" value={inquiry.insuranceMemberId} />
-                    <DataPoint label="Assigned To" value={inquiry.assignedToName} />
+                    <DataPoint label="Level of Care" value={inq.levelOfCare} />
+                    <DataPoint label="Date of Birth" value={inq.dob} />
+                    <DataPoint label="Insurance Provider" value={inq.insuranceProvider} />
+                    <DataPoint label="Member ID" value={inq.insuranceMemberId} />
+                    <DataPoint label="Assigned To" value={inq.assignedToName} />
                   </dl>
 
                   {/* Lead Source Section */}
@@ -272,14 +453,14 @@ export default function InquiryDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <dt className="text-xs font-medium text-muted-foreground mb-1">Source</dt>
-                          <dd className="text-sm font-semibold text-foreground">{(inquiry as any).referralSource || "—"}</dd>
+                          <dd className="text-sm font-semibold text-foreground">{inq.referralSource || "—"}</dd>
                         </div>
-                        {(inquiry as any).searchKeywords && (
+                        {inq.searchKeywords && (
                           <div className="sm:col-span-2">
                             <dt className="text-xs font-medium text-muted-foreground mb-1">Search Keywords</dt>
                             <dd className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                               <Search className="w-3.5 h-3.5 text-primary shrink-0" />
-                              {(inquiry as any).searchKeywords}
+                              {inq.searchKeywords}
                             </dd>
                           </div>
                         )}
@@ -294,22 +475,21 @@ export default function InquiryDetail() {
                   <CardTitle className="text-sm font-semibold text-foreground">Clinical History</CardTitle>
                 </CardHeader>
                 <CardContent className="p-5 space-y-5">
-                  <TextBlock label="Primary Diagnosis" text={inquiry.primaryDiagnosis} />
-                  <TextBlock label="Substance Use History" text={inquiry.substanceHistory} />
-                  <TextBlock label="Medical History" text={inquiry.medicalHistory} />
-                  <TextBlock label="Mental Health History" text={inquiry.mentalHealthHistory} />
+                  <TextBlock label="Primary Diagnosis" text={inq.primaryDiagnosis} />
+                  <TextBlock label="Substance Use History" text={inq.substanceHistory} />
+                  <TextBlock label="Medical History" text={inq.medicalHistory} />
+                  <TextBlock label="Mental Health History" text={inq.mentalHealthHistory} />
                 </CardContent>
               </Card>
 
-              {/* Pre-assessment completion card shown in overview when done */}
-              {inquiry.preAssessmentCompleted === "yes" && (
+              {inq.preAssessmentCompleted === "yes" && (
                 <Card className="rounded-2xl border-emerald-500/25 bg-emerald-500/5">
                   <CardContent className="p-5 flex items-start gap-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-emerald-400 text-sm">Pre-Assessment Completed</p>
-                      {inquiry.preAssessmentDate && <p className="text-xs text-muted-foreground mt-1">{formatDate(inquiry.preAssessmentDate)}</p>}
-                      {inquiry.preAssessmentNotes && <p className="text-sm text-muted-foreground mt-2">{inquiry.preAssessmentNotes}</p>}
+                      {inq.preAssessmentDate && <p className="text-xs text-muted-foreground mt-1">{formatDate(inq.preAssessmentDate)}</p>}
+                      {inq.preAssessmentNotes && <p className="text-sm text-muted-foreground mt-2">{inq.preAssessmentNotes}</p>}
                     </div>
                   </CardContent>
                 </Card>
@@ -317,10 +497,30 @@ export default function InquiryDetail() {
             </>
           )}
 
+          {activeTab === "vob" && (
+            <Card className="rounded-2xl border-border">
+              <CardHeader className="bg-muted/40 border-b border-border py-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <ShieldCheck className="w-4 h-4 text-primary" /> Insurance Verification of Benefits (VOB)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 md:p-7">
+                <VOBForm
+                  inquiryId={id}
+                  inquiry={inq}
+                  onVobSaved={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+                    refetch();
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
           {activeTab === "pre_assessment" && (
             <PreAssessmentSection
               inquiryId={id}
-              currentNotes={inquiry.preAssessmentNotes || ""}
+              currentNotes={inq.preAssessmentNotes || ""}
               onComplete={handlePreAssessmentComplete}
             />
           )}
@@ -392,8 +592,8 @@ export default function InquiryDetail() {
           )}
         </div>
 
-        {/* Right sidebar — hide on pre_assessment tab to use full width */}
-        {activeTab !== "pre_assessment" && (
+        {/* Right sidebar — hide on full-width tabs */}
+        {activeTab !== "pre_assessment" && activeTab !== "vob" && (
           <div className="space-y-5">
             <Card className="rounded-2xl border-border">
               <CardHeader className="py-4 border-b border-border">
@@ -402,13 +602,13 @@ export default function InquiryDetail() {
               <CardContent className="p-4 text-sm space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Created</span>
-                  <span className="font-medium text-foreground">{formatDate(inquiry.createdAt)}</span>
+                  <span className="font-medium text-foreground">{formatDate(inq.createdAt)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Last Updated</span>
-                  <span className="font-medium text-foreground">{formatDate(inquiry.updatedAt)}</span>
+                  <span className="font-medium text-foreground">{formatDate(inq.updatedAt)}</span>
                 </div>
-                {inquiry.parsedAt && (
+                {inq.parsedAt && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-xs text-primary bg-primary/10 p-2 rounded-lg">
                     <Sparkles className="w-4 h-4" /> AI Parsed Intake
                   </div>
@@ -424,11 +624,166 @@ export default function InquiryDetail() {
                     </button>
                   </div>
                 )}
+                <div className="mt-3 pt-3 border-t border-border">
+                  <button
+                    onClick={() => setActiveTab("vob")}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/15 transition-colors"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {inq.vobData ? "View/Edit VOB" : "Start Insurance Verification"}
+                  </button>
+                </div>
               </CardContent>
             </Card>
+
+            {/* VOB Summary Card (in sidebar if VOB has been started) */}
+            {inq.vobData && (
+              <Card className="rounded-2xl border-border">
+                <CardHeader className="py-4 border-b border-border">
+                  <CardTitle className="text-sm text-foreground flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary" /> VOB Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-2 text-sm">
+                  {inq.vobData.inNetworkDeductible && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Deductible</span><span className="font-medium text-foreground">{inq.vobData.inNetworkDeductible}</span></div>
+                  )}
+                  {inq.vobData.inNetworkCoinsurance && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Coinsurance</span><span className="font-medium text-foreground">{inq.vobData.inNetworkCoinsurance}</span></div>
+                  )}
+                  {inq.vobData.quotedCost && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Quoted Cost</span><span className="font-medium text-foreground">{inq.vobData.quotedCost}</span></div>
+                  )}
+                  {inq.vobData.clientResponsibility && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Client Resp.</span><span className="font-medium text-foreground">{inq.vobData.clientResponsibility}</span></div>
+                  )}
+                  {inq.costAcceptance && (
+                    <div className={cn(
+                      "mt-2 pt-2 border-t border-border flex items-center gap-2 text-xs font-bold uppercase tracking-wide",
+                      inq.costAcceptance === "accepted" ? "text-emerald-400" : "text-rose-400"
+                    )}>
+                      {inq.costAcceptance === "accepted"
+                        ? <><CheckCircle2 className="w-3.5 h-3.5" /> Cost Accepted</>
+                        : <><AlertTriangle className="w-3.5 h-3.5" /> Cannot Pay</>}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
+
+      {/* Did Not Admit Modal */}
+      <Dialog open={showNonAdmit} onOpenChange={setShowNonAdmit}>
+        <DialogContent className="bg-card border-border text-foreground max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <XCircle className="w-5 h-5 text-rose-400" /> Did Not Admit
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Recording this will mark the inquiry as <strong className="text-rose-400">Non-Viable</strong> and move it out of the active pipeline.
+            </p>
+            <div>
+              <Label className="text-sm font-medium text-foreground mb-1.5 block">Reason *</Label>
+              <Select value={nonAdmitReason} onValueChange={setNonAdmitReason}>
+                <SelectTrigger className="rounded-lg bg-muted border-border text-foreground h-10">
+                  <SelectValue placeholder="Select reason..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground max-h-72">
+                  <SelectItem value="none">Select reason...</SelectItem>
+                  {NON_ADMIT_REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-foreground mb-1.5 block">Additional Notes (optional)</Label>
+              <Textarea
+                value={nonAdmitNotes}
+                onChange={e => setNonAdmitNotes(e.target.value)}
+                placeholder="Any additional context..."
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-none min-h-[80px] rounded-lg"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowNonAdmit(false)} className="rounded-xl border-border text-foreground">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleNonAdmitSubmit}
+              disabled={submittingNonAdmit || nonAdmitReason === "none"}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white border-0 gap-2"
+            >
+              {submittingNonAdmit ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+              Record Did Not Admit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Refer Out Modal */}
+      <Dialog open={showReferOut} onOpenChange={setShowReferOut}>
+        <DialogContent className="bg-card border-border text-foreground max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <SendHorizontal className="w-5 h-5 text-amber-400" /> Refer Out
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">Send a referral to another treatment facility via text or email.</p>
+            <div>
+              <Label className="text-sm font-medium text-foreground mb-1.5 block">Method *</Label>
+              <Select value={referOutType} onValueChange={setReferOutType}>
+                <SelectTrigger className="rounded-lg bg-muted border-border text-foreground h-10">
+                  <SelectValue placeholder="Select method..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  <SelectItem value="none">Select method...</SelectItem>
+                  <SelectItem value="text">Text Message</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-sm font-medium text-foreground">Message *</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleGenerateReferOutMessage}
+                  disabled={generatingMsg || referOutType === "none"}
+                  className="h-7 px-2 text-xs text-primary hover:bg-primary/10 gap-1"
+                >
+                  {generatingMsg ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                  Generate with AI
+                </Button>
+              </div>
+              <Textarea
+                value={referOutMessage}
+                onChange={e => setReferOutMessage(e.target.value)}
+                placeholder="Compose your referral message..."
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-none min-h-[120px] rounded-lg"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowReferOut(false)} className="rounded-xl border-border text-foreground">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReferOutSubmit}
+              disabled={submittingReferOut || referOutType === "none" || !referOutMessage.trim()}
+              className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white border-0 gap-2"
+            >
+              {submittingReferOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <SendHorizontal className="w-4 h-4" />}
+              Record Refer Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

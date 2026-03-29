@@ -45,6 +45,13 @@ const fullInquirySelect = {
   preAssessmentCompleted: inquiries.preAssessmentCompleted,
   preAssessmentDate: inquiries.preAssessmentDate,
   preAssessmentNotes: inquiries.preAssessmentNotes,
+  vobData: inquiries.vobData,
+  costAcceptance: inquiries.costAcceptance,
+  nonAdmitReason: inquiries.nonAdmitReason,
+  nonAdmitNotes: inquiries.nonAdmitNotes,
+  referralOutAt: inquiries.referralOutAt,
+  referralOutType: inquiries.referralOutType,
+  referralOutMessage: inquiries.referralOutMessage,
 };
 
 router.get("/inquiries", async (req, res) => {
@@ -391,6 +398,66 @@ router.get("/inquiries/:id/download-pre-assessment-forms", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── VOB Save ─────────────────────────────────────────────────────────────────
+router.put("/inquiries/:id/vob", async (req, res) => {
+  try {
+    const { vobData, costAcceptance } = req.body;
+    const update: any = { updatedAt: new Date() };
+    if (vobData !== undefined) update.vobData = vobData;
+    if (costAcceptance !== undefined) {
+      update.costAcceptance = costAcceptance;
+      if (costAcceptance === "cannot_pay") update.status = "Non-Viable";
+    }
+    const [row] = await db.update(inquiries).set(update).where(eq(inquiries.id, parseInt(req.params.id))).returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, costAcceptance ? `cost_acceptance:${costAcceptance}` : "vob_saved", "inquiry", row.id);
+    res.json(row);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Non-Admit / Did Not Admit ────────────────────────────────────────────────
+router.put("/inquiries/:id/non-admit", async (req, res) => {
+  try {
+    const { reason, notes } = req.body;
+    if (!reason) { res.status(400).json({ error: "reason is required" }); return; }
+    const [row] = await db.update(inquiries).set({
+      status: "Non-Viable",
+      nonAdmitReason: reason,
+      nonAdmitNotes: notes || null,
+      updatedAt: new Date(),
+    }).where(eq(inquiries.id, parseInt(req.params.id))).returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "did_not_admit", "inquiry", row.id);
+    res.json(row);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Refer Out ────────────────────────────────────────────────────────────────
+router.post("/inquiries/:id/refer-out", async (req, res) => {
+  try {
+    const { type, message } = req.body;
+    if (!type || !message) { res.status(400).json({ error: "type and message are required" }); return; }
+    const [row] = await db.update(inquiries).set({
+      referralOutAt: new Date(),
+      referralOutType: type,
+      referralOutMessage: message,
+      updatedAt: new Date(),
+    }).where(eq(inquiries.id, parseInt(req.params.id))).returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, `refer_out:${type}`, "inquiry", row.id);
+    res.json(row);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

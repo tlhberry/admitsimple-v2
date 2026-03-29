@@ -1,0 +1,179 @@
+We are enhancing the admissions pipeline with Insurance Verification (VOB), AI parsing, and non-admit/referral workflows.
+
+DO NOT break any existing pipeline functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+1. Add AI-powered VOB parsing (email or screenshot)
+2. Simplify financial decision step (quote + accept/decline)
+3. Add "Non-Viable / Did Not Admit" workflow
+4. Add referral-out automation with prefilled message
+
+-----------------------------------
+VOB (INSURANCE VERIFICATION) FEATURE
+-----------------------------------
+
+Add a VOB step in the pipeline.
+
+Users must be able to:
+1. Paste a full VOB email OR
+2. Upload a screenshot/image of a VOB
+
+-----------------------------------
+AI VOB PARSING
+-----------------------------------
+
+Create endpoint:
+
+POST /api/ai/vob-parse
+
+Input:
+- text (optional)
+- image (optional)
+
+AI should extract and return structured data:
+
+{
+  patient_name,
+  dob,
+  insurance_provider,
+  member_id,
+  deductible,
+  out_of_pocket_max,
+  coverage_details,
+  estimated_cost
+}
+
+-----------------------------------
+FORM AUTO-FILL
+-----------------------------------
+
+- Use parsed data to auto-fill VOB form fields
+- Only required visible field for user:
+  → "Estimated Cost"
+
+-----------------------------------
+DECISION STEP (CRITICAL)
+-----------------------------------
+
+After cost is shown, display ONLY 2 buttons:
+
+1. "Accepts Cost"
+2. "Cannot Pay"
+
+-----------------------------------
+LOGIC
+-----------------------------------
+
+IF "Accepts Cost":
+→ Continue pipeline as normal
+
+IF "Cannot Pay":
+→ Move inquiry to new stage:
+   "Non-Viable"
+
+→ Set reason:
+   "Cannot afford out-of-pocket cost"
+
+-----------------------------------
+NON-VIABLE / DID NOT ADMIT SYSTEM
+-----------------------------------
+
+At ANY point in pipeline:
+
+User can click:
+→ "Did Not Admit"
+
+When clicked:
+→ Show required dropdown:
+
+Reasons:
+- Cannot afford treatment
+- Clinical not appropriate
+- Medicaid / Medicare
+- Chose another facility
+- Lost contact
+- Other (with text input)
+
+Save reason to inquiry record
+
+-----------------------------------
+REFERRAL OUT FEATURE
+-----------------------------------
+
+When inquiry is in:
+- Non-Viable OR
+- Did Not Admit
+
+User can click:
+→ "Refer Out"
+
+-----------------------------------
+REFERRAL ACTION OPTIONS
+-----------------------------------
+
+Show 2 options:
+1. Send Text Message
+2. Send Email
+
+-----------------------------------
+AUTO-GENERATED MESSAGE
+-----------------------------------
+
+Auto-fill message with:
+
+- Patient Name
+- Date of Birth
+- Phone Number
+- Insurance Provider
+- Member ID
+- Brief summary (optional: reason for referral)
+
+Example:
+
+"Referral: John Smith, DOB 01/01/1990, Phone 555-555-5555. 
+Insurance: Aetna, ID: 123456789. 
+Seeking placement."
+
+-----------------------------------
+UI REQUIREMENTS
+-----------------------------------
+
+- Keep UI simple and fast (mobile-friendly)
+- VOB parsing should feel instant
+- Decision step must be very clear (2-button choice only)
+- Referral flow should take <10 seconds to complete
+
+-----------------------------------
+DATA TRACKING
+-----------------------------------
+
+Store:
+- VOB parsed data
+- Estimated cost
+- Acceptance decision
+- Non-admit reason
+- Referral action (text/email + timestamp)
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not overcomplicate UI
+- Do not require manual entry if AI can fill it
+- Do not allow skipping reason for "Did Not Admit"
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+User can:
+- Paste VOB → auto-filled instantly
+- Quote cost → click accept or cannot pay
+- If cannot pay → auto move to non-viable
+- If not admitted → select reason
+- Refer out in 1 click with prefilled message
+
+-----------------------------------
+END

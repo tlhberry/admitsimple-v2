@@ -79,7 +79,11 @@ lib/
 7. **Referral Sources** — Manage and track referral relationships
 8. **Pre-Assessment Forms** — 3-form pre-assessment workflow (Pre-Cert, Nursing Assessment, Pre-Screening) with auto-save, ZIP download, and status advancement
 9. **Business Development Module** — Referral account management, contact tracking, BD activity logs, AI referral insights
-10. **Settings** — Facility info, notifications, AI configuration
+10. **Bed Board** — Real-time bed availability tracker with AI Q&A (natural language filter, group, predict discharge)
+11. **Insurance Verification (VOB)** — Per-inquiry VOB form with AI "Fill with AI" (paste text or upload image/PDF), in/out-of-network fields, pre-cert, quote info, and Cost Acceptance decision panel
+12. **Did Not Admit Workflow** — "Did Not Admit" modal with reason list + notes, sets inquiry to Non-Viable, shows red banner on detail page
+13. **Refer Out** — "Refer Out" modal with Text/Email method, AI-generated message, records referral out with amber badge
+14. **Settings** — Facility info, notifications, AI configuration
 
 ## BD Module (routes/bd.ts)
 
