@@ -14,7 +14,11 @@ export function Layout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) return null; // Let the AuthProvider handle redirect
+  if (!user) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">

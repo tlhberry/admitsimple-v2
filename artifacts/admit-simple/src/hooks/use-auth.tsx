@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode, useEffect } from "react";
 import { useGetMe, useLogin, useLogout, UserSession } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +17,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
+  const [isLoginPage] = useRoute("/login");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -53,10 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isLoading && isError && window.location.pathname !== "/login") {
+    if (!isLoading && isError && !isLoginPage) {
       setLocation("/login");
     }
-  }, [isLoading, isError, setLocation]);
+  }, [isLoading, isError, isLoginPage, setLocation]);
 
   return (
     <AuthContext.Provider 

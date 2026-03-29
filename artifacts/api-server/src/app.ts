@@ -2,9 +2,12 @@ import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import session from "express-session";
+import ConnectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+const PgSession = ConnectPgSimple(session);
 
 const app: Express = express();
 
@@ -41,6 +44,11 @@ app.use(cookieParser());
 
 app.use(
   session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+    }),
     secret: process.env.SESSION_SECRET || "admitsimple-dev-secret-change-in-production",
     resave: false,
     saveUninitialized: false,
@@ -48,7 +56,7 @@ app.use(
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 30 * 60 * 1000,
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
     },
   })
 );

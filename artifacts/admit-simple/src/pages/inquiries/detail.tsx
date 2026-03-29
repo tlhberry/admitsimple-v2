@@ -1,4 +1,4 @@
-import { useRoute, Link } from "wouter";
+import { useParams, Link } from "wouter";
 import { useGetInquiry, useListActivities } from "@workspace/api-client-react";
 import { useAIFeatures } from "@/hooks/use-ai";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
@@ -12,7 +12,7 @@ import ReactMarkdown from "react-markdown";
 import { useState } from "react";
 
 export default function InquiryDetail() {
-  const [, params] = useRoute("/inquiries/:id");
+  const params = useParams<{ id: string }>();
   const id = parseInt(params?.id || "0");
   const { data: inquiry, isLoading } = useGetInquiry(id, { query: { enabled: !!id } });
   const { data: activities } = useListActivities({ inquiryId: id }, { query: { enabled: !!id } });
