@@ -67,7 +67,6 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
       
       const newAiFields = new Set<string>();
       
-      // Auto-fill form and track which fields were AI generated
       Object.entries(data).forEach(([key, value]) => {
         if (value && key !== 'fieldsExtracted') {
           form.setValue(key as any, value);
@@ -96,7 +95,7 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div className="space-y-8 pb-12">
       {/* AI Document Upload Zone */}
-      <div className="bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl p-6 text-center relative hover:bg-blue-50 transition-colors">
+      <div className="bg-primary/5 border-2 border-dashed border-primary/25 rounded-2xl p-6 text-center relative hover:bg-primary/10 transition-colors">
         <input 
           type="file" 
           ref={fileInputRef}
@@ -108,21 +107,21 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           <div className="flex flex-col items-center justify-center py-4">
             <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
             <p className="text-primary font-medium">Claude is reading the document...</p>
-            <p className="text-xs text-slate-500 mt-1">Extracting patient details securely</p>
+            <p className="text-xs text-muted-foreground mt-1">Extracting patient details securely</p>
           </div>
         ) : parseSuccess ? (
-          <div className="flex flex-col items-center justify-center py-4 text-emerald-600">
+          <div className="flex flex-col items-center justify-center py-4 text-emerald-400">
             <CheckCircle2 className="w-10 h-10 mb-2" />
             <p className="font-semibold text-lg">Document Parsed Successfully!</p>
-            <p className="text-sm">Please review the auto-filled fields below.</p>
+            <p className="text-sm text-muted-foreground">Please review the auto-filled fields below.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-2 pointer-events-none">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-primary mb-3">
+            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center shadow-sm text-primary mb-3">
               <Sparkles className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-800">AI Document Parser</h3>
-            <p className="text-sm text-slate-500 max-w-sm mt-1">
+            <h3 className="text-lg font-semibold text-foreground">AI Document Parser</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mt-1">
               Drag & drop a referral fax, screenshot, or PDF here to instantly auto-fill this form.
             </p>
           </div>
@@ -138,12 +137,12 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           <Field label="Date of Birth" name="dob" form={form} isAi={isAi('dob')} placeholder="MM/DD/YYYY" />
           
           <div className="space-y-1.5">
-            <Label className="text-slate-700 font-medium">Level of Care</Label>
+            <Label className="text-foreground font-medium">Level of Care</Label>
             <Select onValueChange={(v) => form.setValue("levelOfCare", v)} defaultValue={form.getValues("levelOfCare")}>
-              <SelectTrigger className={cn("h-11 rounded-xl", isAi('levelOfCare') && "border-primary bg-blue-50/30 ring-2 ring-primary/20")}>
+              <SelectTrigger className={cn("h-11 rounded-xl bg-muted border-border text-foreground", isAi('levelOfCare') && "border-primary ring-2 ring-primary/20")}>
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-card border-border text-foreground">
                 <SelectItem value="Detox">Detox</SelectItem>
                 <SelectItem value="RTC">RTC (Residential)</SelectItem>
                 <SelectItem value="PHP">PHP (Partial Hospitalization)</SelectItem>
@@ -154,12 +153,12 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-slate-700 font-medium">Referral Source</Label>
+            <Label className="text-foreground font-medium">Referral Source</Label>
             <Select onValueChange={(v) => form.setValue("referralSource", v === "none" ? "" : v)} defaultValue={form.getValues("referralSource")}>
-              <SelectTrigger className="h-11 rounded-xl">
+              <SelectTrigger className="h-11 rounded-xl bg-muted border-border text-foreground">
                 <SelectValue placeholder="Select source" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-card border-border text-foreground">
                 <SelectItem value="none">— None —</SelectItem>
                 {referralSources.map((s: any) => (
                   <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
@@ -169,22 +168,22 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           {(watchedReferralSource === "Google PPC" || watchedReferralSource === "Google Organic") && (
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-slate-700 font-medium flex items-center gap-1.5">
+            <div className="col-span-2 space-y-1.5">
+              <Label className="text-foreground font-medium flex items-center gap-1.5">
                 <Search className="w-4 h-4 text-primary" /> Search Keywords
               </Label>
               <Input
                 {...form.register("searchKeywords")}
                 placeholder="e.g. drug rehab near me, alcohol treatment center"
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
-              <p className="text-xs text-slate-400">Keywords the client searched before calling</p>
+              <p className="text-xs text-muted-foreground">Keywords the client searched before calling</p>
             </div>
           )}
         </div>
 
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-4">
-          <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+        <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-4">
+          <h4 className="font-semibold text-foreground flex items-center gap-2">
             Insurance Information
           </h4>
           <div className="grid grid-cols-2 gap-4">
@@ -198,7 +197,7 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           <TextAreaField label="Substance Use History" name="substanceHistory" form={form} isAi={isAi('substanceHistory')} />
         </div>
 
-        <div className="pt-4 flex justify-end gap-3 border-t">
+        <div className="pt-4 flex justify-end gap-3 border-t border-border">
           <Button type="button" variant="outline" onClick={onSuccess} className="rounded-xl h-11 px-6">Cancel</Button>
           <Button type="submit" disabled={createInquiry.isPending} className="rounded-xl h-11 px-8 font-semibold shadow-lg shadow-primary/20">
             {createInquiry.isPending ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
@@ -213,16 +212,19 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 function Field({ label, name, form, isAi, required, placeholder }: any) {
   return (
     <div className="space-y-1.5 relative">
-      <Label className="text-slate-700 font-medium">
-        {label} {required && <span className="text-red-500">*</span>}
+      <Label className="text-foreground font-medium">
+        {label} {required && <span className="text-red-400">*</span>}
       </Label>
       <Input 
         {...form.register(name)} 
         placeholder={placeholder}
-        className={cn("h-11 rounded-xl transition-all", isAi && "border-primary bg-blue-50/30 ring-2 ring-primary/20")}
+        className={cn(
+          "h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground transition-all",
+          isAi && "border-primary ring-2 ring-primary/20"
+        )}
       />
       {isAi && <span className="absolute right-3 top-[34px] text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded uppercase">AI</span>}
-      {form.formState.errors[name] && <p className="text-xs text-red-500">{form.formState.errors[name].message}</p>}
+      {form.formState.errors[name] && <p className="text-xs text-red-400">{form.formState.errors[name].message}</p>}
     </div>
   );
 }
@@ -230,10 +232,13 @@ function Field({ label, name, form, isAi, required, placeholder }: any) {
 function TextAreaField({ label, name, form, isAi }: any) {
   return (
     <div className="space-y-1.5 relative">
-      <Label className="text-slate-700 font-medium">{label}</Label>
+      <Label className="text-foreground font-medium">{label}</Label>
       <Textarea 
         {...form.register(name)} 
-        className={cn("min-h-[100px] rounded-xl transition-all resize-none", isAi && "border-primary bg-blue-50/30 ring-2 ring-primary/20")}
+        className={cn(
+          "min-h-[100px] rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground transition-all resize-none",
+          isAi && "border-primary ring-2 ring-primary/20"
+        )}
       />
       {isAi && <span className="absolute right-3 top-8 text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded uppercase">AI</span>}
     </div>
