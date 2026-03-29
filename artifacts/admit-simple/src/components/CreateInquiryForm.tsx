@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UploadCloud, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateInquiryBody } from "@workspace/api-client-react";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
