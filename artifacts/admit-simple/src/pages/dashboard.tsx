@@ -31,7 +31,7 @@ export default function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1 text-sm">Overview of admissions performance and pipeline.</p>
         </div>
-        <Link href="/inquiries/new">
+        <Link href="/inquiries?new=1">
           <button className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium shadow-md shadow-primary/20 transition-all hover:-translate-y-0.5 flex items-center gap-2 text-sm">
             <ClipboardCheck className="w-4 h-4" />
             New Inquiry

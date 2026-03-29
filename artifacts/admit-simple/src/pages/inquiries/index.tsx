@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useListInquiries } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,14 @@ export default function InquiriesList() {
   const { data, isLoading } = useListInquiries({ search: search || undefined });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [, navigate] = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      setIsFormOpen(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   return (
     <Layout>
