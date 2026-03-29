@@ -49,6 +49,16 @@ export const inquiries = pgTable("inquiries", {
   parsedAt: timestamp("parsed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  // Pre-assessment forms
+  preCertFormData: jsonb("pre_cert_form_data"),
+  preCertFormComplete: varchar("pre_cert_form_complete", { length: 10 }).default("no"),
+  nursingAssessmentData: jsonb("nursing_assessment_data"),
+  nursingAssessmentComplete: varchar("nursing_assessment_complete", { length: 10 }).default("no"),
+  preScreeningData: jsonb("pre_screening_data"),
+  preScreeningComplete: varchar("pre_screening_complete", { length: 10 }).default("no"),
+  preAssessmentCompleted: varchar("pre_assessment_completed", { length: 10 }).default("no"),
+  preAssessmentDate: timestamp("pre_assessment_date"),
+  preAssessmentNotes: text("pre_assessment_notes"),
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });

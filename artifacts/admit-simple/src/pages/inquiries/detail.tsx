@@ -1,24 +1,40 @@
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useGetInquiry, useListActivities } from "@workspace/api-client-react";
 import { useAIFeatures } from "@/hooks/use-ai";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, Loader2, Sparkles, ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { useState } from "react";
+import { PreAssessmentSection } from "@/components/PreAssessmentForms";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InquiryDetail() {
   const params = useParams<{ id: string }>();
   const id = parseInt(params?.id || "0");
-  const { data: inquiry, isLoading } = useGetInquiry(id, { query: { enabled: !!id } });
+  const [, navigate] = useLocation();
+  const { data: inquiry, isLoading, refetch } = useGetInquiry(id, { query: { enabled: !!id } });
   const { data: activities } = useListActivities({ inquiryId: id }, { query: { enabled: !!id } });
   const { summarizeInquiry } = useAIFeatures();
-  const { convertToPatient } = useInquiriesMutations();
-  const [activeTab, setActiveTab] = useState("overview");
+  const { convertToPatient, updateInquiry } = useInquiriesMutations();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const isPreAssessment = inquiry?.status === "Pre-Assessment";
+  const defaultTab = isPreAssessment ? "pre_assessment" : "overview";
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+
+  const tabs = [
+    "overview",
+    ...(isPreAssessment ? ["pre_assessment"] : []),
+    "activities",
+    "clinical_ai",
+  ];
 
   const handleGenerateSummary = async () => {
     const res = await summarizeInquiry.mutateAsync({ data: { inquiryId: id } });
@@ -34,8 +50,38 @@ export default function InquiryDetail() {
     }
   };
 
+  const handlePreAssessmentComplete = async (notes: string) => {
+    try {
+      await fetch(`/api/inquiries/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          preAssessmentCompleted: "yes",
+          preAssessmentDate: new Date().toISOString(),
+          preAssessmentNotes: notes,
+          status: "Clinical Assessment",
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/inquiries"] });
+      toast({ title: "Pre-Assessment complete! Inquiry moved to Clinical Assessment." });
+      await refetch();
+      setActiveTab("overview");
+    } catch {
+      toast({ title: "Failed to complete pre-assessment", variant: "destructive" });
+    }
+  };
+
   if (isLoading) return <Layout><div className="flex justify-center p-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
   if (!inquiry) return <Layout><div className="text-muted-foreground p-8">Not found</div></Layout>;
+
+  const tabLabel = (tab: string) => {
+    if (tab === "pre_assessment") return "Pre-Assessment";
+    if (tab === "clinical_ai") return "Clinical AI";
+    return tab.charAt(0).toUpperCase() + tab.slice(1);
+  };
 
   return (
     <Layout>
@@ -55,6 +101,16 @@ export default function InquiryDetail() {
             {inquiry.priority === "High" && (
               <span className="bg-rose-500/20 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Urgent</span>
             )}
+            {isPreAssessment && (
+              <span className="bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <ClipboardCheck className="w-3 h-3" /> Forms Required
+              </span>
+            )}
+            {inquiry.preAssessmentCompleted === "yes" && (
+              <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3" /> Pre-Assessment Done
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
             {inquiry.phone && <div className="flex items-center gap-1.5"><Phone className="w-4 h-4" />{inquiry.phone}</div>}
@@ -73,24 +129,25 @@ export default function InquiryDetail() {
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-border mb-6 overflow-x-auto">
-        {["overview", "activities", "clinical_ai"].map(tab => (
+        {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-5 py-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap capitalize",
+              "px-5 py-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5",
               activeTab === tab
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
             )}
           >
-            {tab.replace("_", " ")}
+            {tab === "pre_assessment" && <ClipboardCheck className="w-3.5 h-3.5" />}
+            {tabLabel(tab)}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-5">
+      <div className={cn("grid gap-6", activeTab === "pre_assessment" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
+        <div className={cn("space-y-5", activeTab === "pre_assessment" ? "" : "lg:col-span-2")}>
           {activeTab === "overview" && (
             <>
               <Card className="rounded-2xl border-border">
@@ -122,7 +179,29 @@ export default function InquiryDetail() {
                   <TextBlock label="Mental Health History" text={inquiry.mentalHealthHistory} />
                 </CardContent>
               </Card>
+
+              {/* Pre-assessment completion card shown in overview when done */}
+              {inquiry.preAssessmentCompleted === "yes" && (
+                <Card className="rounded-2xl border-emerald-500/25 bg-emerald-500/5">
+                  <CardContent className="p-5 flex items-start gap-4">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-emerald-400 text-sm">Pre-Assessment Completed</p>
+                      {inquiry.preAssessmentDate && <p className="text-xs text-muted-foreground mt-1">{formatDate(inquiry.preAssessmentDate)}</p>}
+                      {inquiry.preAssessmentNotes && <p className="text-sm text-muted-foreground mt-2">{inquiry.preAssessmentNotes}</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </>
+          )}
+
+          {activeTab === "pre_assessment" && (
+            <PreAssessmentSection
+              inquiryId={id}
+              currentNotes={inquiry.preAssessmentNotes || ""}
+              onComplete={handlePreAssessmentComplete}
+            />
           )}
 
           {activeTab === "clinical_ai" && (
@@ -176,29 +255,42 @@ export default function InquiryDetail() {
           )}
         </div>
 
-        {/* Right sidebar */}
-        <div className="space-y-5">
-          <Card className="rounded-2xl border-border">
-            <CardHeader className="py-4 border-b border-border">
-              <CardTitle className="text-sm text-foreground">Status Timeline</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 text-sm space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Created</span>
-                <span className="font-medium text-foreground">{formatDate(inquiry.createdAt)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Last Updated</span>
-                <span className="font-medium text-foreground">{formatDate(inquiry.updatedAt)}</span>
-              </div>
-              {inquiry.parsedAt && (
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-xs text-primary bg-primary/10 p-2 rounded-lg">
-                  <Sparkles className="w-4 h-4" /> AI Parsed Intake
+        {/* Right sidebar — hide on pre_assessment tab to use full width */}
+        {activeTab !== "pre_assessment" && (
+          <div className="space-y-5">
+            <Card className="rounded-2xl border-border">
+              <CardHeader className="py-4 border-b border-border">
+                <CardTitle className="text-sm text-foreground">Status Timeline</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 text-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="font-medium text-foreground">{formatDate(inquiry.createdAt)}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Last Updated</span>
+                  <span className="font-medium text-foreground">{formatDate(inquiry.updatedAt)}</span>
+                </div>
+                {inquiry.parsedAt && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-xs text-primary bg-primary/10 p-2 rounded-lg">
+                    <Sparkles className="w-4 h-4" /> AI Parsed Intake
+                  </div>
+                )}
+                {isPreAssessment && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <button
+                      onClick={() => setActiveTab("pre_assessment")}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-400 hover:bg-indigo-500/15 transition-colors"
+                    >
+                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      Open Pre-Assessment Forms
+                    </button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </Layout>
   );

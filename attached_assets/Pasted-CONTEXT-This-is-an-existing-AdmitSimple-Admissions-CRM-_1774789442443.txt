@@ -1,0 +1,370 @@
+CONTEXT
+This is an existing AdmitSimple Admissions CRM built with React/TypeScript (Vite), Express, Drizzle ORM, and PostgreSQL. The pipeline already has stages: New Inquiry, VOB Pending, Quote Client, Pre-Assessment, Scheduled, Admitted, Non-Viable. The Pre-Assessment stage needs its full content — three clinical forms that live inside each inquiry's detail view when it is in the Pre-Assessment stage. These forms currently exist in the live app and must be replicated exactly.
+
+WHAT TO BUILD
+Add a PreAssessmentForms component and all supporting backend routes so that when an inquiry is in the pre_assessment pipeline stage, the staff can complete three clinical forms directly inside the inquiry detail page. All form data auto-saves to the database as JSONB. Forms are protected by role-based access. A "Download Pre-Assessment Forms" button exports all completed forms as a ZIP/PDF.
+
+DATABASE CHANGES
+Add three new JSONB columns to the inquiries table (or create a separate pre_assessment_forms table with inquiry_id foreign key — use whichever matches the existing Drizzle schema pattern):
+typescript// Add to inquiries table in Drizzle schema (or as separate table):
+preCertFormData: jsonb('pre_cert_form_data'),           // Form 1 data
+preCertFormComplete: varchar('pre_cert_form_complete', { length: 10 }).default('no'), // 'yes' or 'no'
+
+nursingAssessmentData: jsonb('nursing_assessment_data'), // Form 2 data
+nursingAssessmentComplete: varchar('nursing_assessment_complete', { length: 10 }).default('no'),
+
+preScreeningData: jsonb('pre_screening_data'),           // Form 3 data
+preScreeningComplete: varchar('pre_screening_complete', { length: 10 }).default('no'),
+
+preAssessmentCompleted: varchar('pre_assessment_completed', { length: 10 }).default('no'), // overall
+preAssessmentDate: timestamp('pre_assessment_date'),
+preAssessmentNotes: text('pre_assessment_notes'),
+```
+
+Run `drizzle-kit push` to apply the migration.
+
+---
+
+## BACKEND API ROUTES
+
+Add these six routes to the existing routes file. All require `isAuthenticated` middleware. GET routes also require `canAccessPreAssessment` middleware (staff/admin/clinical roles). Store each form's data as JSONB in the database.
+```
+GET  /api/inquiries/:id/pre-cert-form       — fetch Form 1 data
+PUT  /api/inquiries/:id/pre-cert-form       — save Form 1 data (body: { formData, isComplete })
+
+GET  /api/inquiries/:id/nursing-assessment  — fetch Form 2 data
+PUT  /api/inquiries/:id/nursing-assessment  — save Form 2 data (body: { formData, isComplete })
+
+GET  /api/inquiries/:id/pre-screening       — fetch Form 3 data
+PUT  /api/inquiries/:id/pre-screening       — save Form 3 data (body: { formData, isComplete })
+
+GET  /api/inquiries/:id/download-pre-assessment-forms
+  — Returns a ZIP file containing all completed forms rendered as PDFs or structured JSON
+  — Requires canAccessInquiries middleware
+  — Returns 400 if no forms have been completed yet
+  — Filename: "PreAssessment-[PatientName]-[Date].zip"
+The PUT routes should:
+
+Accept { formData: Record<string, any>, isComplete: string } in the request body
+Save to the corresponding JSONB column in the inquiries table
+Set isComplete field ('yes' or 'no') on the form record
+Return the saved form object
+
+
+FRONTEND COMPONENT: PreAssessmentForms.tsx
+Create client/src/components/PreAssessmentForms.tsx. This component is rendered inside the inquiry detail page when inquiry.stage === 'pre_assessment'.
+The component renders three tabs (Tab 1, Tab 2, Tab 3) — one per form. Use shadcn/ui Tabs, TabsList, TabsTrigger, TabsContent.
+Tab labels:
+
+Tab 1: "RB Pre-Cert / Clinical"
+Tab 2: "Nursing Assessment"
+Tab 3: "Pre-Screening"
+
+Each tab shows its form with a completion status badge (green "Complete" or yellow "In Progress").
+Auto-save behavior (CRITICAL): Each form uses useDebounce (1000ms) on the form data state. A useEffect watches the debounced data and fires the PUT API call automatically whenever the user stops typing. Show a subtle "Saving..." indicator while saving, "Saved" on success. Do NOT have explicit Save buttons — it all auto-saves. The only explicit action button is "Mark Complete" at the bottom of each form.
+Props: { inquiryId: number }
+
+FORM 1: RB Pre-Cert / Clinical Pre-Assessment
+Card Title: "RB Pre-Cert / Clinical Pre-Assessment"
+API endpoints: GET/PUT /api/inquiries/:id/pre-cert-form
+Initial form state:
+typescript{
+  primarySubstance: "",
+  lastUsed: "",
+  firstUsed: "",
+  frequency: "",
+  amount: "",
+  route: "",
+  method: "",
+  treatmentHistory: "",
+  severityOfIllness: "",          // select
+  withdrawalSymptoms: [],          // array of checked symptoms
+  withdrawalNotes: "",
+  psychosocialNotes: "",
+  medicalConditions: "",
+  medications: "",
+  allergies: "",
+  mentalHealthHistory: "",
+  suicidalIdeation: "",            // select
+  homicidalIdeation: "",           // select
+  legalIssues: "",
+  familyHistory: "",
+  additionalNotes: "",
+}
+Section: Substance Use History
+
+Primary Substance (text input, placeholder: "Substance")
+Last Used (text input, placeholder: "Last Used")
+First Used (text input, placeholder: "First Used")
+Frequency (text input, placeholder: "Frequency")
+Amount (text input, placeholder: "Amount")
+Route (text input, placeholder: "Route")
+Method (text input, placeholder: "Method")
+Lay these out in a 2-column grid on desktop, 1-column on mobile
+
+Section: Treatment History
+
+Previous Treatment (textarea, placeholder: "Previous treatment episodes, dates, facilities, outcomes...")
+
+Section: Severity of Illness
+
+Severity select dropdown with options: none, passive (Passive), active_no_plan (Active – No Plan), active_with_plan (Active – With Plan)
+
+Section: Withdrawal Symptoms
+
+Checkbox grid (3 columns on desktop, 2 on mobile) with these exact symptoms:
+
+"Tremors", "Sweating", "Nausea/Vomiting", "Anxiety", "Insomnia", "Agitation", "Hallucinations", "Seizure History", "Elevated HR", "Elevated BP"
+
+
+Clicking a checkbox toggles that symptom in the withdrawalSymptoms array
+Additional Withdrawal Notes textarea (placeholder: "Additional withdrawal notes...")
+
+Section: Psychosocial Information
+
+Psychosocial Notes (textarea, placeholder: "Living situation, employment, support system, stressors...")
+Medical Conditions (textarea, placeholder: "Current medical conditions...")
+Current Medications (textarea, placeholder: "List current medications...")
+Allergies (textarea, placeholder: "Known allergies...")
+Mental Health History (textarea, placeholder: "Prior diagnoses, hospitalizations...")
+Suicidal Ideation (select): options: None, Passive, Active – No Plan, Active – With Plan
+Homicidal Ideation (select): options: None, Passive, Active
+Legal Issues (textarea, placeholder: "Pending charges, probation, court dates...")
+Family History (textarea, placeholder: "Family history of substance use, mental health...")
+Additional Notes (textarea, placeholder: "Any other relevant information...")
+
+Complete button: "Mark Pre-Cert Complete" — sets isComplete: 'yes' and saves
+
+FORM 2: Nursing Admission Assessment
+Card Title: "Nursing Admission Assessment"
+API endpoints: GET/PUT /api/inquiries/:id/nursing-assessment
+Initial form state:
+typescript{
+  // Vital Signs
+  bloodPressure: "",
+  heartRate: "",
+  temperature: "",
+  respiratoryRate: "",
+  oxygenSaturation: "",
+  weight: "",
+  height: "",
+  // Allergies
+  allergies: "",
+  allergiesNotes: "",
+  // Review of Systems
+  reviewOfSystemsNotes: "",
+  reviewOfSystemsFindings: "",       // select: normal / abnormal / not assessed
+  // Pain Screen
+  painLocation: "",
+  painLevel: "",                     // select: 0-10 or "No Pain"
+  painNotes: "",
+  // Suicide Risk Questionnaire
+  suicideRiskLevel: "",              // select: Low / Moderate / High / Imminent
+  suicideRiskNotes: "",
+  // Nutritional Screen
+  nutritionalNotes: "",
+  dietaryRestrictions: "",
+  // General Appearance
+  generalAppearanceNotes: "",
+  orientationStatus: "",             // select: Oriented x4 / Oriented x3 / Confused / Unresponsive
+  // Additional Nursing Notes
+  additionalNursingNotes: "",
+}
+Section: Vital Signs (2-column grid on desktop)
+
+Blood Pressure (text input, placeholder: "120/80")
+Heart Rate (text input, placeholder: "72 bpm")
+Temperature (text input, placeholder: "98.6°F")
+Respiratory Rate (text input, placeholder: "16/min")
+Oxygen Saturation (text input, placeholder: "98%")
+Weight (text input, placeholder: "165 lbs")
+Height (text input, placeholder: "5ft 10in")
+
+Section: Allergies
+
+Allergies (textarea, placeholder: "List all known allergies and reactions...")
+
+Section: Review of Systems
+
+Findings (select: Normal / Abnormal / Not Assessed)
+Notes (textarea, placeholder: "Notes on any abnormal findings...")
+
+Section: Pain Screen
+
+Pain Level (select: No Pain / 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 / 10)
+Location (text input, placeholder: "Location...")
+Notes (textarea, placeholder: "Pain notes...")
+
+Section: Suicide Risk Questionnaire
+
+Risk Level (select: Low / Moderate / High / Imminent)
+Notes (textarea, placeholder: "Risk assessment notes, safety plan...")
+
+Section: Nutritional Screen
+
+Nutritional Notes (textarea, placeholder: "Nutritional status, eating patterns, concerns...")
+Dietary Restrictions (textarea, placeholder: "Dietary restrictions...")
+
+Section: General Appearance
+
+General Appearance Notes (textarea, placeholder: "Hygiene, grooming, affect...")
+Orientation Status (select: Oriented x4 / Oriented x3 / Confused / Unresponsive)
+
+Section: Additional Nursing Notes
+
+Additional Nursing Observations (textarea, placeholder: "Additional nursing observations and notes...")
+
+Complete button: "Mark Nursing Assessment Complete"
+
+FORM 3: Pre-Screening Form
+Card Title: "Pre-Screening Form"
+API endpoints: GET/PUT /api/inquiries/:id/pre-screening
+Initial form state:
+typescript{
+  // Referral Source
+  referralSource: "",               // select
+  referralSourceOther: "",
+  referralContact: "",
+  referralPhone: "",
+  // Level of Care Interest
+  levelOfCareInterest: "",          // select: Detox / RTC / PHP / IOP / OP
+  insuranceType: "",                // select: Private / Medicaid / Medicare / Self-Pay / Other
+  hasInsurance: "",                 // select: Yes / No
+  // Legal Status
+  hasLegalIssues: "",               // select: Yes / No
+  isCourtOrdered: "",               // select: Yes / No
+  isOnProbation: "",                // select: Yes / No
+  hasRegisteredOffenses: "",        // select: Yes / No
+  legalDetails: "",
+  // Mental Health History
+  mentalHealthDiagnoses: "",
+  psychiatricHospitalizations: "",
+  currentMedications: "",
+  // Substance Use Summary
+  primarySubstance: "",
+  lastUseDate: "",
+  substanceUseHistory: "",
+  previousTreatment: "",
+  // Motivation
+  motivationLevel: "",              // select: Pre-Contemplation / Contemplation / Preparation / Action / Maintenance
+  barriers: "",
+  // Program Recommendation
+  programRecommendation: "",        // select: Detox / RTC / PHP / IOP / OP / Not Appropriate
+  recommendationNotes: "",
+  screeningNotes: "",
+}
+Section: Referral Source
+
+Referral Source (select): Self-Referral, Family/Friend, Hospital/ER, Therapist/Counselor, Doctor/Physician, Detox/Treatment Center, Court/Probation, Employer/EAP, Online/Website, Insurance Company, Other
+If "Other" selected: show text input (placeholder: "Specify other referral source...")
+Referral Contact Name (text input)
+Referral Phone (text input)
+
+Section: Level of Care Interest
+
+Level of Care (select): Detox, Residential (RTC), Partial Hospitalization (PHP), Intensive Outpatient (IOP), Outpatient (OP)
+Insurance Type (select): Private Insurance, Medicaid, Medicare, Self-Pay, Other
+Has Active Insurance (select): Yes, No
+
+Section: Legal Status
+
+Has Legal Issues (select: Yes / No)
+Is Court Ordered (select: Yes / No)
+On Probation/Parole (select: Yes / No)
+Has Registered Offenses (select: Yes / No)
+If "Has Legal Issues" = Yes: show Legal Details textarea (placeholder: "Legal issue details...")
+
+Section: Mental Health History
+
+Current/Past Mental Health Diagnoses (textarea, placeholder: "Current or past diagnoses...")
+Psychiatric Hospitalizations (textarea, placeholder: "Dates, facilities, reasons...")
+Current Medications (textarea, placeholder: "List medications...")
+
+Section: Substance Use Summary
+
+Primary Substance (text input, placeholder: "Primary substance...")
+Last Use Date (text input)
+Substance Use History (textarea, placeholder: "Brief substance use history...")
+Previous Treatment (textarea, placeholder: "Previous treatment attempts...")
+
+Section: Motivation Level
+
+Motivation Level (select): Pre-Contemplation, Contemplation, Preparation, Action, Maintenance
+Barriers to Treatment (textarea, placeholder: "Financial, transportation, childcare...")
+
+Section: Program Recommendation
+
+Recommended Program (select): Detox, Residential (RTC), PHP, IOP, Outpatient, Not Clinically Appropriate
+Recommendation Notes (textarea, placeholder: "Recommendation notes and rationale...")
+Additional Screening Notes (textarea, placeholder: "Any additional screening notes...")
+
+Complete button: "Mark Pre-Screening Complete"
+
+INTEGRATION INTO INQUIRY DETAIL PAGE
+In the existing InquiryDetail.tsx (or equivalent), find where the inquiry's pipeline stage content is rendered. Add this block:
+tsximport { PreAssessmentForms } from "@/components/PreAssessmentForms";
+
+// Inside the inquiry detail, when displaying stage-specific content:
+{inquiry.stage === 'pre_assessment' && (
+  <PreAssessmentSection
+    inquiryId={inquiry.id}
+    onComplete={(notes) => updateMutation.mutate({
+      preAssessmentCompleted: "yes",
+      preAssessmentDate: new Date(),
+      preAssessmentNotes: notes,
+      stage: "scheduled"
+    })}
+  />
+)}
+PreAssessmentSection component (can be in same file or PreAssessmentForms.tsx):
+
+Card with title "Pre-Assessment"
+Renders <PreAssessmentForms inquiryId={inquiryId} />
+Below the forms, shows "Additional Assessment Notes" textarea
+Shows form completion status summary: "Form 1: ✅ Complete | Form 2: ⏳ In Progress | Form 3: ⏳ In Progress"
+"Pre-Assessment Complete – Schedule Admission" button at the bottom
+
+Clicking this sets preAssessmentCompleted: 'yes', saves notes, and moves inquiry to next stage ("scheduled")
+This button should be disabled until all 3 forms are marked complete (show tooltip: "Complete all 3 forms to continue")
+
+
+"Download Pre-Assessment Forms" button (calls GET /api/inquiries/:id/download-pre-assessment-forms to download the ZIP)
+
+
+PRE-ASSESSMENT STAGE — PIPELINE STAGE DISPLAY
+On the main pipeline/dashboard view where stages are shown as cards (like the existing stage cards), the Pre-Assessment card should:
+
+Show the clipboard icon (ClipboardCheck from lucide-react)
+Show count of inquiries in pre_assessment stage
+Use indigo color scheme: bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300
+When expanded: show each inquiry as a card with name, date, and form completion progress (e.g., "2/3 forms complete")
+
+
+STYLING REQUIREMENTS
+
+Match the existing dark navy / card-based design system
+All forms use the existing shadcn/ui components: Input, Textarea, Select, Checkbox, Label, Card, CardContent, CardTitle, Tabs, TabsList, TabsTrigger, TabsContent, Badge, Button
+Section headers use className="text-base font-semibold" with a bottom border separator
+Form fields use className="text-sm font-medium" for labels
+Checkboxes in the withdrawal symptoms section use a 3-column grid: grid grid-cols-3 gap-2
+Vital signs use a 2-column grid: grid grid-cols-2 gap-4
+All other fields are full-width, stacked vertically with space-y-4
+Mobile: everything is 1-column, forms are scrollable
+Auto-save indicator: small text in top-right of each form card showing "Saving..." (gray) or "Saved ✓" (green)
+Completed forms: Tab trigger shows a green checkmark badge next to the name
+Incomplete forms: Tab trigger shows a yellow dot indicator
+
+
+COMPLETE THE FLOW
+After all three forms are marked complete and "Pre-Assessment Complete – Schedule Admission" is clicked:
+
+Set preAssessmentCompleted = 'yes' and preAssessmentDate = new Date() on the inquiry
+Move the inquiry to the scheduled stage
+Show a success toast: "Pre-assessment complete. Inquiry moved to Scheduled."
+Refresh the inquiry data
+
+
+DATABASE MIGRATION NOTE
+After adding the new columns to the Drizzle schema, run:
+bashnpm run db:push
+This will apply the schema changes to the PostgreSQL database without data loss.
