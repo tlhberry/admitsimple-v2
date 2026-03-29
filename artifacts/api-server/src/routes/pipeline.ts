@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { pipelineStages, inquiries, users } from "@workspace/db/schema";
-import { eq, asc, desc } from "drizzle-orm";
+import { eq, asc, desc, notInArray } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 
 const router = Router();
@@ -19,32 +19,18 @@ router.get("/pipeline/stages", async (req, res) => {
 
 router.get("/pipeline/inquiries", async (req, res) => {
   try {
-    const stages = await db.select().from(pipelineStages).where(eq(pipelineStages.isActive, true)).orderBy(asc(pipelineStages.order));
-    const allInquiries = await db.select({
-      id: inquiries.id,
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      status: inquiries.status,
-      priority: inquiries.priority,
-      assignedTo: inquiries.assignedTo,
-      assignedToName: users.name,
-      createdAt: inquiries.createdAt,
-    })
-    .from(inquiries)
-    .leftJoin(users, eq(inquiries.assignedTo, users.id))
-    .where(eq(inquiries.status, "new"))
-    .orderBy(desc(inquiries.createdAt));
+    const stages = await db
+      .select()
+      .from(pipelineStages)
+      .where(eq(pipelineStages.isActive, true))
+      .orderBy(asc(pipelineStages.order));
 
-    const statusMap: Record<string, string> = {
-      "New Inquiry": "new",
-      "Initial Contact": "contacted",
-      "Insurance Verification": "qualified",
-      "Clinical Assessment": "qualified",
-      "Admissions Decision": "qualified",
-    };
+    // Statuses that mean the inquiry is no longer in the active pipeline
+    const excludedStatuses = ["admitted", "declined", "discharged", "closed", "converted"];
 
-    const result = await Promise.all(stages.map(async stage => {
-      const stageInquiries = await db.select({
+    // Fetch all active inquiries (exclude end-stage statuses)
+    const allInquiries = await db
+      .select({
         id: inquiries.id,
         firstName: inquiries.firstName,
         lastName: inquiries.lastName,
@@ -53,81 +39,43 @@ router.get("/pipeline/inquiries", async (req, res) => {
         assignedTo: inquiries.assignedTo,
         assignedToName: users.name,
         createdAt: inquiries.createdAt,
+        updatedAt: inquiries.updatedAt,
       })
       .from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
-      .where(eq(inquiries.referralContact, `stage:${stage.id}`));
+      .where(notInArray(inquiries.status, excludedStatuses))
+      .orderBy(desc(inquiries.updatedAt));
 
-      const now = new Date();
-      const cards = stageInquiries.map(inq => ({
-        ...inq,
-        daysInStage: Math.floor((now.getTime() - new Date(inq.createdAt!).getTime()) / 86400000),
-      }));
+    // Map legacy lowercase statuses to the canonical stage name so they
+    // still appear correctly after the pipeline stages were renamed.
+    const legacyStatusToStageName: Record<string, string> = {
+      "new": "New Inquiry",
+      "contacted": "Initial Contact",
+      "qualified": "Insurance Verification",
+      // anything that already equals a stage name passes through below
+    };
 
-      return { stage, inquiries: cards };
-    }));
+    // Build a Set of all active stage names for O(1) lookup
+    const stageNames = new Set(stages.map(s => s.name));
 
-    const allInqs = await db.select({
-      id: inquiries.id,
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      status: inquiries.status,
-      priority: inquiries.priority,
-      assignedTo: inquiries.assignedTo,
-      assignedToName: users.name,
-      createdAt: inquiries.createdAt,
-      updatedAt: inquiries.updatedAt,
-    })
-    .from(inquiries)
-    .leftJoin(users, eq(inquiries.assignedTo, users.id))
-    .where(eq(inquiries.status, "new"));
+    // For each inquiry, resolve its effective stage name
+    const resolveStage = (status: string): string => {
+      if (stageNames.has(status)) return status;           // exact match (post-drag)
+      return legacyStatusToStageName[status] ?? "New Inquiry"; // legacy fallback
+    };
 
     const now = new Date();
-    const defaultStageMap: Record<number, any[]> = {};
-    stages.forEach((s, i) => { defaultStageMap[s.id] = []; });
 
-    allInqs.forEach(inq => {
-      if (stages[0]) {
-        defaultStageMap[stages[0].id].push({
+    const pipeline = stages.map(stage => {
+      const stageInquiries = allInquiries
+        .filter(inq => resolveStage(inq.status) === stage.name)
+        .map(inq => ({
           ...inq,
-          daysInStage: Math.floor((now.getTime() - new Date(inq.createdAt!).getTime()) / 86400000),
-        });
-      }
-    });
+          daysInStage: Math.floor(
+            (now.getTime() - new Date(inq.updatedAt ?? inq.createdAt!).getTime()) / 86400000
+          ),
+        }));
 
-    const contacted = await db.select({
-      id: inquiries.id,
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      status: inquiries.status,
-      priority: inquiries.priority,
-      assignedTo: inquiries.assignedTo,
-      assignedToName: users.name,
-      createdAt: inquiries.createdAt,
-    })
-    .from(inquiries)
-    .leftJoin(users, eq(inquiries.assignedTo, users.id))
-    .where(eq(inquiries.status, "contacted"));
-
-    const qualified = await db.select({
-      id: inquiries.id,
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      status: inquiries.status,
-      priority: inquiries.priority,
-      assignedTo: inquiries.assignedTo,
-      assignedToName: users.name,
-      createdAt: inquiries.createdAt,
-    })
-    .from(inquiries)
-    .leftJoin(users, eq(inquiries.assignedTo, users.id))
-    .where(eq(inquiries.status, "qualified"));
-
-    const pipeline = stages.map((stage, i) => {
-      let stageInquiries: any[] = [];
-      if (i === 0) stageInquiries = allInqs.map(inq => ({ ...inq, daysInStage: Math.floor((now.getTime() - new Date(inq.createdAt!).getTime()) / 86400000) }));
-      else if (i === 1) stageInquiries = contacted.map(inq => ({ ...inq, daysInStage: Math.floor((now.getTime() - new Date(inq.createdAt!).getTime()) / 86400000) }));
-      else if (i >= 2) stageInquiries = qualified.filter((_, idx) => idx % (stages.length - 2) === i - 2).map(inq => ({ ...inq, daysInStage: Math.floor((now.getTime() - new Date(inq.createdAt!).getTime()) / 86400000) }));
       return { stage, inquiries: stageInquiries };
     });
 
