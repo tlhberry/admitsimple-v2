@@ -1,16 +1,19 @@
 import { useGetPipelineInquiries } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { useState, useEffect } from "react";
-import { Loader2, Brain, Clock, MoreHorizontal } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Brain, Clock, MoreHorizontal, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getStatusColor, cn } from "@/lib/utils";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { PipelineColumn, PipelineCard } from "@workspace/api-client-react";
+import { useLocation } from "wouter";
 
 export default function Pipeline() {
   const { data, isLoading } = useGetPipelineInquiries();
   const { updateInquiry } = useInquiriesMutations();
+  const [, navigate] = useLocation();
+  const justDragged = useRef(false);
   
   const [columns, setColumns] = useState<PipelineColumn[]>([]);
 
@@ -44,11 +47,20 @@ export default function Pipeline() {
     
     setColumns(newCols);
 
+    // Flag so card click handler doesn't navigate after a drag
+    justDragged.current = true;
+    setTimeout(() => { justDragged.current = false; }, 200);
+
     // Persist to API
     await updateInquiry.mutateAsync({ 
       id: parseInt(draggableId), 
       data: { status: destCol.stage.name } 
     });
+  };
+
+  const handleCardClick = (id: number) => {
+    if (justDragged.current) return;
+    navigate(`/inquiries/${id}`);
   };
 
   if (isLoading) return <Layout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
@@ -97,15 +109,21 @@ export default function Pipeline() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
+                            onClick={() => handleCardClick(item.id)}
                             className={cn(
-                              "bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative",
+                              "bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative",
                               snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 border-primary/50 ring-1 ring-primary/20",
                               item.priority === 'High' && "border-l-4 border-l-rose-500"
                             )}
                           >
                             <div className="flex justify-between items-start mb-2">
-                              <h4 className="font-semibold text-slate-900 text-sm">{item.firstName} {item.lastName}</h4>
-                              {item.priority === 'High' && <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Urgent</span>}
+                              <h4 className="font-semibold text-slate-900 text-sm group-hover:text-primary transition-colors">
+                                {item.firstName} {item.lastName}
+                              </h4>
+                              <div className="flex items-center gap-1.5">
+                                {item.priority === 'High' && <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Urgent</span>}
+                                <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-primary/60 transition-colors opacity-0 group-hover:opacity-100" />
+                              </div>
                             </div>
                             
                             <div className="flex items-center justify-between mt-4">
