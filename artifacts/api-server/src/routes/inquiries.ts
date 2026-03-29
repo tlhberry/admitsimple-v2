@@ -25,6 +25,7 @@ const fullInquirySelect = {
   levelOfCare: inquiries.levelOfCare,
   referralSource: inquiries.referralSource,
   referralContact: inquiries.referralContact,
+  searchKeywords: inquiries.searchKeywords,
   assignedTo: inquiries.assignedTo,
   assignedToName: users.name,
   status: inquiries.status,
@@ -137,7 +138,7 @@ router.put("/inquiries/:id", async (req, res) => {
     const fields = [
       "firstName","lastName","phone","email","dob","insuranceProvider","insuranceMemberId",
       "primaryDiagnosis","substanceHistory","medicalHistory","mentalHealthHistory","levelOfCare",
-      "referralSource","referralContact","status","priority","notes",
+      "referralSource","referralContact","searchKeywords","status","priority","notes",
       "preAssessmentCompleted","preAssessmentNotes",
     ];
     fields.forEach(f => { if (data[f] !== undefined) update[f] = data[f]; });

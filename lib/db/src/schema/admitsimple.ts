@@ -49,6 +49,7 @@ export const inquiries = pgTable("inquiries", {
   parsedAt: timestamp("parsed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  searchKeywords: text("search_keywords"),
   // Pre-assessment forms
   preCertFormData: jsonb("pre_cert_form_data"),
   preCertFormComplete: varchar("pre_cert_form_complete", { length: 10 }).default("no"),

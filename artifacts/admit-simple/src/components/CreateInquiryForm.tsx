@@ -2,13 +2,14 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { useAIFeatures } from "@/hooks/use-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UploadCloud, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
+import { UploadCloud, Sparkles, Loader2, CheckCircle2, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateInquiryBody } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ const formSchema = z.object({
   insuranceProvider: z.string().optional(),
   insuranceMemberId: z.string().optional(),
   levelOfCare: z.string().optional(),
+  referralSource: z.string().optional(),
+  searchKeywords: z.string().optional(),
   status: z.string().default("New"),
   priority: z.string().default("Medium"),
   primaryDiagnosis: z.string().optional(),
@@ -41,10 +44,18 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   const [isParsing, setIsParsing] = useState(false);
   const [parseSuccess, setParseSuccess] = useState(false);
 
+  const { data: referralSources = [] } = useQuery<any[]>({
+    queryKey: ["/api/referrals"],
+    queryFn: () => fetch("/api/referrals", { credentials: "include" }).then(r => r.json()),
+    staleTime: 60000,
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { status: "New", priority: "Medium" }
   });
+
+  const watchedReferralSource = form.watch("referralSource");
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -141,6 +152,35 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-slate-700 font-medium">Referral Source</Label>
+            <Select onValueChange={(v) => form.setValue("referralSource", v === "none" ? "" : v)} defaultValue={form.getValues("referralSource")}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue placeholder="Select source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— None —</SelectItem>
+                {referralSources.map((s: any) => (
+                  <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(watchedReferralSource === "Google PPC" || watchedReferralSource === "Google Organic") && (
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label className="text-slate-700 font-medium flex items-center gap-1.5">
+                <Search className="w-4 h-4 text-primary" /> Search Keywords
+              </Label>
+              <Input
+                {...form.register("searchKeywords")}
+                placeholder="e.g. drug rehab near me, alcohol treatment center"
+                className="h-11 rounded-xl"
+              />
+              <p className="text-xs text-slate-400">Keywords the client searched before calling</p>
+            </div>
+          )}
         </div>
 
         <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-4">

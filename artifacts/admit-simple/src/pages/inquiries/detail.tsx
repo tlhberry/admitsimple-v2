@@ -5,13 +5,15 @@ import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, Loader2, Sparkles, ClipboardCheck, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check } from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { useState } from "react";
 import { PreAssessmentSection } from "@/components/PreAssessmentForms";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function InquiryDetail() {
   const params = useParams<{ id: string }>();
@@ -28,6 +30,44 @@ export default function InquiryDetail() {
   const defaultTab = isPreAssessment ? "pre_assessment" : "overview";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [editingLeadSource, setEditingLeadSource] = useState(false);
+  const [leadSourceEdit, setLeadSourceEdit] = useState({ referralSource: "", searchKeywords: "" });
+  const [savingLeadSource, setSavingLeadSource] = useState(false);
+
+  const { data: referralSources = [] } = useQuery<any[]>({
+    queryKey: ["/api/referrals"],
+    queryFn: () => fetch("/api/referrals", { credentials: "include" }).then(r => r.json()),
+    staleTime: 60000,
+  });
+
+  const handleStartEditLeadSource = () => {
+    setLeadSourceEdit({
+      referralSource: (inquiry as any)?.referralSource ?? "",
+      searchKeywords: (inquiry as any)?.searchKeywords ?? "",
+    });
+    setEditingLeadSource(true);
+  };
+
+  const handleSaveLeadSource = async () => {
+    setSavingLeadSource(true);
+    try {
+      await fetch(`/api/inquiries/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leadSourceEdit),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
+      await refetch();
+      setEditingLeadSource(false);
+      toast({ title: "Lead source updated" });
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSavingLeadSource(false);
+    }
+  };
 
   const tabs = [
     "overview",
@@ -162,9 +202,90 @@ export default function InquiryDetail() {
                     <DataPoint label="Date of Birth" value={inquiry.dob} />
                     <DataPoint label="Insurance Provider" value={inquiry.insuranceProvider} />
                     <DataPoint label="Member ID" value={inquiry.insuranceMemberId} />
-                    <DataPoint label="Referral Source" value={inquiry.referralSource} />
                     <DataPoint label="Assigned To" value={inquiry.assignedToName} />
                   </dl>
+
+                  {/* Lead Source Section */}
+                  <div className="mt-5 pt-5 border-t border-border/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Search className="w-3.5 h-3.5" /> Lead Source
+                      </h4>
+                      {!editingLeadSource && (
+                        <button
+                          onClick={handleStartEditLeadSource}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
+                      )}
+                    </div>
+
+                    {editingLeadSource ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Referral Source</label>
+                          <Select
+                            value={leadSourceEdit.referralSource || "none"}
+                            onValueChange={v => setLeadSourceEdit(prev => ({ ...prev, referralSource: v === "none" ? "" : v }))}
+                          >
+                            <SelectTrigger className="h-9 rounded-lg text-sm">
+                              <SelectValue placeholder="Select source..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— None —</SelectItem>
+                              {referralSources.map((s: any) => (
+                                <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {(leadSourceEdit.referralSource === "Google PPC" || leadSourceEdit.referralSource === "Google Organic") && (
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Search Keywords</label>
+                            <Input
+                              value={leadSourceEdit.searchKeywords}
+                              onChange={e => setLeadSourceEdit(prev => ({ ...prev, searchKeywords: e.target.value }))}
+                              placeholder="e.g. drug rehab near me, alcohol treatment"
+                              className="h-9 rounded-lg text-sm"
+                            />
+                          </div>
+                        )}
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={handleSaveLeadSource}
+                            disabled={savingLeadSource}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
+                          >
+                            {savingLeadSource ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingLeadSource(false)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="w-3 h-3" /> Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <dt className="text-xs font-medium text-muted-foreground mb-1">Source</dt>
+                          <dd className="text-sm font-semibold text-foreground">{(inquiry as any).referralSource || "—"}</dd>
+                        </div>
+                        {(inquiry as any).searchKeywords && (
+                          <div className="sm:col-span-2">
+                            <dt className="text-xs font-medium text-muted-foreground mb-1">Search Keywords</dt>
+                            <dd className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                              <Search className="w-3.5 h-3.5 text-primary shrink-0" />
+                              {(inquiry as any).searchKeywords}
+                            </dd>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
