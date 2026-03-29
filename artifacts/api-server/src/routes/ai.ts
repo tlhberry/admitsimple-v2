@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { inquiries, patients, referralSources, pipelineStages } from "@workspace/db/schema";
 import { eq, count, gte, lte, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
@@ -370,6 +370,129 @@ say so and explain what additional data would help. Always be helpful and action
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "AI processing failed" });
+  }
+});
+
+// ─── Natural language report builder ─────────────────────────────────────────
+
+const ALLOWED_TABLES = [
+  "users", "inquiries", "patients", "activities",
+  "referral_sources", "referral_accounts", "bd_activity_logs",
+  "referral_contacts", "audit_logs", "pipeline_stages",
+];
+
+const REPORT_SCHEMA_PROMPT = `You are a data analyst for an addiction treatment admissions CRM.
+Your job is to convert natural language into SQL queries for a PostgreSQL database.
+
+STRICT RULES:
+- ONLY return a SQL SELECT query — nothing else
+- NEVER use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, or any write operation
+- LIMIT results to 500 rows max (always add LIMIT 500 if not specified)
+- Return ONLY the raw SQL query — no markdown, no explanation, no code fences
+
+TABLES AND COLUMNS (all column names are snake_case):
+
+users: id, name, email, role, created_at
+  role values: 'admin', 'staff', 'clinical', 'bd_rep'
+
+inquiries: id, first_name, last_name, phone, email, status, level_of_care,
+  referral_source, assigned_to (FK → users.id), created_at, search_keywords
+  status values: 'new', 'Initial Contact', 'Insurance Verification', 'Clinical Review', 'Admitted', 'Declined', 'Waitlist'
+  level_of_care values: 'Detox', 'RTC', 'PHP', 'IOP', 'OP'
+
+patients: id, inquiry_id (FK → inquiries.id), first_name, last_name,
+  level_of_care, admit_date, discharge_date, current_stage, status,
+  credit_user_id (FK → users.id), assigned_admissions (FK → users.id),
+  assigned_clinician (FK → users.id), created_at
+
+activities: id, inquiry_id (FK → inquiries.id), user_id (FK → users.id),
+  type, subject, body, created_at
+  type values: 'call', 'email', 'note', 'meeting', 'face_to_face', 'other'
+
+bd_activity_logs: id, account_id (FK → referral_accounts.id),
+  user_id (FK → users.id), activity_type, notes, activity_date, created_at
+  activity_type values: 'face_to_face', 'phone_call', 'email', 'meeting', 'lunch', 'presentation', 'other'
+
+referral_sources: id, name, type, contact, phone, email, is_active,
+  owned_by_user_id (FK → users.id), created_at
+
+referral_accounts: id, name, type, address, phone, assigned_bd_rep_id (FK → users.id),
+  created_by (FK → users.id), created_at
+
+COMMON QUERY PATTERNS:
+- "admits by rep this month" → SELECT u.name, COUNT(p.id) as admits FROM patients p JOIN users u ON p.credit_user_id = u.id WHERE p.admit_date >= date_trunc('month', NOW()) GROUP BY u.name ORDER BY admits DESC LIMIT 500
+- "inquiries this week" → WHERE created_at >= date_trunc('week', NOW())
+- "last 30 days" → WHERE created_at >= NOW() - INTERVAL '30 days'
+- "face to face meetings" → FROM bd_activity_logs WHERE activity_type = 'face_to_face'
+- "top referral sources" → SELECT referral_source, COUNT(*) FROM inquiries GROUP BY referral_source ORDER BY count DESC
+- "by rep" → JOIN users on the relevant user FK, GROUP BY users.name
+
+Return ONLY the SQL query. No explanation. No markdown. No code fences.`;
+
+router.post("/ai/report", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== "string") {
+      res.status(400).json({ error: "prompt is required" });
+      return;
+    }
+
+    // Step 1: Generate SQL from natural language
+    const sqlResponse = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 1000,
+      system: REPORT_SCHEMA_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const rawSql = (sqlResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "";
+
+    // Strip markdown code fences if Claude added them
+    const cleanSql = rawSql
+      .replace(/^```sql\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```\s*$/, "")
+      .trim();
+
+    // Step 2: Validate — reject any write operations using whole-word matching
+    const upperSql = cleanSql.toUpperCase();
+    const forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE", "CREATE", "GRANT", "REVOKE"];
+    for (const kw of forbidden) {
+      // Use word-boundary regex so "created_at" does not match "CREATE"
+      if (new RegExp(`\\b${kw}\\b`).test(upperSql)) {
+        res.status(400).json({ error: `Query rejected: contains forbidden keyword '${kw}'` });
+        return;
+      }
+    }
+
+    // Validate it starts with SELECT
+    if (!upperSql.trimStart().startsWith("SELECT")) {
+      res.status(400).json({ error: "Only SELECT queries are allowed" });
+      return;
+    }
+
+    // Step 3: Execute the query
+    const result = await pool.query(cleanSql);
+    const columns: string[] = result.fields.map((f: any) => f.name);
+    const rows: any[][] = result.rows.map((row: any) => columns.map(col => row[col]));
+
+    // Step 4: Generate a human summary
+    const summaryResponse = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 200,
+      messages: [{
+        role: "user",
+        content: `Summarize this report in one short sentence for a business user. Be specific about the numbers.\n\n${JSON.stringify({ columns, rowCount: rows.length, sample: rows.slice(0, 5) })}`,
+      }],
+    });
+
+    const summary = (summaryResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "";
+
+    res.json({ columns, rows, summary, rowCount: rows.length, sql: cleanSql });
+  } catch (err: any) {
+    req.log.error(err);
+    const msg = err?.message ?? "AI report generation failed";
+    res.status(500).json({ error: msg });
   }
 });
 

@@ -1,0 +1,163 @@
+We are adding an AI-powered custom report builder to an existing admissions CRM.
+
+Do NOT change or break any existing functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+Add a natural language report feature where users can type a request and instantly generate a report from the database.
+
+-----------------------------------
+FRONTEND REQUIREMENTS
+-----------------------------------
+On the Reports page:
+
+1. Add a new input section above the report display area:
+
+- Text input field
+- Placeholder:
+  "Ask anything... admits by rep this month, top referral sources, face to face meetings last week"
+
+- Button: "Generate"
+
+2. When user submits:
+- Call POST /api/ai/report
+- Pass the input text as "prompt"
+
+3. Replace the empty report state with:
+- AI summary (short sentence)
+- Table of results
+- Clean formatting (match existing UI style)
+
+4. Add loading state while generating
+
+-----------------------------------
+BACKEND REQUIREMENTS
+-----------------------------------
+
+Create a new route:
+
+POST /api/ai/report
+
+Request body:
+{
+  "prompt": string
+}
+
+-----------------------------------
+AI SQL GENERATION
+-----------------------------------
+
+Send this exact system prompt to Claude:
+
+"You are a data analyst for an admissions CRM.
+
+Your job is to convert natural language into SQL queries.
+
+STRICT RULES:
+- ONLY return a SQL SELECT query
+- NEVER use INSERT, UPDATE, DELETE, DROP
+- LIMIT results to 500 rows
+- ALWAYS filter by company_id = {{companyId}}
+- Use ONLY these tables:
+
+TABLES:
+
+inquiries:
+- id
+- created_at
+- user_id
+- referral_source_id
+- status
+
+admissions:
+- id
+- inquiry_id
+- user_id
+- referral_source_id
+- admitted_at
+
+users:
+- id
+- name
+- initials
+
+referral_sources:
+- id
+- name
+- owner_user_id
+
+activities:
+- id
+- type
+- user_id
+- created_at
+
+RELATIONSHIPS:
+- admissions.inquiry_id → inquiries.id
+- admissions.user_id → users.id
+- inquiries.referral_source_id → referral_sources.id
+- activities.user_id → users.id
+
+COMMON REQUESTS:
+- 'admits by rep' = group by users.name from admissions
+- 'this month' = filter admitted_at >= start of current month
+- 'last 30 days' = NOW() - INTERVAL '30 days'
+- 'face to face meetings' = activities.type = 'face_to_face'
+
+Return ONLY SQL. No explanation."
+
+-----------------------------------
+VALIDATION (CRITICAL)
+-----------------------------------
+
+Before executing:
+- Reject query if it contains:
+  - UPDATE
+  - DELETE
+  - INSERT
+  - DROP
+- Reject if it references unknown tables
+
+-----------------------------------
+EXECUTION
+-----------------------------------
+
+- Run the query
+- Return:
+
+{
+  columns: string[],
+  rows: any[][],
+  summary: string
+}
+
+-----------------------------------
+AI SUMMARY
+-----------------------------------
+
+After getting results:
+Send a second prompt to Claude:
+
+"Summarize this report in one short sentence for a business user:
+<insert JSON result>"
+
+-----------------------------------
+UI DISPLAY
+-----------------------------------
+
+Render:
+- Summary at top
+- Table below
+- Keep styling consistent with existing dashboard
+
+-----------------------------------
+DO NOT
+-----------------------------------
+- Do not modify existing report generation
+- Do not break current routes
+- Do not introduce new dependencies unless necessary
+
+-----------------------------------
+END
+-----------------------------------

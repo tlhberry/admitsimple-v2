@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useListReports, useDeleteReport, useGenerateAiReport } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, FileText, Sparkles, Trash2, Brain, Download } from "lucide-react";
+import { Loader2, FileText, Sparkles, Trash2, Brain, Download, Search, TableIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -17,6 +18,37 @@ export default function Reports() {
   const [isGenerating, setIsGenerating] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Natural language report builder
+  const [nlPrompt, setNlPrompt] = useState("");
+  const [nlLoading, setNlLoading] = useState(false);
+  const [nlResult, setNlResult] = useState<{ columns: string[]; rows: any[][]; summary: string; rowCount: number } | null>(null);
+  const nlResultRef = useRef<HTMLDivElement>(null);
+
+  const handleNlReport = async () => {
+    if (!nlPrompt.trim()) return;
+    setNlLoading(true);
+    setNlResult(null);
+    try {
+      const resp = await fetch("/api/ai/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ prompt: nlPrompt.trim() }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || "Report generation failed");
+      }
+      const data = await resp.json();
+      setNlResult(data);
+      setTimeout(() => nlResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (err: any) {
+      toast({ title: err.message || "Failed to generate report", variant: "destructive" });
+    } finally {
+      setNlLoading(false);
+    }
+  };
 
   const generateReport = useGenerateAiReport({
     mutation: {
@@ -99,6 +131,95 @@ export default function Reports() {
           </Button>
         </div>
       </div>
+
+      {/* ── Natural Language Report Builder ── */}
+      <Card className="rounded-2xl border-primary/20 bg-primary/5 mb-6">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <h2 className="font-semibold text-foreground text-sm">Ask Anything</h2>
+            <span className="text-xs text-muted-foreground">— natural language report builder powered by Claude</span>
+          </div>
+          <div className="flex gap-3">
+            <Input
+              value={nlPrompt}
+              onChange={e => setNlPrompt(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !nlLoading && handleNlReport()}
+              placeholder="Ask anything... admits by rep this month, top referral sources, face to face meetings last week"
+              className="flex-1 h-11 rounded-xl bg-card border-border text-foreground placeholder:text-muted-foreground"
+              disabled={nlLoading}
+            />
+            <Button
+              onClick={handleNlReport}
+              disabled={nlLoading || !nlPrompt.trim()}
+              className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20 flex gap-2 shrink-0"
+            >
+              {nlLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Generate
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Natural Language Results ── */}
+      {(nlLoading || nlResult) && (
+        <div ref={nlResultRef} className="mb-6">
+          {nlLoading ? (
+            <Card className="rounded-2xl border-border">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-primary space-y-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary rounded-full blur-xl opacity-20 animate-pulse" />
+                  <Brain className="w-10 h-10 relative z-10 animate-bounce" />
+                </div>
+                <p className="font-semibold text-foreground">Claude is querying the database...</p>
+                <p className="text-sm text-muted-foreground">Generating SQL and summarizing results.</p>
+              </CardContent>
+            </Card>
+          ) : nlResult && (
+            <Card className="rounded-2xl border-border overflow-hidden">
+              <CardHeader className="bg-muted/40 border-b border-border py-4 flex flex-row items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                  <TableIcon className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">{nlResult.summary}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{nlResult.rowCount} row{nlResult.rowCount !== 1 ? "s" : ""} returned</p>
+                </div>
+              </CardHeader>
+              {nlResult.rows.length === 0 ? (
+                <CardContent className="py-12 text-center text-muted-foreground text-sm">No results found.</CardContent>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/60 text-muted-foreground border-b border-border">
+                      <tr>
+                        {nlResult.columns.map(col => (
+                          <th key={col} className="px-5 py-3 font-semibold whitespace-nowrap">
+                            {col.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border bg-card">
+                      {nlResult.rows.map((row, i) => (
+                        <tr key={i} className="hover:bg-muted/20 transition-colors">
+                          {row.map((cell, j) => (
+                            <td key={j} className="px-5 py-3 text-foreground whitespace-nowrap">
+                              {cell === null || cell === undefined ? <span className="text-muted-foreground">—</span> : String(cell)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* History list */}
