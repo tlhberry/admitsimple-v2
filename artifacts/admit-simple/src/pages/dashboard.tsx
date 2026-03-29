@@ -1,16 +1,16 @@
 import { useGetDashboardAnalytics } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList } from "lucide-react";
+import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { cn, getStatusColor, formatDate } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
+const COLORS = ['#5BC8DC', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
 
 export default function Dashboard() {
   const { data, isLoading } = useGetDashboardAnalytics();
+  const [, navigate] = useLocation();
 
   if (isLoading) {
     return (
@@ -26,83 +26,74 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Overview of admissions performance and pipeline.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Overview of admissions performance and pipeline.</p>
         </div>
-        <Link href="/inquiries" className="block">
-          <button className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium shadow-md shadow-primary/20 transition-all hover:-translate-y-0.5 flex items-center gap-2">
+        <Link href="/inquiries/new">
+          <button className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium shadow-md shadow-primary/20 transition-all hover:-translate-y-0.5 flex items-center gap-2 text-sm">
             <ClipboardCheck className="w-4 h-4" />
             New Inquiry
           </button>
         </Link>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-        <KpiCard title="Today's Inquiries" value={data.kpi.todaysInquiries} icon={Activity} color="text-blue-500" bg="bg-blue-50" />
-        <KpiCard title="Week's Admissions" value={data.kpi.weeksAdmissions} icon={ClipboardCheck} color="text-emerald-500" bg="bg-emerald-50" />
-        <KpiCard title="Current Census" value={data.kpi.census} icon={Users} color="text-purple-500" bg="bg-purple-50" />
-        <KpiCard title="Conversion Rate" value={`${data.kpi.conversionRate}%`} icon={TrendingUp} color="text-amber-500" bg="bg-amber-50" />
+      {/* KPI Cards — clickable */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <KpiCard title="Today's Inquiries" value={data.kpi.todaysInquiries} icon={Activity}      href="/inquiries" accent="cyan"    />
+        <KpiCard title="Week's Admissions"  value={data.kpi.weeksAdmissions} icon={ClipboardCheck} href="/pipeline"  accent="emerald" />
+        <KpiCard title="Current Census"     value={data.kpi.census}           icon={Users}         href="/patients"  accent="purple"  />
+        <KpiCard title="Conversion Rate"    value={`${data.kpi.conversionRate}%`} icon={TrendingUp} href="/analytics" accent="amber"   />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         {/* Trend Chart */}
-        <Card className="lg:col-span-2 shadow-sm rounded-2xl overflow-hidden border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
+        <Card className="lg:col-span-2 rounded-2xl border-border overflow-hidden">
+          <CardHeader className="bg-muted/40 border-b border-border pb-4">
+            <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+              <TrendingUp className="w-4 h-4 text-primary" />
               Inquiries Trend (30 Days)
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 h-[300px]">
+          <CardContent className="pt-6 h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.inquiriesByDay} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="date" tickFormatter={(str) => str.split('-').slice(1).join('/')} stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(220,18%,29%)" />
+                <XAxis dataKey="date" tickFormatter={(str) => str.split('-').slice(1).join('/')} stroke="hsl(220,15%,54%)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(220,15%,54%)" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '10px', border: 'none', background: 'hsl(220,17%,26%)', color: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.4)' }}
                 />
-                <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="count" stroke="#5BC8DC" strokeWidth={2.5} dot={{ r: 3.5, fill: '#5BC8DC', strokeWidth: 2, stroke: 'hsl(220,17%,22%)' }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Status Donut */}
-        <Card className="shadow-sm rounded-2xl overflow-hidden border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
+        <Card className="rounded-2xl border-border overflow-hidden">
+          <CardHeader className="bg-muted/40 border-b border-border pb-4">
+            <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+              <Sparkles className="w-4 h-4 text-amber-400" />
               Pipeline Breakdown
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 h-[300px] flex flex-col items-center justify-center">
-            <ResponsiveContainer width="100%" height={220}>
+          <CardContent className="pt-4 flex flex-col items-center">
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie
-                  data={data.statusBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="count"
-                  nameKey="status"
-                >
-                  {data.statusBreakdown.map((entry, index) => (
+                <Pie data={data.statusBreakdown} cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="count" nameKey="status">
+                  {data.statusBreakdown.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}/>
+                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', background: 'hsl(220,17%,26%)', color: '#fff' }} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex flex-wrap justify-center gap-3 mt-2">
-              {data.statusBreakdown.slice(0,4).map((item, i) => (
-                <div key={item.status} className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-1 pb-2">
+              {data.statusBreakdown.slice(0, 4).map((item, i) => (
+                <div key={item.status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                   {item.status}
                 </div>
               ))}
@@ -111,18 +102,45 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent Inquiries Table */}
-      <Card className="shadow-sm rounded-2xl overflow-hidden border-slate-200">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-slate-600" />
+      {/* Recent Inquiries */}
+      <Card className="rounded-2xl border-border overflow-hidden">
+        <CardHeader className="bg-muted/40 border-b border-border pb-4 flex flex-row items-center justify-between">
+          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+            <ClipboardList className="w-4 h-4 text-muted-foreground" />
             Recent Inquiries
           </CardTitle>
-          <Link href="/inquiries" className="text-sm font-medium text-primary hover:underline">View All</Link>
+          <Link href="/inquiries" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">View All</Link>
         </CardHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+
+        {/* Mobile: card list */}
+        <div className="md:hidden divide-y divide-border">
+          {data.recentInquiries.length === 0 ? (
+            <p className="px-6 py-8 text-center text-muted-foreground text-sm">No recent inquiries found.</p>
+          ) : data.recentInquiries.map((inq) => (
+            <button key={inq.id} onClick={() => navigate(`/inquiries/${inq.id}`)}
+              className="w-full text-left px-4 py-3.5 flex items-center gap-3 hover:bg-muted/30 transition-colors active:scale-[0.99]">
+              <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
+                {inq.firstName?.charAt(0) ?? "?"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-foreground text-sm truncate">{inq.firstName} {inq.lastName}</div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", getStatusColor(inq.status))}>{inq.status}</span>
+                  <span className="text-[11px] text-muted-foreground">{inq.levelOfCare || "—"}</span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="text-xs text-muted-foreground">{formatDate(inq.createdAt)}</div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 ml-auto" />
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-muted/40 text-muted-foreground border-b border-border">
               <tr>
                 <th className="px-6 py-3 font-medium">Name</th>
                 <th className="px-6 py-3 font-medium">Status</th>
@@ -131,31 +149,22 @@ export default function Dashboard() {
                 <th className="px-6 py-3 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {data.recentInquiries.map((inq) => (
-                <tr key={inq.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-900">
-                    {inq.firstName} {inq.lastName}
-                  </td>
+            <tbody className="divide-y divide-border">
+              {data.recentInquiries.length === 0 ? (
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">No recent inquiries found.</td></tr>
+              ) : data.recentInquiries.map((inq) => (
+                <tr key={inq.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/inquiries/${inq.id}`)}>
+                  <td className="px-6 py-4 font-medium text-foreground">{inq.firstName} {inq.lastName}</td>
                   <td className="px-6 py-4">
-                    <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium border", getStatusColor(inq.status))}>
-                      {inq.status}
-                    </span>
+                    <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium border", getStatusColor(inq.status))}>{inq.status}</span>
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{inq.levelOfCare || '—'}</td>
-                  <td className="px-6 py-4 text-slate-500">{formatDate(inq.createdAt)}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{inq.levelOfCare || '—'}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{formatDate(inq.createdAt)}</td>
                   <td className="px-6 py-4 text-right">
-                    <Link href={`/inquiries/${inq.id}`} className="text-primary hover:underline font-medium">View</Link>
+                    <span className="text-primary hover:text-primary/80 font-medium text-sm">View</span>
                   </td>
                 </tr>
               ))}
-              {data.recentInquiries.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                    No recent inquiries found.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -164,18 +173,32 @@ export default function Dashboard() {
   );
 }
 
-function KpiCard({ title, value, icon: Icon, color, bg }: any) {
+const accentMap: Record<string, { icon: string; bg: string }> = {
+  cyan:    { icon: "text-primary",     bg: "bg-primary/15 border border-primary/20" },
+  emerald: { icon: "text-emerald-400", bg: "bg-emerald-500/15 border border-emerald-500/20" },
+  purple:  { icon: "text-purple-400",  bg: "bg-purple-500/15 border border-purple-500/20" },
+  amber:   { icon: "text-amber-400",   bg: "bg-amber-500/15 border border-amber-500/20" },
+};
+
+function KpiCard({ title, value, icon: Icon, href, accent }: {
+  title: string; value: string | number; icon: any; href: string; accent: string;
+}) {
+  const { icon, bg } = accentMap[accent] ?? accentMap.cyan;
+  const [, navigate] = useLocation();
+
   return (
-    <Card className="rounded-2xl border-slate-200 shadow-sm hover:shadow-md transition-shadow group cursor-default">
-      <CardContent className="p-5 flex items-center gap-4">
-        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", bg, color)}>
-          <Icon className="w-6 h-6" />
+    <button
+      onClick={() => navigate(href)}
+      className="w-full text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 hover:bg-card/70 transition-all group active:scale-[0.98] cursor-pointer"
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", bg)}>
+          <Icon className={cn("w-4 h-4", icon)} />
         </div>
-        <div>
-          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{value}</h3>
-        </div>
-      </CardContent>
-    </Card>
+        <ChevronRight className="ml-auto w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
+      <h3 className="text-2xl font-bold text-foreground tracking-tight">{value}</h3>
+    </button>
   );
 }
