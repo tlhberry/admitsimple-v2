@@ -15,6 +15,7 @@ import webhooksRouter from "./webhooks";
 import bdRouter from "./bd";
 import bdReportsRouter from "./bdReports";
 import auditLogsRouter from "./auditLogs";
+import bedsRouter from "./beds";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(aiRouter);
 router.use(bdRouter);
 router.use(bdReportsRouter);
 router.use(auditLogsRouter);
+router.use(bedsRouter);
 
 export default router;

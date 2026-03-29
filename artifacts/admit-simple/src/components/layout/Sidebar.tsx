@@ -13,6 +13,7 @@ import {
   LogOut,
   Building2,
   Activity,
+  BedDouble,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import logoImg from "@assets/ChatGPT_Image_Mar_29,_2026,_08_28_12_AM_1774787305208.png";
@@ -33,6 +34,7 @@ const navSections = [
       { icon: Building2, label: "Referral Accounts", href: "/referral-accounts" },
       { icon: Activity, label: "Activity Feed", href: "/bd-activity-feed" },
       { icon: TrendingUp, label: "BD Reports", href: "/bd-reports" },
+      { icon: BedDouble, label: "Bed Board", href: "/bed-board" },
     ],
   },
   {

@@ -25,6 +25,7 @@ artifacts/
         analytics/
         reports/
         ai-insights/
+        bed-board/
         settings/
         login.tsx
       components/

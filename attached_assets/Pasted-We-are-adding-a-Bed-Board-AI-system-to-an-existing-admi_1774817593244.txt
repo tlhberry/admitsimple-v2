@@ -1,0 +1,251 @@
+We are adding a Bed Board + AI system to an existing admissions CRM.
+
+DO NOT break any existing functionality.
+DO NOT modify existing routes unless required.
+
+-----------------------------------
+GOAL
+-----------------------------------
+Build a real-time Bed Board that:
+1. Tracks bed availability
+2. Displays current census
+3. Allows filtering and grouping
+4. Uses AI for natural language queries, predictions, and smart insights
+
+-----------------------------------
+DATABASE DESIGN
+-----------------------------------
+
+Create new table: beds
+
+beds:
+- id (uuid)
+- name (string) // ex: "Bed 1"
+- unit (string) // detox, residential, etc
+- status (string) // available, occupied, reserved
+- current_patient_name (string, nullable)
+- gender (string, nullable)
+- expected_discharge_date (timestamp, nullable)
+- created_at
+- updated_at
+
+-----------------------------------
+
+Update admissions table (if needed):
+
+- bed_id (nullable)
+- admitted_at
+- discharged_at
+
+-----------------------------------
+CORE LOGIC
+-----------------------------------
+
+Bed status rules:
+
+- occupied → if patient assigned and no discharge
+- reserved → future admit scheduled
+- available → no patient
+
+Available beds:
+total beds - occupied beds
+
+-----------------------------------
+FRONTEND UI (NEW PAGE: Bed Board)
+-----------------------------------
+
+Create a new page: /bed-board
+
+TOP SECTION:
+- "Beds Available: X / Total"
+- Color indicator:
+  - green (>50% available)
+  - yellow (<50%)
+  - red (<20%)
+
+MAIN BOARD:
+Display beds in grid or list:
+
+Each bed card shows:
+- Bed name
+- Unit
+- Status (color coded)
+- Patient name (if occupied)
+- Expected discharge date
+
+STATUS COLORS:
+- available = green
+- occupied = red
+- reserved = yellow
+
+-----------------------------------
+FILTERS (NON-AI)
+-----------------------------------
+
+Add dropdown filters:
+- Unit
+- Status
+- Gender
+
+-----------------------------------
+AI FEATURES
+-----------------------------------
+
+Add input box at top:
+
+Placeholder:
+"Ask anything about beds..."
+
+Button: "Ask AI"
+
+-----------------------------------
+API ROUTE
+-----------------------------------
+
+POST /api/ai/bedboard
+
+Request:
+{
+  "prompt": string
+}
+
+-----------------------------------
+AI FUNCTIONALITY
+-----------------------------------
+
+Use Claude to interpret user requests.
+
+SYSTEM PROMPT:
+
+"You are a bed board assistant for a treatment center.
+
+You help users understand bed availability and customize views.
+
+You MUST return structured JSON.
+
+DO NOT return SQL.
+
+You can return one of these types:
+
+1. FILTER REQUEST
+{
+  "type": "filter",
+  "filters": {
+    "unit": "detox",
+    "status": "available",
+    "gender": "female"
+  }
+}
+
+2. QUESTION RESPONSE
+{
+  "type": "answer",
+  "answer": "There are 3 detox beds available today."
+}
+
+3. PREDICTION
+{
+  "type": "prediction",
+  "answer": "You will have 4 beds available tomorrow based on scheduled discharges."
+}
+
+4. GROUP VIEW
+{
+  "type": "group",
+  "groupBy": "unit"
+}
+
+-----------------------------------
+AI DATA INPUT
+-----------------------------------
+
+Before calling AI, pass:
+
+- current beds
+- admissions
+- upcoming discharges
+- total capacity
+
+-----------------------------------
+BACKEND LOGIC
+-----------------------------------
+
+1. Receive prompt
+2. Send to AI with current bed data
+3. Parse response
+
+IF type = filter:
+- Apply filters to bed list
+
+IF type = group:
+- Group beds accordingly
+
+IF type = answer:
+- Return text response
+
+IF type = prediction:
+- Use:
+  - expected_discharge_date
+  - current occupancy
+  - avg length of stay (optional)
+
+-----------------------------------
+PREDICTION LOGIC (SIMPLE V1)
+-----------------------------------
+
+Projected available beds =
+current available +
+beds with discharge_date within requested timeframe
+
+-----------------------------------
+FRONTEND BEHAVIOR
+-----------------------------------
+
+- If filter → update board view
+- If group → re-render grouped layout
+- If answer → show message above board
+- If prediction → show highlighted insight box
+
+-----------------------------------
+SMART ALERTS (OPTIONAL V1.1)
+-----------------------------------
+
+Show alerts:
+- "Only 2 beds left"
+- "3 discharges tomorrow"
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not allow AI to modify data
+- Do not allow AI to assign beds
+- Do not allow destructive actions
+
+-----------------------------------
+UI STYLE
+-----------------------------------
+
+Match existing dashboard:
+- dark theme
+- soft borders
+- subtle shadows
+- same card style as metrics
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+User can:
+- See real-time bed availability
+- Ask questions like:
+  "How many detox beds are open?"
+  "Do we have room for 2 admits?"
+  "Show only female beds"
+  "Group beds by unit"
+
+And get instant results.
+
+-----------------------------------
+END
+-----------------------------------

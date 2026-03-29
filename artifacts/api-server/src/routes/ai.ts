@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
-import { inquiries, patients, referralSources, pipelineStages } from "@workspace/db/schema";
+import { inquiries, patients, referralSources, pipelineStages, beds } from "@workspace/db/schema";
 import { eq, count, gte, lte, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import Anthropic from "@anthropic-ai/sdk";
@@ -370,6 +370,88 @@ say so and explain what additional data would help. Always be helpful and action
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "AI processing failed" });
+  }
+});
+
+// ─── Bed Board AI ────────────────────────────────────────────────────────────
+
+router.post("/ai/bedboard", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== "string") {
+      res.status(400).json({ error: "prompt is required" });
+      return;
+    }
+
+    const allBeds = await db.select().from(beds).orderBy(beds.unit, beds.name);
+
+    const total = allBeds.length;
+    const available = allBeds.filter(b => b.status === "available").length;
+    const occupied = allBeds.filter(b => b.status === "occupied").length;
+    const reserved = allBeds.filter(b => b.status === "reserved").length;
+    const units = [...new Set(allBeds.map(b => b.unit))];
+    const upcomingDischarges = allBeds
+      .filter(b => b.expectedDischargeDate && b.status === "occupied")
+      .map(b => ({ name: b.name, unit: b.unit, patient: b.currentPatientName, date: b.expectedDischargeDate }));
+
+    const context = JSON.stringify({
+      summary: { total, available, occupied, reserved, units },
+      beds: allBeds.map(b => ({
+        id: b.id, name: b.name, unit: b.unit, status: b.status,
+        patient: b.currentPatientName, gender: b.gender,
+        expectedDischarge: b.expectedDischargeDate,
+      })),
+      upcomingDischarges,
+    });
+
+    const systemPrompt = `You are a bed board assistant for a residential addiction treatment center.
+You help users understand bed availability and customize views.
+
+You MUST return valid JSON only — no explanation, no markdown.
+
+You can return one of these response types:
+
+1. FILTER REQUEST — when user asks to show/filter beds
+{"type":"filter","filters":{"unit":"detox","status":"available","gender":"female"}}
+All filter fields are optional. Use null to clear a filter.
+
+2. QUESTION ANSWER — when user asks a question about current beds
+{"type":"answer","answer":"There are 3 detox beds available today."}
+
+3. PREDICTION — when user asks about future availability
+{"type":"prediction","answer":"Based on 2 scheduled discharges in the next 2 days, you should have 4 beds available by then."}
+
+4. GROUP VIEW — when user asks to group or organize the board
+{"type":"group","groupBy":"unit"}
+groupBy can be: "unit", "status", or "gender"
+
+Current bed data:
+${context}
+
+Return ONLY valid JSON. No markdown. No explanation.`;
+
+    const aiResponse = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 500,
+      system: systemPrompt,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (aiResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
+    // Strip markdown fences if present
+    const clean = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      parsed = { type: "answer", answer: raw };
+    }
+
+    res.json({ ...parsed, beds: allBeds });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "AI bedboard processing failed" });
   }
 });
 

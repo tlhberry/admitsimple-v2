@@ -266,6 +266,24 @@ export const bdActivityLogs = pgTable("bd_activity_logs", {
 export const insertBdActivityLogSchema = createInsertSchema(bdActivityLogs).omit({ id: true, createdAt: true });
 export type BdActivityLog = typeof bdActivityLogs.$inferSelect;
 
+// ─── Bed Board ───────────────────────────────────────────────────────────────
+export const beds = pgTable("beds", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  unit: varchar("unit", { length: 100 }).notNull().default("general"),
+  status: varchar("status", { length: 20 }).notNull().default("available"),
+  currentPatientName: varchar("current_patient_name", { length: 255 }),
+  gender: varchar("gender", { length: 20 }),
+  expectedDischargeDate: timestamp("expected_discharge_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBedSchema = createInsertSchema(beds).omit({ id: true, createdAt: true, updatedAt: true });
+export type Bed = typeof beds.$inferSelect;
+export type InsertBed = z.infer<typeof insertBedSchema>;
+
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),

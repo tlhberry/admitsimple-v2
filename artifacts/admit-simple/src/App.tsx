@@ -18,6 +18,7 @@ import Settings from "@/pages/settings/index";
 import ReferralAccounts from "@/pages/referral-accounts/index";
 import BDActivityFeed from "@/pages/referral-accounts/BDActivityFeed";
 import BDReports from "@/pages/bd-reports/index";
+import BedBoard from "@/pages/bed-board/index";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/referral-accounts" component={ReferralAccounts} />
       <Route path="/bd-activity-feed" component={BDActivityFeed} />
       <Route path="/bd-reports" component={BDReports} />
+      <Route path="/bed-board" component={BedBoard} />
       <Route component={NotFound} />
     </Switch>
   );
