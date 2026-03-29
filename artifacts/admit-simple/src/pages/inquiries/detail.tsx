@@ -357,21 +357,37 @@ export default function InquiryDetail() {
           {activeTab === "activities" && (
             <div className="space-y-3 relative before:absolute before:left-5 before:top-0 before:h-full before:w-px before:bg-border">
               {activities?.length === 0 && <p className="text-center text-muted-foreground py-8 text-sm">No activities recorded yet.</p>}
-              {activities?.map((act) => (
-                <div key={act.id} className="relative flex gap-4 pl-12">
-                  <div className="absolute left-0 w-10 h-10 rounded-full border-2 border-border bg-muted flex items-center justify-center text-muted-foreground z-10">
-                    <Activity className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 p-4 rounded-xl border border-border bg-card">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-foreground text-sm">{act.type}</span>
-                      <time className="text-xs text-muted-foreground">{formatDate(act.createdAt)}</time>
+              {activities?.map((act: any) => {
+                const name: string = act.userName || "";
+                const parts = name.trim().split(/\s+/).filter(Boolean);
+                const hasUser = parts.length > 0;
+                const initials = hasUser
+                  ? parts.length >= 2
+                    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                    : parts[0][0].toUpperCase()
+                  : null;
+                return (
+                  <div key={act.id} className="relative flex gap-4 pl-12">
+                    <div className={cn(
+                      "absolute left-0 w-10 h-10 rounded-full border-2 border-border flex items-center justify-center z-10 text-sm font-bold",
+                      hasUser ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      {hasUser ? initials : <Activity className="w-4 h-4" />}
                     </div>
-                    <p className="text-sm text-muted-foreground">{act.subject}</p>
-                    {act.body && <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded-lg">{act.body}</p>}
+                    <div className="flex-1 p-4 rounded-xl border border-border bg-card">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground text-sm capitalize">{act.type}</span>
+                          {hasUser && <span className="text-xs text-muted-foreground">· {name}</span>}
+                        </div>
+                        <time className="text-xs text-muted-foreground">{formatDate(act.createdAt)}</time>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{act.subject}</p>
+                      {act.body && <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded-lg">{act.body}</p>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

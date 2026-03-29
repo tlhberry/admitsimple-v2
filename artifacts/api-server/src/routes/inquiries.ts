@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { inquiries, users, patients } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { logAudit } from "../lib/logAudit";
 import archiver from "archiver";
 
 const router = Router();
@@ -82,6 +83,11 @@ router.get("/inquiries", async (req, res) => {
 router.post("/inquiries", async (req, res) => {
   try {
     const data = req.body;
+    const sess = req.session as any;
+    const sessionUserId = sess?.userId;
+    // Auto-assign creator as owner if not explicitly set
+    const assignedTo = data.assignedTo ? parseInt(data.assignedTo) : (sessionUserId || null);
+
     const [row] = await db.insert(inquiries).values({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -97,11 +103,14 @@ router.post("/inquiries", async (req, res) => {
       levelOfCare: data.levelOfCare,
       referralSource: data.referralSource,
       referralContact: data.referralContact,
-      assignedTo: data.assignedTo ? parseInt(data.assignedTo) : null,
+      searchKeywords: data.searchKeywords,
+      assignedTo,
       status: data.status || "new",
       priority: data.priority || "medium",
       notes: data.notes,
     }).returning();
+
+    await logAudit(req, "Created Inquiry", "inquiry", row.id);
 
     const full = await db.select(fullInquirySelect)
       .from(inquiries)
@@ -145,6 +154,7 @@ router.put("/inquiries/:id", async (req, res) => {
     if (data.assignedTo !== undefined) update.assignedTo = data.assignedTo ? parseInt(data.assignedTo) : null;
     if (data.preAssessmentDate !== undefined) update.preAssessmentDate = data.preAssessmentDate ? new Date(data.preAssessmentDate) : null;
     await db.update(inquiries).set(update).where(eq(inquiries.id, id));
+    await logAudit(req, "Updated Inquiry", "inquiry", id);
 
     const rows = await db.select(fullInquirySelect)
       .from(inquiries)
@@ -176,6 +186,10 @@ router.post("/inquiries/:id/convert", async (req, res) => {
     const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, id));
     if (!inq) { res.status(404).json({ error: "Inquiry not found" }); return; }
 
+    const sess = req.session as any;
+    // Credit goes to inquiry owner by default; fallback to session user
+    const creditUserId = inq.assignedTo || sess?.userId || null;
+
     const [patient] = await db.insert(patients).values({
       inquiryId: id,
       firstName: inq.firstName,
@@ -188,11 +202,13 @@ router.post("/inquiries/:id/convert", async (req, res) => {
       levelOfCare: levelOfCare || inq.levelOfCare,
       admitDate: admitDate ? new Date(admitDate) : new Date(),
       assignedClinician: assignedClinician ? parseInt(assignedClinician) : null,
+      creditUserId,
       status: "active",
       notes: notes || inq.notes,
     }).returning();
 
     await db.update(inquiries).set({ status: "admitted", updatedAt: new Date() }).where(eq(inquiries.id, id));
+    await logAudit(req, "Converted to Patient", "inquiry", id);
 
     const rows = await db.select({
       id: patients.id,

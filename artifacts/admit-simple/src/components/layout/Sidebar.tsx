@@ -32,6 +32,7 @@ const navSections = [
     items: [
       { icon: Building2, label: "Referral Accounts", href: "/referral-accounts" },
       { icon: Activity, label: "Activity Feed", href: "/bd-activity-feed" },
+      { icon: TrendingUp, label: "BD Reports", href: "/bd-reports" },
     ],
   },
   {

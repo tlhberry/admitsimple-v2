@@ -135,6 +135,38 @@ Loaded on first startup:
 
 `users`, `inquiries`, `patients`, `pipeline_stages`, `activities`, `reports`, `settings`, `referral_sources`, `insurance_verifications`, `audit_logs`, `referral_accounts`, `referral_contacts`, `bd_activity_logs`
 
+## Ownership & Credit Tracking
+
+- **Inquiry ownership**: `inquiries.assignedTo` auto-set to creator's userId on POST
+- **Referral source ownership**: `referral_sources.ownedByUserId` set on create; admin-only change via PUT; `ownerName` returned in GET /api/referrals
+- **Admissions credit**: `patients.creditUserId` set from `inq.assignedTo` on convertToPatient; admin can override via `PATCH /api/patients/:id/credit` (tracks `creditOverrideBy` + `creditOverriddenAt`)
+
+## Audit Logging
+
+- Helper: `artifacts/api-server/src/lib/logAudit.ts` — exports `logAudit(req, action, resourceType, resourceId?)`
+- Logged events: inquiry create/update, patient convert, activity create, referral CRUD
+- GET `/api/audit-logs` — returns last 200 audit log entries (auth required)
+- Also exports `getInitials(name: string)` for 2-letter initials
+
+## BD Reports
+
+- Page: `/bd-reports` in the frontend sidebar
+- API: `GET /api/bd-reports` returns per-rep array: `{ userId, name, initials, role, f2fThisWeek, f2fThisMonth, creditedAdmissions, admissionsBySource[] }`
+- KPI cards: F2F This Week, F2F This Month, Total Credited Admits
+- Per-rep table with expandable admitted-by-source breakdown
+
+## Google PPC / Organic Search Keywords
+
+- `inquiries.searchKeywords` column stores keywords when lead source is "Google PPC" or "Google Organic"
+- Shown conditionally in Create Inquiry form and in the Lead Source inline-edit section of inquiry detail
+- Returned in `fullInquirySelect` join
+
+## Activity Display
+
+- Activities tab in inquiry detail shows a timeline with colored initials badges
+- If activity has a `userId` linked, shows 2-letter initials with primary color badge
+- Seeded/legacy activities (no userId) show a plain Activity icon fallback
+
 ## DB Migration Notes
 
 - Always use direct SQL for schema changes (`ALTER TABLE` / `CREATE TABLE`), never `drizzle-kit push` — it will try to drop `user_sessions` managed by connect-pg-simple

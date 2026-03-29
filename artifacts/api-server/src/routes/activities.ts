@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { activities, users } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { logAudit } from "../lib/logAudit";
 
 const router = Router();
 router.use(requireAuth);
@@ -53,6 +54,7 @@ router.post("/activities", async (req, res) => {
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       completedAt: data.completedAt ? new Date(data.completedAt) : null,
     }).returning();
+    await logAudit(req, `Added Activity: ${data.type || "note"}`, "activity", row.id);
     const rows = await db.select({
       id: activities.id,
       inquiryId: activities.inquiryId,

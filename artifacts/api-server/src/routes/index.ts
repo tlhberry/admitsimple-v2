@@ -13,6 +13,8 @@ import analyticsRouter from "./analytics";
 import aiRouter from "./ai";
 import webhooksRouter from "./webhooks";
 import bdRouter from "./bd";
+import bdReportsRouter from "./bdReports";
+import auditLogsRouter from "./auditLogs";
 
 const router: IRouter = Router();
 
@@ -30,5 +32,7 @@ router.use(pipelineRouter);
 router.use(analyticsRouter);
 router.use(aiRouter);
 router.use(bdRouter);
+router.use(bdReportsRouter);
+router.use(auditLogsRouter);
 
 export default router;

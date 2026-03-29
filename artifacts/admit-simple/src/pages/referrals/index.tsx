@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Loader2, Handshake, Phone, Mail, Building, ToggleLeft, ToggleRight } from "lucide-react";
+import { Search, Plus, Loader2, Handshake, Phone, Mail, Building, ToggleLeft, ToggleRight, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -137,6 +137,12 @@ export default function Referrals() {
               <div className="space-y-1 mt-3">
                 {ref.phone && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Phone className="w-3.5 h-3.5" />{ref.phone}</div>}
                 {ref.email && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mail className="w-3.5 h-3.5" />{ref.email}</div>}
+                {(ref as any).ownerName && (
+                  <div className="flex items-center gap-2 text-xs text-primary border-t border-border/40 pt-2 mt-2">
+                    <UserCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-medium">{(ref as any).ownerName}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}

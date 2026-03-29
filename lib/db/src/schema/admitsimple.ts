@@ -82,6 +82,9 @@ export const patients = pgTable("patients", {
   currentStage: varchar("current_stage", { length: 100 }),
   assignedClinician: integer("assigned_clinician").references(() => users.id),
   assignedAdmissions: integer("assigned_admissions").references(() => users.id),
+  creditUserId: integer("credit_user_id").references(() => users.id),
+  creditOverrideBy: integer("credit_override_by").references(() => users.id),
+  creditOverriddenAt: timestamp("credit_overridden_at"),
   status: varchar("status", { length: 50 }).notNull().default("active"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -160,6 +163,7 @@ export const referralSources = pgTable("referral_sources", {
   address: text("address"),
   notes: text("notes"),
   isActive: boolean("is_active").default(true),
+  ownedByUserId: integer("owned_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
