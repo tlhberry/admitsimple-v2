@@ -3,7 +3,7 @@ import { useListInquiries } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Loader2, ClipboardList, ChevronRight } from "lucide-react";
+import { Search, Plus, Loader2, ClipboardList, ChevronRight, Globe } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn, getStatusColor, formatDate } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
@@ -130,8 +130,8 @@ export default function InquiriesList() {
                 <th className="px-6 py-3.5 font-semibold">Contact</th>
                 <th className="px-6 py-3.5 font-semibold">Status</th>
                 <th className="px-6 py-3.5 font-semibold">Level of Care</th>
+                <th className="px-6 py-3.5 font-semibold">Referral Source</th>
                 <th className="px-6 py-3.5 font-semibold">Created</th>
-                <th className="px-6 py-3.5 font-semibold text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">
@@ -159,12 +159,17 @@ export default function InquiriesList() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-foreground font-medium">{inq.levelOfCare || "—"}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{formatDate(inq.createdAt)}</td>
-                  <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary">
-                      View
-                    </Button>
+                  <td className="px-6 py-4">
+                    {(inq as any).referralSource === "Google PPC" || (inq as any).referralSource === "Google Organic" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                        <Globe className="w-3 h-3" />
+                        {(inq as any).referralSource}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
+                  <td className="px-6 py-4 text-muted-foreground">{formatDate(inq.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

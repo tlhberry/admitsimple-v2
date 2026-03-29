@@ -53,6 +53,29 @@ router.post("/webhooks/ctm", async (req, res) => {
     const duration = body.duration ? parseInt(body.duration, 10) : null;
     const agentName = body.agent_name || "";
     const calledNumber = body.called_number || "";
+    const ctmKeyword = body.keyword || body.search_keyword || "";
+
+    // Map CTM tracking label to referral source.
+    // If the campaign is Google-based, classify as Google PPC or Google Organic.
+    let referralSource = trackingLabel || "Call Tracking Metrics";
+    const labelLower = trackingLabel.toLowerCase();
+    if (labelLower.includes("google")) {
+      const isPPC =
+        labelLower.includes("ppc") ||
+        labelLower.includes("paid") ||
+        labelLower.includes("cpc") ||
+        labelLower.includes("adwords") ||
+        labelLower.includes("ads");
+      const isOrganic =
+        labelLower.includes("organic") || labelLower.includes("seo");
+      if (isOrganic) {
+        referralSource = "Google Organic";
+      } else if (isPPC) {
+        referralSource = "Google PPC";
+      } else {
+        referralSource = "Google PPC";
+      }
+    }
 
     const locationNote = [callerCity, callerState].filter(Boolean).join(", ");
     const notes = [
@@ -68,13 +91,17 @@ router.post("/webhooks/ctm", async (req, res) => {
       .filter(Boolean)
       .join("\n");
 
+    const isGoogleSource =
+      referralSource === "Google PPC" || referralSource === "Google Organic";
+
     const [inquiry] = await db
       .insert(inquiries)
       .values({
         firstName,
         lastName,
         phone,
-        referralSource: trackingLabel || "Call Tracking Metrics",
+        referralSource,
+        searchKeywords: isGoogleSource && ctmKeyword ? ctmKeyword : null,
         status: "new",
         priority: "medium",
         notes,
