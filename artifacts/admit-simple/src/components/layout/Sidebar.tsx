@@ -36,11 +36,11 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen fixed left-0 top-0 text-sidebar-foreground shadow-xl z-20 transition-all">
         {/* Logo */}
-        <div className="px-4 py-4 border-b border-sidebar-border/40">
+        <div className="px-3 py-5 border-b border-sidebar-border/40">
           <img
             src={logoImg}
             alt="AdmitSimple"
-            className="h-16 w-full object-contain object-left"
+            className="h-24 w-full object-contain object-left"
             style={{ mixBlendMode: "screen" }}
           />
         </div>
