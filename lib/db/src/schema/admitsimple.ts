@@ -183,6 +183,85 @@ export const insuranceVerifications = pgTable("insurance_verifications", {
 
 export type InsuranceVerification = typeof insuranceVerifications.$inferSelect;
 
+// ─── BD Module ───────────────────────────────────────────────────────────────
+
+export const accountTypes = [
+  "hospital", "private_practice", "mat_clinic", "outpatient_facility",
+  "residential_facility", "attorneys", "ed_consultant", "community", "other"
+] as const;
+
+export const accountTypeDisplayNames: Record<string, string> = {
+  hospital: "Hospital",
+  private_practice: "Private Practice",
+  mat_clinic: "MAT Clinic",
+  outpatient_facility: "Outpatient Facility",
+  residential_facility: "Residential Facility",
+  attorneys: "Attorneys",
+  ed_consultant: "Ed Consultant",
+  community: "Community",
+  other: "Other",
+};
+
+export const bdActivityTypes = [
+  "face_to_face", "phone_call", "email", "meeting", "lunch", "presentation", "other"
+] as const;
+
+export const bdActivityTypeDisplayNames: Record<string, string> = {
+  face_to_face: "Face-to-Face Visit",
+  phone_call: "Phone Call",
+  email: "Email",
+  meeting: "Meeting",
+  lunch: "Lunch/Coffee",
+  presentation: "Presentation",
+  other: "Other",
+};
+
+export const referralAccounts = pgTable("referral_accounts", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }),
+  address: text("address"),
+  phone: varchar("phone", { length: 50 }),
+  website: varchar("website", { length: 255 }),
+  notes: text("notes"),
+  assignedBdRepId: integer("assigned_bd_rep_id").references(() => users.id),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertReferralAccountSchema = createInsertSchema(referralAccounts).omit({ id: true, createdAt: true, updatedAt: true });
+export type ReferralAccount = typeof referralAccounts.$inferSelect;
+export type InsertReferralAccount = z.infer<typeof insertReferralAccountSchema>;
+
+export const referralContacts = pgTable("referral_contacts", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id").notNull().references(() => referralAccounts.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  position: varchar("position", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertReferralContactSchema = createInsertSchema(referralContacts).omit({ id: true, createdAt: true });
+export type ReferralContact = typeof referralContacts.$inferSelect;
+
+export const bdActivityLogs = pgTable("bd_activity_logs", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id").references(() => referralAccounts.id),
+  userId: integer("user_id").references(() => users.id),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  notes: text("notes"),
+  activityDate: timestamp("activity_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBdActivityLogSchema = createInsertSchema(bdActivityLogs).omit({ id: true, createdAt: true });
+export type BdActivityLog = typeof bdActivityLogs.$inferSelect;
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),

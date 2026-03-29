@@ -12,6 +12,7 @@ import pipelineRouter from "./pipeline";
 import analyticsRouter from "./analytics";
 import aiRouter from "./ai";
 import webhooksRouter from "./webhooks";
+import bdRouter from "./bd";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(referralsRouter);
 router.use(pipelineRouter);
 router.use(analyticsRouter);
 router.use(aiRouter);
+router.use(bdRouter);
 
 export default router;

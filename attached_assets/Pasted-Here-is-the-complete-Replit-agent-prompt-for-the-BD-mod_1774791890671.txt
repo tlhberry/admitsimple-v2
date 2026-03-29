@@ -1,0 +1,436 @@
+Here is the complete Replit agent prompt for the BD module:
+
+PROMPT: Add Business Development (BD) Module to Admissions CRM
+Add a complete Business Development module to this app. This module tracks referral accounts (hospitals, clinics, private practices, attorneys, etc.), contacts at those accounts, and BD rep activity logs. It also includes an AI Referral Insights feature powered by Claude. Copy everything below exactly — do not add or remove features.
+
+1. DATABASE SCHEMA
+Add the following three tables to shared/schema.ts:
+typescript// Account type enum values
+export const accountTypes = [
+  "hospital",
+  "private_practice",
+  "mat_clinic",
+  "outpatient_facility",
+  "residential_facility",
+  "attorneys",
+  "ed_consultant",
+  "community",
+  "other"
+] as const;
+
+export const accountTypeDisplayNames: Record<string, string> = {
+  hospital: "Hospital",
+  private_practice: "Private Practice",
+  mat_clinic: "MAT Clinic",
+  outpatient_facility: "Outpatient Facility",
+  residential_facility: "Residential Facility",
+  attorneys: "Attorneys",
+  ed_consultant: "Ed Consultant",
+  community: "Community",
+  other: "Other",
+};
+
+// Activity type enum values
+export const activityTypes = [
+  "face_to_face",
+  "phone_call",
+  "email",
+  "meeting",
+  "lunch",
+  "presentation",
+  "other"
+] as const;
+
+export const activityTypeDisplayNames: Record<string, string> = {
+  face_to_face: "Face-to-Face Visit",
+  phone_call: "Phone Call",
+  email: "Email",
+  meeting: "Meeting",
+  lunch: "Lunch/Coffee",
+  presentation: "Presentation",
+  other: "Other",
+};
+
+// referral_accounts table
+export const referralAccounts = pgTable("referral_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }),
+  address: text("address"),
+  phone: varchar("phone", { length: 50 }),
+  website: varchar("website", { length: 255 }),
+  notes: text("notes"),
+  assignedBdRepId: integer("assigned_bd_rep_id").references(() => users.id),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// referral_contacts table
+export const referralContacts = pgTable("referral_contacts", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id").notNull().references(() => referralAccounts.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  position: varchar("position", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// activity_logs table
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  accountId: integer("account_id").references(() => referralAccounts.id),
+  userId: integer("user_id").references(() => users.id),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  notes: text("notes"),
+  activityDate: timestamp("activity_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Zod insert schemas
+export const insertReferralAccountSchema = createInsertSchema(referralAccounts);
+export const insertReferralContactSchema = createInsertSchema(referralContacts);
+export const insertActivityLogSchema = createInsertSchema(activityLogs);
+
+// TypeScript types
+export type ReferralAccount = typeof referralAccounts.$inferSelect;
+export type InsertReferralAccount = typeof referralAccounts.$inferInsert;
+export type ReferralContact = typeof referralContacts.$inferSelect;
+export type InsertReferralContact = typeof referralContacts.$inferInsert;
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = typeof activityLogs.$inferInsert;
+Run db:push to apply schema changes after adding.
+
+2. RBAC MIDDLEWARE
+In server/middleware.ts (or wherever auth middleware lives), add two middleware functions:
+typescript// Allows: admin, staff, bd_rep roles
+export const canAccessReferralAccounts = requireRole(["admin", "staff", "bd_rep"]);
+
+// Allows: admin, staff, bd_rep roles
+export const canAccessActivities = requireRole(["admin", "staff", "bd_rep"]);
+The bd_rep role must be a valid user role in the system. Add "bd_rep" to the roles enum/array if it doesn't already exist.
+
+3. API ROUTES
+Add all of the following routes to server/routes.ts. All routes are scoped to companyId from the authenticated session. BD reps only see accounts assigned to them; admins/staff see all.
+typescript// ── Referral Accounts ──────────────────────────────────────────────
+
+// Get all referral accounts for company (bd_rep sees only their assigned accounts)
+app.get("/api/referral-accounts", canAccessReferralAccounts, async (req, res) => {
+  const { companyId, userId, role } = req.user;
+  let accounts;
+  if (role === "bd_rep") {
+    accounts = await db.select().from(referralAccounts)
+      .where(and(eq(referralAccounts.companyId, companyId), eq(referralAccounts.assignedBdRepId, userId)));
+  } else {
+    accounts = await db.select().from(referralAccounts)
+      .where(eq(referralAccounts.companyId, companyId));
+  }
+  res.json(accounts);
+});
+
+// Create referral account
+app.post("/api/referral-accounts", canAccessReferralAccounts, async (req, res) => {
+  const { companyId, userId } = req.user;
+  const data = insertReferralAccountSchema.parse({ ...req.body, companyId, createdBy: userId });
+  const [account] = await db.insert(referralAccounts).values(data).returning();
+  res.json(account);
+});
+
+// Get single referral account by id
+app.get("/api/referral-accounts/:id", canAccessReferralAccounts, async (req, res) => {
+  const account = await db.select().from(referralAccounts)
+    .where(eq(referralAccounts.id, parseInt(req.params.id)));
+  if (!account.length) return res.status(404).json({ message: "Account not found" });
+  res.json(account[0]);
+});
+
+// Update referral account
+app.patch("/api/referral-accounts/:id", canAccessReferralAccounts, async (req, res) => {
+  const [account] = await db.update(referralAccounts)
+    .set({ ...req.body, updatedAt: new Date() })
+    .where(eq(referralAccounts.id, parseInt(req.params.id)))
+    .returning();
+  res.json(account);
+});
+
+// Delete referral account
+app.delete("/api/referral-accounts/:id", canAccessReferralAccounts, async (req, res) => {
+  await db.delete(referralAccounts).where(eq(referralAccounts.id, parseInt(req.params.id)));
+  res.json({ success: true });
+});
+
+// ── Contacts ───────────────────────────────────────────────────────
+
+// Get all contacts for an account
+app.get("/api/referral-accounts/:id/contacts", canAccessReferralAccounts, async (req, res) => {
+  const contacts = await db.select().from(referralContacts)
+    .where(eq(referralContacts.accountId, parseInt(req.params.id)));
+  res.json(contacts);
+});
+
+// Add contact to account
+app.post("/api/referral-accounts/:id/contacts", canAccessReferralAccounts, async (req, res) => {
+  const data = insertReferralContactSchema.parse({ ...req.body, accountId: parseInt(req.params.id) });
+  const [contact] = await db.insert(referralContacts).values(data).returning();
+  res.json(contact);
+});
+
+// Update contact
+app.patch("/api/referral-contacts/:id", canAccessReferralAccounts, async (req, res) => {
+  const [contact] = await db.update(referralContacts)
+    .set(req.body)
+    .where(eq(referralContacts.id, parseInt(req.params.id)))
+    .returning();
+  res.json(contact);
+});
+
+// Delete contact
+app.delete("/api/referral-contacts/:id", canAccessReferralAccounts, async (req, res) => {
+  await db.delete(referralContacts).where(eq(referralContacts.id, parseInt(req.params.id)));
+  res.json({ success: true });
+});
+
+// ── Activity Logs ──────────────────────────────────────────────────
+
+// Get activities for a specific account
+app.get("/api/referral-accounts/:id/activities", canAccessActivities, async (req, res) => {
+  const activities = await db.select().from(activityLogs)
+    .where(eq(activityLogs.accountId, parseInt(req.params.id)))
+    .orderBy(desc(activityLogs.activityDate));
+  res.json(activities);
+});
+
+// Log activity for a specific account
+app.post("/api/referral-accounts/:id/activities", canAccessActivities, async (req, res) => {
+  const { companyId, userId } = req.user;
+  const data = insertActivityLogSchema.parse({
+    ...req.body,
+    companyId,
+    userId,
+    accountId: parseInt(req.params.id),
+  });
+  const [activity] = await db.insert(activityLogs).values(data).returning();
+  res.json(activity);
+});
+
+// Get ALL activities across all accounts for company (for BD dashboard/feed)
+app.get("/api/activities", canAccessActivities, async (req, res) => {
+  const { companyId, userId, role } = req.user;
+  let activities;
+  if (role === "bd_rep") {
+    // bd_rep only sees their own activities
+    activities = await db.select().from(activityLogs)
+      .where(and(eq(activityLogs.companyId, companyId), eq(activityLogs.userId, userId)))
+      .orderBy(desc(activityLogs.activityDate));
+  } else {
+    activities = await db.select().from(activityLogs)
+      .where(eq(activityLogs.companyId, companyId))
+      .orderBy(desc(activityLogs.activityDate));
+  }
+  res.json(activities);
+});
+
+// ── AI Referral Insights ───────────────────────────────────────────
+
+// Generate AI insights for a referral account using Claude
+app.post("/api/ai/referral-insights", canAccessActivities, async (req, res) => {
+  const { accountId } = req.body;
+  const { companyId } = req.user;
+
+  // Gather account data
+  const [account] = await db.select().from(referralAccounts).where(eq(referralAccounts.id, accountId));
+  const contacts = await db.select().from(referralContacts).where(eq(referralContacts.accountId, accountId));
+  const activities = await db.select().from(activityLogs)
+    .where(eq(activityLogs.accountId, accountId))
+    .orderBy(desc(activityLogs.activityDate));
+
+  const prompt = `You are an expert business development analyst for an addiction treatment center.
+
+Analyze this referral account and provide actionable insights:
+
+Account: ${account.name}
+Type: ${account.type}
+Phone: ${account.phone || "N/A"}
+Address: ${account.address || "N/A"}
+Notes: ${account.notes || "N/A"}
+
+Contacts (${contacts.length}):
+${contacts.map(c => `- ${c.name} (${c.position || "Unknown role"}) — ${c.email || ""} ${c.phone || ""}`).join("\n")}
+
+Activity History (${activities.length} total):
+${activities.slice(0, 20).map(a => `- ${a.activityType} on ${new Date(a.activityDate).toLocaleDateString()}: ${a.notes || "No notes"}`).join("\n")}
+
+Please provide:
+1. Relationship health assessment (strong/moderate/needs attention)
+2. Last contact summary and recency analysis
+3. Suggested next steps and outreach recommendations
+4. Key opportunities or risks to be aware of
+5. Recommended contact frequency for this account type`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  res.json({ insights: response.content[0].text, accountName: account.name });
+});
+```
+
+---
+
+### 4. FRONTEND PAGES & COMPONENTS
+
+Create the file `client/src/pages/ReferralAccounts.tsx`.
+
+#### Page Layout
+- Page title: **"Referral Accounts"** with a `Building2` icon (lucide-react)
+- Header row with two buttons: **"Log Activity"** (opens quick activity dialog) and **"Add Account"** (opens add account dialog)
+- Main content: accounts list table + account detail panel
+
+#### Accounts List Table Columns
+| Column | Content |
+|---|---|
+| Account Name | Bold name, account type badge below |
+| Type | `accountTypeDisplayNames[account.type]` |
+| Assigned Rep | Name of assigned BD rep user |
+| Phone | Phone number |
+| Last Activity | Date of most recent activity for that account |
+| Actions | Edit button, Delete button |
+
+- Clicking a row opens the Account Detail view in a side panel or navigates to `/referral-accounts/:id`
+- Table is searchable by account name
+- Empty state: "No referral accounts yet. Add your first account to get started."
+
+#### Add / Edit Account Dialog — Form Fields
+```
+Account Name*     [text input]          required
+Type              [select]              options: all 9 accountTypes with display names
+Assigned BD Rep   [select]              options: all users with role bd_rep or staff
+Phone             [text input]
+Address           [textarea]
+Website           [text input]
+Notes             [textarea]
+```
+Submit button: "Save Account" / "Update Account"
+
+#### Account Detail View (drawer or detail page)
+Show account name, type badge, phone, website, address, notes, assigned rep at top.
+
+**Two tabs:**
+
+**Tab 1 — Contacts**
+- List all contacts for the account
+- Each contact card shows: Name, Position, Phone, Email
+- "Add Contact" button opens contact form dialog
+- Edit / Delete buttons on each contact card
+
+**Add/Edit Contact Dialog — Form Fields:**
+```
+Name*       [text input]   required
+Position    [text input]
+Phone       [text input]
+Email       [text input]
+Notes       [textarea]
+```
+
+**Tab 2 — Activity Log**
+- Chronological list of all activities for this account (newest first)
+- Each activity item shows:
+  - Activity type display name (e.g., "Face-to-Face Visit") with colored badge
+  - Date formatted as "MMM d, yyyy"
+  - Notes (if any)
+  - Name of the user who logged it
+- "Log Activity" button opens activity form dialog
+- Empty state: "No activities logged yet."
+
+**Add Activity Dialog — Form Fields:**
+```
+Activity Type*   [select]    options: all 7 activityTypes with display names, default: face_to_face
+Date*            [date]      required, default: today
+Notes            [textarea]  placeholder: "What was discussed?"
+```
+
+**AI Referral Insights Button**
+- Button labeled **"AI Referral Insights"** with a Sparkles icon, located in the account detail header
+- On click: calls `POST /api/ai/referral-insights` with `{ accountId }`
+- Shows a loading spinner while fetching
+- Displays Claude's response in a formatted card below the account header
+- The card has a gradient background (purple/blue tones to indicate AI feature)
+- Title: "AI Referral Insights" with Sparkles icon
+
+#### Quick Log Activity Dialog (from main page header)
+- Triggered by "Log Activity" button in page header
+- **Form Fields:**
+```
+Account*         [select]       all referral accounts for company
+Activity Type*   [select]       all 7 activityTypes with display names, default: face_to_face
+Date*            [date]         required, default: today
+Notes            [textarea]     placeholder: "What was discussed?"
+
+5. NAVIGATION
+Add "Referral Accounts" to the sidebar navigation with a Building2 icon. It should appear in the BD / Operations section of the sidebar. Route: /referral-accounts.
+Add this route to App.tsx (or wherever routes are defined):
+tsx<Route path="/referral-accounts" component={ReferralAccounts} />
+
+6. BD ACTIVITY FEED PAGE (optional but include)
+Create a secondary page client/src/pages/BDActivityFeed.tsx:
+
+Title: "BD Activity Feed"
+Calls GET /api/activities to show all activity across all accounts
+Shows a chronological feed: activity type, account name, rep name, date, notes
+Filterable by: BD rep, activity type, date range
+Add to sidebar as "Activity Feed" under the BD section
+
+
+7. ANALYTICS / METRICS
+On the existing Analytics page, add a "Business Development" section with the following metrics cards:
+
+Total Referral Accounts — count of all accounts
+Active Accounts (30 days) — accounts with at least 1 activity in last 30 days
+Total Activities (30 days) — count of activity_logs in last 30 days
+Activities by Type — bar chart or list breakdown of activity types (face_to_face, phone_call, etc.) for last 30 days
+Top BD Reps — table showing each BD rep with their activity count for the month
+Accounts by Type — pie or bar chart of account type distribution
+
+These metrics are available to admin and staff only. BD reps see only their own stats.
+
+8. DESIGN SYSTEM
+Match the existing dark navy app design exactly:
+
+Use the same card styles, table styles, badge styles, dialog styles, and button styles already in the app
+Activity type badges should use distinct colors (e.g., green for face_to_face, blue for phone_call, yellow for email, purple for meeting, orange for lunch, teal for presentation, gray for other)
+Account type displayed as a small muted badge below the account name in the list
+All forms use the same form field styling (Label + Input/Select/Textarea) already used throughout the app
+Mobile-first: all tables collapse to card list view on mobile, dialogs are full-screen on mobile
+
+
+9. REACT QUERY HOOKS
+Use the same React Query pattern already in the app. Example hooks to implement:
+typescript// Accounts
+useQuery({ queryKey: ["/api/referral-accounts"], ... })
+useMutation({ mutationFn: (data) => apiRequest("POST", "/api/referral-accounts", data), ... })
+useMutation({ mutationFn: (data) => apiRequest("PATCH", `/api/referral-accounts/${id}`, data), ... })
+useMutation({ mutationFn: () => apiRequest("DELETE", `/api/referral-accounts/${id}`), ... })
+
+// Contacts
+useQuery({ queryKey: [`/api/referral-accounts/${id}/contacts`], ... })
+useMutation({ mutationFn: (data) => apiRequest("POST", `/api/referral-accounts/${id}/contacts`, data), ... })
+
+// Activities
+useQuery({ queryKey: [`/api/referral-accounts/${id}/activities`], ... })
+useMutation({ mutationFn: (data) => apiRequest("POST", `/api/referral-accounts/${id}/activities`, data), ... })
+useQuery({ queryKey: ["/api/activities"], ... })  // global feed
+
+// AI
+useMutation({ mutationFn: (data) => apiRequest("POST", "/api/ai/referral-insights", data), ... })
+Invalidate relevant query keys after mutations. Show toast notifications on success/error using the existing toast system.
+
+10. PERMISSIONS SUMMARY
+Actionadminstaffbd_repView all accounts✅✅❌ (own only)Create account✅✅✅Edit account✅✅✅ (own only)Delete account✅✅❌Add/edit contacts✅✅✅Log activity✅✅✅View all activities✅✅❌ (own only)View AI insights✅✅✅View BD analytics✅✅❌ (own stats only)
+
+That is the complete BD module. Build exactly what is described above, using the same tech stack (Drizzle ORM, Express, React, React Query, shadcn/ui, Tailwind, Anthropic SDK) already in the project. Do not add third-party dependencies that are not already installed.

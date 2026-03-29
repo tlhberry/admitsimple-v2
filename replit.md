@@ -73,17 +73,35 @@ lib/
 2. **Patient Tracking** — Census management with level-of-care tracking
 3. **Kanban Pipeline** — Drag-and-drop admissions pipeline (5 stages)
 4. **AI Intelligence Hub** — Admissions trends, referral insights, custom queries
-5. **Analytics Dashboard** — KPI cards, trend charts, payer mix, staff performance
+5. **Analytics Dashboard** — KPI cards, trend charts, payer mix, staff performance + BD metrics
 6. **Reports** — AI-generated reports (weekly, monthly, referral, financial, census)
 7. **Referral Sources** — Manage and track referral relationships
-8. **Settings** — Facility info, notifications, AI configuration
+8. **Pre-Assessment Forms** — 3-form pre-assessment workflow (Pre-Cert, Nursing Assessment, Pre-Screening) with auto-save, ZIP download, and status advancement
+9. **Business Development Module** — Referral account management, contact tracking, BD activity logs, AI referral insights
+10. **Settings** — Facility info, notifications, AI configuration
 
-## AI Routes (7 total)
+## BD Module (routes/bd.ts)
+
+Tables: `referral_accounts`, `referral_contacts`, `bd_activity_logs`
+- `GET/POST /api/referral-accounts` — List/create referral accounts
+- `GET/PATCH/DELETE /api/referral-accounts/:id` — Account detail CRUD
+- `GET/POST /api/referral-accounts/:id/contacts` — Account contacts
+- `PATCH/DELETE /api/referral-contacts/:id` — Contact CRUD
+- `GET/POST /api/referral-accounts/:id/activities` — Account activity log
+- `GET/POST /api/bd-activities` — Global activity feed
+- `GET /api/bd-analytics` — BD metrics (accounts, active accounts 30d, activities by type, top reps)
+- `POST /api/ai/referral-insights` — AI insights for a referral account
+
+Account types: hospital, private_practice, mat_clinic, outpatient_facility, residential_facility, attorneys, ed_consultant, community, other
+Activity types: face_to_face, phone_call, email, meeting, lunch, presentation, other
+RBAC: bd_rep sees only own accounts/activities; admin+staff see all
+
+## AI Routes (8 total)
 
 All use Claude claude-opus-4-5 via Replit AI Integrations:
 - `POST /api/ai/parse-intake` — Screenshot/image parser for intake forms
 - `POST /api/ai/insights` — Admissions trend analysis
-- `POST /api/ai/referral-insights` — Referral source analysis
+- `POST /api/ai/referral-insights` — Referral source analysis (also used by BD module)
 - `POST /api/ai/pipeline-optimize` — Pipeline bottleneck recommendations
 - `POST /api/ai/reports` — Executive report generation
 - `POST /api/ai/summarize-inquiry` — Clinical inquiry summary
@@ -115,4 +133,9 @@ Loaded on first startup:
 
 ## Database Tables
 
-`users`, `inquiries`, `patients`, `pipeline_stages`, `activities`, `reports`, `settings`, `referral_sources`, `insurance_verifications`, `audit_logs`
+`users`, `inquiries`, `patients`, `pipeline_stages`, `activities`, `reports`, `settings`, `referral_sources`, `insurance_verifications`, `audit_logs`, `referral_accounts`, `referral_contacts`, `bd_activity_logs`
+
+## DB Migration Notes
+
+- Always use direct SQL for schema changes (`ALTER TABLE` / `CREATE TABLE`), never `drizzle-kit push` — it will try to drop `user_sessions` managed by connect-pg-simple
+- Pipeline status logic: inquiry `status` field stores exact stage name after drag; legacy statuses: `new`→"New Inquiry", `contacted`→"Initial Contact", `qualified`→"Insurance Verification"
