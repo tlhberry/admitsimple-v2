@@ -44,9 +44,9 @@ async function saveForm(inquiryId: number, path: string, formData: Record<string
 // ── Status badge ──────────────────────────────────────────────────────────────
 function TabBadge({ complete }: { complete: boolean }) {
   return complete ? (
-    <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-400"><CheckCircle2 className="w-3 h-3" /></span>
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-400 mt-0.5"><CheckCircle2 className="w-3 h-3" /></span>
   ) : (
-    <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-amber-400" />
+    <span className="inline-block w-2 h-2 rounded-full bg-amber-400 mt-0.5" />
   );
 }
 
@@ -721,15 +721,27 @@ export function PreAssessmentSection({ inquiryId, currentNotes = "", onComplete 
       <Card className="rounded-2xl border-border">
         <CardContent className="p-0">
           <Tabs defaultValue="form1">
-            <TabsList className="w-full rounded-t-2xl rounded-b-none border-b border-border bg-muted/40 h-auto p-1">
-              <TabsTrigger value="form1" className="flex-1 rounded-xl text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-                RB Pre-Cert / Clinical<TabBadge complete={form1Done} />
+            <TabsList className="w-full rounded-t-2xl rounded-b-none border-b border-border bg-muted/40 h-auto p-1 gap-0.5">
+              <TabsTrigger value="form1" className="flex-1 rounded-xl data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm py-2.5 px-1">
+                <div className="flex flex-col items-center gap-0.5 leading-tight">
+                  <span className="text-[11px] font-bold">Pre-Cert</span>
+                  <span className="text-[10px] text-muted-foreground leading-none">Clinical</span>
+                  <TabBadge complete={form1Done} />
+                </div>
               </TabsTrigger>
-              <TabsTrigger value="form2" className="flex-1 rounded-xl text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-                Nursing Assessment<TabBadge complete={form2Done} />
+              <TabsTrigger value="form2" className="flex-1 rounded-xl data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm py-2.5 px-1">
+                <div className="flex flex-col items-center gap-0.5 leading-tight">
+                  <span className="text-[11px] font-bold">Nursing</span>
+                  <span className="text-[10px] text-muted-foreground leading-none">Assessment</span>
+                  <TabBadge complete={form2Done} />
+                </div>
               </TabsTrigger>
-              <TabsTrigger value="form3" className="flex-1 rounded-xl text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-                Pre-Screening<TabBadge complete={form3Done} />
+              <TabsTrigger value="form3" className="flex-1 rounded-xl data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm py-2.5 px-1">
+                <div className="flex flex-col items-center gap-0.5 leading-tight">
+                  <span className="text-[11px] font-bold">Pre</span>
+                  <span className="text-[10px] text-muted-foreground leading-none">Screening</span>
+                  <TabBadge complete={form3Done} />
+                </div>
               </TabsTrigger>
             </TabsList>
 
