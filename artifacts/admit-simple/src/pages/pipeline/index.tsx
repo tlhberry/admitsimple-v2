@@ -65,10 +65,10 @@ export default function Pipeline() {
         </Button>
       </div>
 
-      <div className="flex overflow-x-auto pb-8 pt-2 kanban-scroll gap-6 h-[calc(100vh-180px)] min-h-[600px]">
+      <div className="flex flex-col md:flex-row md:overflow-x-auto pb-8 pt-2 gap-4 md:gap-6 md:h-[calc(100vh-180px)] md:min-h-[600px]">
         <DragDropContext onDragEnd={onDragEnd}>
           {columns.map((col) => (
-            <div key={col.stage.id} className="min-w-[320px] w-[320px] flex flex-col bg-slate-50 rounded-2xl border border-slate-200 kanban-col shadow-sm">
+            <div key={col.stage.id} className="w-full md:min-w-[320px] md:w-[320px] flex flex-col bg-slate-50 rounded-2xl border border-slate-200 kanban-col shadow-sm">
               <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100/50 rounded-t-2xl">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: col.stage.color || '#94A3B8' }} />
@@ -86,7 +86,7 @@ export default function Pipeline() {
                     ref={provided.innerRef} 
                     {...provided.droppableProps}
                     className={cn(
-                      "flex-1 p-3 space-y-3 overflow-y-auto transition-colors",
+                      "flex-1 p-3 space-y-3 md:overflow-y-auto transition-colors min-h-[80px]",
                       snapshot.isDraggingOver ? "bg-slate-100/80" : ""
                     )}
                   >
