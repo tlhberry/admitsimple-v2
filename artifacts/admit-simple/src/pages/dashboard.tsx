@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { cn, getStatusColor, formatDate } from "@/lib/utils";
+import { cn, getStatusColor, formatDate, groupByDay } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 
 const COLORS = ['#5BC8DC', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
@@ -116,25 +116,32 @@ export default function Dashboard() {
         <div className="md:hidden divide-y divide-border">
           {data.recentInquiries.length === 0 ? (
             <p className="px-6 py-8 text-center text-muted-foreground text-sm">No recent inquiries found.</p>
-          ) : data.recentInquiries.map((inq) => (
-            <button key={inq.id} onClick={() => navigate(`/inquiries/${inq.id}`)}
-              className="w-full text-left px-4 py-3.5 flex items-center gap-3 hover:bg-muted/30 transition-colors active:scale-[0.99]">
-              <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
-                {inq.firstName?.charAt(0) ?? "?"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-foreground text-sm truncate">{inq.firstName} {inq.lastName}</div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", getStatusColor(inq.status))}>{inq.status}</span>
-                  <span className="text-[11px] text-muted-foreground">{inq.levelOfCare || "—"}</span>
+          ) : groupByDay(data.recentInquiries).flatMap(({ label, items }) => [
+            <div key={`day-${label}`} className="flex items-center gap-3 px-4 pt-3 pb-1">
+              <div className="h-px flex-1 bg-border/50" />
+              <span className="text-[10px] font-semibold text-muted-foreground/55 uppercase tracking-widest whitespace-nowrap">{label}</span>
+              <div className="h-px flex-1 bg-border/50" />
+            </div>,
+            ...items.map((inq) => (
+              <button key={inq.id} onClick={() => navigate(`/inquiries/${inq.id}`)}
+                className="w-full text-left px-4 py-3.5 flex items-center gap-3 hover:bg-muted/30 transition-colors active:scale-[0.99]">
+                <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
+                  {inq.firstName?.charAt(0) ?? "?"}
                 </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="text-xs text-muted-foreground">{formatDate(inq.createdAt)}</div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 ml-auto" />
-              </div>
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-foreground text-sm truncate">{inq.firstName} {inq.lastName}</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", getStatusColor(inq.status))}>{inq.status}</span>
+                    <span className="text-[11px] text-muted-foreground">{inq.levelOfCare || "—"}</span>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-xs text-muted-foreground">{formatDate(inq.createdAt)}</div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 ml-auto" />
+                </div>
+              </button>
+            )),
+          ])}
         </div>
 
         {/* Desktop: table */}
@@ -152,19 +159,30 @@ export default function Dashboard() {
             <tbody className="divide-y divide-border">
               {data.recentInquiries.length === 0 ? (
                 <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">No recent inquiries found.</td></tr>
-              ) : data.recentInquiries.map((inq) => (
-                <tr key={inq.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/inquiries/${inq.id}`)}>
-                  <td className="px-6 py-4 font-medium text-foreground">{inq.firstName} {inq.lastName}</td>
-                  <td className="px-6 py-4">
-                    <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium border", getStatusColor(inq.status))}>{inq.status}</span>
+              ) : groupByDay(data.recentInquiries).flatMap(({ label, items }) => [
+                <tr key={`day-${label}`}>
+                  <td colSpan={5} className="px-6 pt-4 pb-1.5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border/40" />
+                      <span className="text-[10px] font-semibold text-muted-foreground/55 uppercase tracking-widest whitespace-nowrap">{label}</span>
+                      <div className="h-px flex-1 bg-border/40" />
+                    </div>
                   </td>
-                  <td className="px-6 py-4 text-muted-foreground">{inq.levelOfCare || '—'}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{formatDate(inq.createdAt)}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-primary hover:text-primary/80 font-medium text-sm">View</span>
-                  </td>
-                </tr>
-              ))}
+                </tr>,
+                ...items.map((inq) => (
+                  <tr key={inq.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/inquiries/${inq.id}`)}>
+                    <td className="px-6 py-4 font-medium text-foreground">{inq.firstName} {inq.lastName}</td>
+                    <td className="px-6 py-4">
+                      <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium border", getStatusColor(inq.status))}>{inq.status}</span>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">{inq.levelOfCare || '—'}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{formatDate(inq.createdAt)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="text-primary hover:text-primary/80 font-medium text-sm">View</span>
+                    </td>
+                  </tr>
+                )),
+              ])}
             </tbody>
           </table>
         </div>

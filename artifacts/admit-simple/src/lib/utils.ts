@@ -36,3 +36,32 @@ export const statusColors: Record<string, string> = {
 export function getStatusColor(status: string) {
   return statusColors[status] || "bg-slate-100 text-slate-700";
 }
+
+export function getDayLabel(dateValue: string | Date | null | undefined): string {
+  if (!dateValue) return "Unknown Date";
+  try {
+    const d = new Date(typeof dateValue === "string" ? dateValue : dateValue.toISOString());
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return format(d, "EEE, MMM d, yyyy");
+  } catch {
+    return "Unknown Date";
+  }
+}
+
+export function groupByDay<T extends { createdAt: any }>(items: T[]): { label: string; items: T[] }[] {
+  const groups: { label: string; items: T[] }[] = [];
+  for (const item of items) {
+    const label = getDayLabel(item.createdAt);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) {
+      last.items.push(item);
+    } else {
+      groups.push({ label, items: [item] });
+    }
+  }
+  return groups;
+}
