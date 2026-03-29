@@ -13,6 +13,7 @@ import {
   LogOut
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import logoImg from "@assets/0C81D426-83A5-43FF-9228-B4A59CE7AF61_1774786596683.jpeg";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/" },
@@ -34,14 +35,16 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen fixed left-0 top-0 text-sidebar-foreground shadow-xl z-20 transition-all">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold shadow-lg shadow-primary/30">
-            A
-          </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">AdmitSimple</h1>
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-sidebar-border/40">
+          <img
+            src={logoImg}
+            alt="AdmitSimple"
+            className="h-8 w-auto object-contain"
+          />
         </div>
         
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
@@ -49,25 +52,28 @@ export function Sidebar() {
                 <div className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer",
                   isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-md" 
-                    : "hover:bg-sidebar-accent/50 hover:text-white"
+                    ? "bg-primary/15 text-primary font-medium border border-primary/20" 
+                    : "hover:bg-sidebar-accent/60 hover:text-white"
                 )}>
-                  <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-sidebar-foreground group-hover:text-white")} />
-                  {item.label}
+                  <item.icon className={cn(
+                    "w-[18px] h-[18px] shrink-0 transition-colors",
+                    isActive ? "text-primary" : "text-sidebar-foreground group-hover:text-white"
+                  )} />
+                  <span className="text-sm">{item.label}</span>
                 </div>
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border/50 bg-sidebar-accent/10">
+        <div className="p-4 border-t border-sidebar-border/40">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="w-10 h-10 rounded-full bg-sidebar-primary flex items-center justify-center text-white font-medium border border-sidebar-border">
+            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
               {user?.name.charAt(0) || "U"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-sidebar-foreground truncate">{user?.role}</p>
+              <p className="text-xs text-sidebar-foreground truncate capitalize">{user?.role}</p>
             </div>
             <button 
               onClick={() => logout()}
@@ -81,14 +87,14 @@ export function Sidebar() {
       </div>
 
       {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 pb-safe z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border flex justify-around p-2 pb-safe z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
         {[navItems[0], navItems[1], navItems[3], navItems[4], navItems[8]].map((item) => {
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
           return (
             <Link key={item.href} href={item.href} className="flex-1">
               <div className="flex flex-col items-center gap-1 p-2 cursor-pointer">
-                <item.icon className={cn("w-6 h-6 transition-colors", isActive ? "text-primary" : "text-slate-400")} />
-                <span className={cn("text-[10px] font-medium transition-colors", isActive ? "text-primary" : "text-slate-400")}>
+                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-sidebar-foreground")} />
+                <span className={cn("text-[10px] font-medium transition-colors", isActive ? "text-primary" : "text-sidebar-foreground")}>
                   {item.label}
                 </span>
               </div>

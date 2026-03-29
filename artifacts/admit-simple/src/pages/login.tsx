@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logoImg from "@assets/0C81D426-83A5-43FF-9228-B4A59CE7AF61_1774786596683.jpeg";
 
 export default function Login() {
   const [username, setUsername] = useState("admin");
@@ -17,73 +17,70 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-slate-50">
-      {/* Background Image/Pattern */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={`${import.meta.env.BASE_URL}images/login-bg.png`} 
-          alt="Background" 
-          className="w-full h-full object-cover opacity-20"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-[2px]" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
+      {/* Subtle background gradient */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
       </div>
 
-      <Card className="w-[90%] max-w-md z-10 shadow-2xl shadow-black/20 border-0 rounded-2xl overflow-hidden">
-        <div className="bg-primary p-6 text-center text-primary-foreground relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white/10 blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full bg-white/10 blur-xl"></div>
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 shadow-inner border border-white/20">
-              <ShieldCheck className="w-8 h-8 text-white" />
-            </div>
-            <CardTitle className="text-3xl font-bold tracking-tight">AdmitSimple</CardTitle>
-            <CardDescription className="text-primary-foreground/80 mt-2 text-sm max-w-xs mx-auto">
-              HIPAA-Conscious Admissions CRM for Treatment Centers
-            </CardDescription>
-          </div>
+      <div className="w-[90%] max-w-md z-10">
+        {/* Logo card */}
+        <div className="flex justify-center mb-8">
+          <img
+            src={logoImg}
+            alt="AdmitSimple"
+            className="h-16 w-auto object-contain rounded-xl"
+          />
         </div>
-        
-        <CardContent className="p-8 bg-white">
-          <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Login form card */}
+        <div className="bg-card border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+          <div className="px-8 pt-8 pb-2">
+            <h2 className="text-xl font-bold text-foreground">Sign in to your account</h2>
+            <p className="text-sm text-muted-foreground mt-1">HIPAA-Conscious Admissions CRM</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-slate-600 font-medium">Username</Label>
-              <Input 
-                id="username" 
+              <Label htmlFor="username" className="text-sm font-medium text-foreground">Username</Label>
+              <Input
+                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-lg"
+                className="h-11 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary transition-colors"
                 placeholder="Enter your username"
               />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label htmlFor="password" className="text-slate-600 font-medium">Password</Label>
-                <a href="#" className="text-xs text-primary font-medium hover:underline">Forgot?</a>
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
+                <a href="#" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">Forgot?</a>
               </div>
-              <Input 
-                id="password" 
+              <Input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-lg"
+                className="h-11 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary transition-colors"
                 placeholder="••••••••"
               />
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isLoggingIn}
-              className="w-full h-12 text-base font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+              className="w-full h-11 text-base font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 mt-2"
             >
               {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
               {isLoggingIn ? "Authenticating..." : "Sign In Securely"}
             </Button>
-            
-            <p className="text-xs text-center text-slate-400 pt-4">
+
+            <p className="text-xs text-center text-muted-foreground pt-2">
               Authorized personnel only. All access is logged and monitored.
             </p>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

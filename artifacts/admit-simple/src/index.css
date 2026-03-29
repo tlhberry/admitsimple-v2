@@ -52,61 +52,65 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ─── AdmitSimple Brand Theme (Dark Default) ─── */
 :root {
-  --background: 210 40% 98%; /* #F8FAFC */
-  --foreground: 217 33% 17%; /* #1E293B */
-  
-  --card: 0 0% 100%; /* #FFFFFF */
-  --card-foreground: 217 33% 17%;
-  --card-border: 214 32% 91%; /* #E2E8F0 */
-  
-  --popover: 0 0% 100%;
-  --popover-foreground: 217 33% 17%;
-  --popover-border: 214 32% 91%;
-  
-  --primary: 217 91% 60%; /* #3B82F6 */
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 214 32% 91%;
-  --secondary-foreground: 217 33% 17%;
-  
-  --muted: 214 32% 91%;
-  --muted-foreground: 215 16% 47%; /* #64748B */
-  
-  --accent: 214 32% 91%;
-  --accent-foreground: 217 33% 17%;
-  
-  --destructive: 348 83% 47%; /* #E11D48 */
+  /* Brand: dark charcoal bg + cyan accent */
+  --background: 220 18% 18%;       /* #252B35 main app bg */
+  --foreground: 210 20% 90%;       /* #E2E8F2 primary text */
+
+  --card: 220 17% 22%;             /* #2D3440 card surface */
+  --card-foreground: 210 20% 90%;
+  --card-border: 220 18% 29%;      /* #3A4358 */
+
+  --popover: 220 17% 22%;
+  --popover-foreground: 210 20% 90%;
+  --popover-border: 220 18% 29%;
+
+  /* Cyan brand accent from the logo underline */
+  --primary: 190 65% 61%;          /* #5BC8DC */
+  --primary-foreground: 220 18% 15%;
+
+  --secondary: 220 18% 29%;
+  --secondary-foreground: 210 20% 90%;
+
+  --muted: 220 18% 15%;            /* #1C2232 darker surface */
+  --muted-foreground: 220 15% 54%; /* #7A8399 muted text */
+
+  --accent: 190 65% 20%;           /* subtle cyan tint bg */
+  --accent-foreground: 190 65% 80%;
+
+  --destructive: 348 83% 55%;
   --destructive-foreground: 0 0% 100%;
-  
-  --border: 214 32% 91%; /* #E2E8F0 */
-  --input: 214 32% 91%;
-  --ring: 217 91% 60%;
-  
-  --sidebar: 222 47% 11%; /* #0F172A */
-  --sidebar-foreground: 215 16% 65%; /* #94A3B8 */
-  --sidebar-border: 217 33% 17%;
-  --sidebar-primary: 217 33% 17%; /* #1E293B */
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 33% 17%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 217 91% 60%;
+
+  --border: 220 18% 29%;           /* #3A4358 */
+  --input: 220 18% 24%;
+  --ring: 190 65% 61%;
+
+  /* Sidebar — deepest dark */
+  --sidebar: 220 22% 14%;          /* #1A2130 */
+  --sidebar-foreground: 220 15% 60%;
+  --sidebar-border: 220 18% 22%;
+  --sidebar-primary: 190 65% 20%;  /* cyan tinted active bg */
+  --sidebar-primary-foreground: 190 65% 85%;
+  --sidebar-accent: 220 22% 20%;
+  --sidebar-accent-foreground: 210 20% 90%;
+  --sidebar-ring: 190 65% 61%;
 
   --radius: 0.5rem;
-  
-  /* Status Colors */
-  --status-new-bg: 214 100% 97%; /* #EFF6FF */
-  --status-new-text: 217 91% 60%; /* #3B82F6 */
-  --status-contacted-bg: 28 100% 97%; /* #FFF7ED */
-  --status-contacted-text: 25 95% 53%; /* #F97316 */
-  --status-qualified-bg: 138 76% 97%; /* #F0FDF4 */
-  --status-qualified-text: 142 71% 45%; /* #22C55E */
-  --status-admitted-bg: 152 76% 97%; /* #ECFDF5 */
-  --status-admitted-text: 160 84% 39%; /* #10B981 */
-  --status-declined-bg: 355 100% 97%; /* #FFF1F2 */
-  --status-declined-text: 343 88% 60%; /* #F43F5E */
-  --status-lost-bg: 210 40% 98%; /* #F8FAFC */
-  --status-lost-text: 215 16% 65%; /* #94A3B8 */
+
+  /* Status Colors — adjusted for dark */
+  --status-new-bg: 217 50% 20%;
+  --status-new-text: 190 65% 61%;
+  --status-contacted-bg: 28 60% 18%;
+  --status-contacted-text: 25 95% 70%;
+  --status-qualified-bg: 142 40% 18%;
+  --status-qualified-text: 142 71% 55%;
+  --status-admitted-bg: 160 40% 18%;
+  --status-admitted-text: 160 84% 55%;
+  --status-declined-bg: 355 50% 18%;
+  --status-declined-text: 343 88% 70%;
+  --status-lost-bg: 220 18% 22%;
+  --status-lost-text: 220 15% 54%;
 }
 
 @layer base {
@@ -115,31 +119,61 @@
   }
   body {
     @apply bg-background text-foreground antialiased font-sans;
+    color-scheme: dark;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight text-foreground;
   }
+
+  /* ── Global dark overrides for hardcoded Tailwind colors ── */
+  .bg-white {
+    background-color: hsl(220, 17%, 22%) !important;
+  }
+  .bg-slate-50 {
+    background-color: hsl(220, 18%, 19%) !important;
+  }
+  .bg-slate-100 {
+    background-color: hsl(220, 18%, 24%) !important;
+  }
+  .border-slate-100,
+  .border-slate-200 {
+    border-color: hsl(220, 18%, 29%) !important;
+  }
+  .text-slate-900 {
+    color: hsl(210, 20%, 90%) !important;
+  }
+  .text-slate-800 {
+    color: hsl(210, 15%, 82%) !important;
+  }
+  .text-slate-700 {
+    color: hsl(210, 12%, 72%) !important;
+  }
+  .text-slate-600 {
+    color: hsl(220, 12%, 62%) !important;
+  }
+  .text-slate-500 {
+    color: hsl(220, 12%, 54%) !important;
+  }
+  .text-slate-400 {
+    color: hsl(220, 12%, 46%) !important;
+  }
+  /* Prose / markdown in dark */
+  .prose { color: hsl(210, 20%, 85%); }
+  .prose strong { color: hsl(210, 20%, 95%); }
+  .prose code { color: hsl(190, 65%, 70%); }
 }
 
-/* Custom Scrollbar for better aesthetics */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
+  background: hsl(220, 18%, 35%);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  background: hsl(220, 18%, 44%);
 }
 
-/* Kanban specific styles */
-.kanban-scroll {
-  scroll-snap-type: x mandatory;
-}
-.kanban-col {
-  scroll-snap-align: start;
-}
+/* Kanban */
+.kanban-scroll { scroll-snap-type: x mandatory; }
+.kanban-col { scroll-snap-align: start; }
