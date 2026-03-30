@@ -2,7 +2,7 @@ import { useGetPipelineInquiries } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Clock, MoreHorizontal, ExternalLink, Plus, CalendarCheck } from "lucide-react";
+import { Loader2, Clock, MoreHorizontal, ExternalLink, Plus, CalendarCheck, Phone, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
@@ -10,14 +10,49 @@ import { cn } from "@/lib/utils";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { PipelineColumn } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+
+async function logContact(inquiryId: number, type: "phone_call" | "sms") {
+  await fetch("/api/activities", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      inquiryId,
+      type,
+      subject: type === "phone_call" ? "Called from pipeline" : "Texted from pipeline",
+      completedAt: new Date().toISOString(),
+    }),
+  });
+}
 
 export default function Pipeline() {
   const { data, isLoading, refetch } = useGetPipelineInquiries();
   const { updateInquiry } = useInquiriesMutations();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const justDragged = useRef(false);
   const [columns, setColumns] = useState<PipelineColumn[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+
+  const handleContact = async (e: React.MouseEvent, item: any, type: "phone_call" | "sms") => {
+    e.stopPropagation();
+    const phone = (item as any).phone;
+    if (!phone) {
+      toast({ title: "No phone number on file", variant: "destructive" });
+      return;
+    }
+    window.location.href = type === "phone_call" ? `tel:${phone}` : `sms:${phone}`;
+    try {
+      await logContact(item.id, type);
+    } catch {
+      // log silently — don't block the user
+    }
+    toast({
+      title: type === "phone_call" ? `Calling ${item.firstName} ${item.lastName}` : `Texting ${item.firstName} ${item.lastName}`,
+      description: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+    });
+  };
 
   useEffect(() => {
     if (data) setColumns(data);
@@ -127,11 +162,27 @@ export default function Pipeline() {
                                 <Clock className="w-3 h-3" />
                                 {item.daysInStage}d
                               </div>
-                              {item.assignedToName && (
-                                <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20" title={item.assignedToName}>
-                                  {item.assignedToName.charAt(0)}
-                                </div>
-                              )}
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={(e) => handleContact(e, item, "phone_call")}
+                                  title="Call"
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => handleContact(e, item, "sms")}
+                                  title="Text"
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 transition-colors"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </button>
+                                {item.assignedToName && (
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20 ml-0.5" title={item.assignedToName}>
+                                    {item.assignedToName.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         )}
