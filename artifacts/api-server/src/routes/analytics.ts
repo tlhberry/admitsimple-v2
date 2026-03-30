@@ -358,15 +358,17 @@ router.get("/dashboard/command-center", async (req, res) => {
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 3600000);
     const fortyEightHoursAgo = new Date(now.getTime() - 48 * 3600000);
 
-    // Last 5 inquiries created
+    // Last 5 active inquiries created (exclude terminal statuses)
     const recentRows = await db.select({
       id: inquiries.id,
       firstName: inquiries.firstName,
       lastName: inquiries.lastName,
+      phone: inquiries.phone,
       status: inquiries.status,
       referralSource: inquiries.referralSource,
       createdAt: inquiries.createdAt,
     }).from(inquiries)
+      .where(sql`${inquiries.status} NOT IN ('did_not_admit','discharged','referred_out')`)
       .orderBy(desc(inquiries.createdAt))
       .limit(5);
 
@@ -423,6 +425,7 @@ router.get("/dashboard/command-center", async (req, res) => {
       recentInquiries: recentRows.map(r => ({
         id: r.id,
         name: `${r.firstName} ${r.lastName}`,
+        phone: r.phone,
         status: r.status,
         referralSource: r.referralSource,
         createdAt: r.createdAt,

@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Loader2, Plus, Phone, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Phone, MessageSquare, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -155,23 +155,25 @@ export default function Dashboard() {
           {/* ── 0. Recent Inquiries ─────────────────────────────────────── */}
           <Section title="Recent Inquiries" badge="All" onClick={() => navigate("/inquiries")}>
             {recentInqs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No inquiries yet</p>
+              <p className="text-sm text-muted-foreground">No active inquiries</p>
             ) : (
               <div className="space-y-2">
                 {recentInqs.map((r: any) => (
-                  <button
+                  <div
                     key={r.id}
-                    onClick={(e) => { e.stopPropagation(); navigate(`/inquiries/${r.id}`); }}
-                    className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl bg-muted/40 hover:bg-muted/70 active:scale-[0.98] transition-all"
+                    onClick={() => navigate(`/inquiries/${r.id}`)}
+                    className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-muted/40 hover:bg-muted/70 active:scale-[0.98] transition-all cursor-pointer"
                   >
-                    <div className="text-left min-w-0">
+                    {/* Name + source */}
+                    <div className="flex-1 min-w-0 text-left">
                       <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{r.referralSource ?? "No source"}</p>
                     </div>
-                    <div className="shrink-0 ml-3 flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground/60">{timeAgo(r.createdAt)}</span>
+                    {/* Time + status */}
+                    <div className="shrink-0 flex flex-col items-end gap-1">
+                      <span className="text-[10px] text-muted-foreground/60 leading-none">{timeAgo(r.createdAt)}</span>
                       <span className={cn(
-                        "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full border leading-none",
                         r.status === "admitted"
                           ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
                           : r.status === "new"
@@ -181,7 +183,26 @@ export default function Dashboard() {
                         {statusLabel(r.status)}
                       </span>
                     </div>
-                  </button>
+                    {/* Call / Text actions */}
+                    {r.phone && (
+                      <div className="shrink-0 flex items-center gap-1.5 ml-1" onClick={(e) => e.stopPropagation()}>
+                        <a
+                          href={`tel:${r.phone}`}
+                          className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                          title={`Call ${r.phone}`}
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={`sms:${r.phone}`}
+                          className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                          title={`Text ${r.phone}`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
