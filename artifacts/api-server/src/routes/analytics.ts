@@ -358,6 +358,18 @@ router.get("/dashboard/command-center", async (req, res) => {
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 3600000);
     const fortyEightHoursAgo = new Date(now.getTime() - 48 * 3600000);
 
+    // Last 5 inquiries created
+    const recentRows = await db.select({
+      id: inquiries.id,
+      firstName: inquiries.firstName,
+      lastName: inquiries.lastName,
+      status: inquiries.status,
+      referralSource: inquiries.referralSource,
+      createdAt: inquiries.createdAt,
+    }).from(inquiries)
+      .orderBy(desc(inquiries.createdAt))
+      .limit(5);
+
     // Ready to Admit — has appointment date, not yet admitted/discharged
     const readyRows = await db.select({
       id: inquiries.id,
@@ -408,6 +420,13 @@ router.get("/dashboard/command-center", async (req, res) => {
       .limit(8);
 
     res.json({
+      recentInquiries: recentRows.map(r => ({
+        id: r.id,
+        name: `${r.firstName} ${r.lastName}`,
+        status: r.status,
+        referralSource: r.referralSource,
+        createdAt: r.createdAt,
+      })),
       readyToAdmit: readyRows.map(r => ({
         id: r.id,
         name: `${r.firstName} ${r.lastName}`,

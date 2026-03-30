@@ -107,6 +107,7 @@ export default function Dashboard() {
   const speed    = perf?.speed    ?? { avgHoursToAdmit: null, sampleSize: 0 };
   const pipe     = perf?.pipeline ?? { active: 0, vobPending: 0, readyToAdmit: 0 };
 
+  const recentInqs  = (cc?.recentInquiries ?? []) as any[];
   const ready       = (cc?.readyToAdmit ?? []) as any[];
   const stuck       = cc?.stuckLeads ?? { vob: 0, preAssess: 0, initialContact: 0, total: 0 };
   const missedCalls = (cc?.missedCalls ?? []) as any[];
@@ -150,6 +151,41 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
+
+          {/* ── 0. Recent Inquiries ─────────────────────────────────────── */}
+          <Section title="Recent Inquiries" badge="All" onClick={() => navigate("/inquiries")}>
+            {recentInqs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No inquiries yet</p>
+            ) : (
+              <div className="space-y-2">
+                {recentInqs.map((r: any) => (
+                  <button
+                    key={r.id}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/inquiries/${r.id}`); }}
+                    className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl bg-muted/40 hover:bg-muted/70 active:scale-[0.98] transition-all"
+                  >
+                    <div className="text-left min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{r.referralSource ?? "No source"}</p>
+                    </div>
+                    <div className="shrink-0 ml-3 flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground/60">{timeAgo(r.createdAt)}</span>
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                        r.status === "admitted"
+                          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                          : r.status === "new"
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-muted text-muted-foreground border-border",
+                      )}>
+                        {statusLabel(r.status)}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </Section>
 
           {/* ── 1. Ready to Admit ─────────────────────────────────────── */}
           <Section
