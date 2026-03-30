@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UploadCloud, Sparkles, Loader2, CheckCircle2, Search, History } from "lucide-react";
+import {
+  Sparkles, Loader2, CheckCircle2, Search, History,
+  CreditCard, X, Camera,
+} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateInquiryBody } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -21,8 +24,12 @@ const formSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   dob: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
   insuranceProvider: z.string().optional(),
   insuranceMemberId: z.string().optional(),
+  insuranceGroupNumber: z.string().optional(),
+  insuranceCarrierPhone: z.string().optional(),
   levelOfCare: z.string().optional(),
   referralSource: z.string().optional(),
   searchKeywords: z.string().optional(),
@@ -41,6 +48,58 @@ function buildTreatmentText(facility: string, year: string, types: string[]): st
   return parts ? `${parts}${typeStr}` : types.length > 0 ? types.join("/") : "Yes";
 }
 
+// ── Insurance card dropzone ───────────────────────────────────────────────────
+function CardDropzone({
+  label,
+  file,
+  onFile,
+  onClear,
+}: {
+  label: string;
+  file: File | null;
+  onFile: (f: File) => void;
+  onClear: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div
+      className={cn(
+        "relative border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-colors",
+        file ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/40 hover:bg-muted/60"
+      )}
+      onClick={() => ref.current?.click()}
+    >
+      <input
+        type="file"
+        ref={ref}
+        accept="image/*"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
+      />
+      {file ? (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <CreditCard className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-xs text-foreground truncate">{file.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onClear(); }}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-1 py-1 pointer-events-none">
+          <Camera className="w-5 h-5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground font-medium">{label}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   const { createInquiry } = useInquiriesMutations();
   const { parseIntake } = useAIFeatures();
@@ -50,7 +109,13 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   const [isParsing, setIsParsing] = useState(false);
   const [parseSuccess, setParseSuccess] = useState(false);
 
-  // Treatment history (managed outside react-hook-form)
+  // Insurance card scan
+  const [cardFront, setCardFront] = useState<File | null>(null);
+  const [cardBack, setCardBack] = useState<File | null>(null);
+  const [isScanningCard, setIsScanningCard] = useState(false);
+  const [cardScanSuccess, setCardScanSuccess] = useState(false);
+
+  // Treatment history
   const [hadPreviousTreatment, setHadPreviousTreatment] = useState(false);
   const [prevFacilityName, setPrevFacilityName] = useState("");
   const [prevTreatmentYear, setPrevTreatmentYear] = useState("");
@@ -74,6 +139,7 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 
   const watchedReferralSource = form.watch("referralSource");
 
+  // ── AI document parse ──────────────────────────────────────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -98,6 +164,47 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
+  // ── Insurance card scan ────────────────────────────────────────────────────
+  const handleScanCard = async () => {
+    if (!cardFront && !cardBack) return;
+    setIsScanningCard(true);
+    try {
+      const formData = new FormData();
+      if (cardFront) formData.append("front", cardFront);
+      if (cardBack) formData.append("back", cardBack);
+
+      const res = await fetch("/api/ai/parse-insurance-card", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Card scan failed");
+      const data = await res.json();
+
+      const cardFields = new Set<string>(aiFields);
+      const fieldMap: Record<string, string> = {
+        insuranceProvider: "insuranceProvider",
+        insuranceMemberId: "insuranceMemberId",
+        insuranceGroupNumber: "insuranceGroupNumber",
+        insuranceCarrierPhone: "insuranceCarrierPhone",
+      };
+      Object.entries(fieldMap).forEach(([apiKey, formKey]) => {
+        if (data[apiKey]) {
+          form.setValue(formKey as any, data[apiKey]);
+          cardFields.add(formKey);
+        }
+      });
+      setAiFields(cardFields);
+      setCardScanSuccess(true);
+      setTimeout(() => setCardScanSuccess(false), 5000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsScanningCard(false);
+    }
+  };
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const onSubmit = async (data: FormValues) => {
     const created = await createInquiry.mutateAsync({ data: data as CreateInquiryBody });
     const inquiryId = (created as any)?.id;
@@ -107,7 +214,7 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
         ? buildTreatmentText(prevFacilityName, prevTreatmentYear, prevTreatmentTypes)
         : "";
 
-      // ── Seed Pre-Cert form ───────────────────────────────────────────────
+      // Pre-Cert form
       const preCertSeed: Record<string, any> = {};
       if (data.primaryDiagnosis) preCertSeed.presentingProblem = data.primaryDiagnosis;
       if (treatmentText) preCertSeed.treatmentHistory = treatmentText;
@@ -121,11 +228,12 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
         }).catch(() => {});
       }
 
-      // ── Seed Pre-Screening form ──────────────────────────────────────────
+      // Pre-Screening form
       const prescreenSeed: Record<string, any> = {};
       if (data.referralSource) prescreenSeed.referralSource = data.referralSource;
       if (data.levelOfCare) prescreenSeed.levelOfCareInterest = data.levelOfCare;
       if (data.insuranceProvider) prescreenSeed.hasInsurance = "Yes";
+      if (data.insuranceProvider) prescreenSeed.insuranceType = data.insuranceProvider;
       if (treatmentText) prescreenSeed.previousTreatment = treatmentText;
 
       if (Object.keys(prescreenSeed).length > 0) {
@@ -137,7 +245,7 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
         }).catch(() => {});
       }
 
-      // ── Seed Nursing Assessment form ─────────────────────────────────────
+      // Nursing Assessment
       const nursingSeed: Record<string, any> = {};
       if (data.medicalHistory) nursingSeed.additionalNursingNotes = data.medicalHistory;
 
@@ -200,6 +308,9 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           <Field label="Phone" name="phone" form={form} isAi={isAi("phone")} />
           <Field label="Email" name="email" form={form} isAi={isAi("email")} />
           <Field label="Date of Birth" name="dob" form={form} isAi={isAi("dob")} placeholder="MM/DD/YYYY" />
+          <div /> {/* spacer */}
+          <Field label="City" name="city" form={form} isAi={isAi("city")} placeholder="City" />
+          <Field label="State" name="state" form={form} isAi={isAi("state")} placeholder="e.g. FL" />
 
           <div className="space-y-1.5">
             <Label className="text-foreground font-medium">Level of Care</Label>
@@ -255,10 +366,56 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 
         {/* Insurance */}
         <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-4">
-          <h4 className="font-semibold text-foreground">Insurance Information</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-primary" />
+              Insurance Information
+            </h4>
+          </div>
+
+          {/* Insurance card scan */}
+          <div className="bg-card rounded-lg p-3 border border-border space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Scan Insurance Card with AI
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <CardDropzone
+                label="Front of Card"
+                file={cardFront}
+                onFile={setCardFront}
+                onClear={() => setCardFront(null)}
+              />
+              <CardDropzone
+                label="Back of Card"
+                file={cardBack}
+                onFile={setCardBack}
+                onClear={() => setCardBack(null)}
+              />
+            </div>
+            {(cardFront || cardBack) && (
+              <Button
+                type="button"
+                onClick={handleScanCard}
+                disabled={isScanningCard}
+                size="sm"
+                className="w-full rounded-lg bg-primary text-white h-9"
+              >
+                {isScanningCard ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Scanning card...</>
+                ) : cardScanSuccess ? (
+                  <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-300" />Card scanned — fields filled below</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-2" />Extract Info from Card</>
+                )}
+              </Button>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Provider" name="insuranceProvider" form={form} isAi={isAi("insuranceProvider")} />
-            <Field label="Member ID" name="insuranceMemberId" form={form} isAi={isAi("insuranceMemberId")} />
+            <Field label="Provider / Carrier" name="insuranceProvider" form={form} isAi={isAi("insuranceProvider")} placeholder="e.g. Aetna" />
+            <Field label="Member ID" name="insuranceMemberId" form={form} isAi={isAi("insuranceMemberId")} placeholder="Member ID" />
+            <Field label="Group Number" name="insuranceGroupNumber" form={form} isAi={isAi("insuranceGroupNumber")} placeholder="Group #" />
+            <Field label="Carrier Phone" name="insuranceCarrierPhone" form={form} isAi={isAi("insuranceCarrierPhone")} placeholder="(800) 000-0000" />
           </div>
         </div>
 

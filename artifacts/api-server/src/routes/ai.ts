@@ -47,7 +47,8 @@ Extract these fields if present:
 - firstName, lastName
 - phone, email
 - dob (date of birth, format MM/DD/YYYY)
-- insuranceProvider, insuranceMemberId
+- city, state
+- insuranceProvider, insuranceMemberId, insuranceGroupNumber, insuranceCarrierPhone
 - primaryDiagnosis
 - substanceHistory
 - medicalHistory
@@ -66,6 +67,80 @@ Do not include any explanation, only the JSON object.`,
     const textContent = response.content.find(c => c.type === "text");
     if (!textContent || textContent.type !== "text") {
       res.status(500).json({ error: "Failed to parse document" });
+      return;
+    }
+
+    let parsed: any = {};
+    try {
+      const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      parsed = {};
+    }
+
+    const fieldsExtracted = Object.values(parsed).filter(v => v !== null && v !== undefined && v !== "").length;
+    res.json({ ...parsed, fieldsExtracted });
+  } catch (err: any) {
+    req.log.error(err);
+    res.status(500).json({ error: "AI processing failed" });
+  }
+});
+
+// ── Insurance card scan (front + back) ───────────────────────────────────────
+const uploadInsuranceCard = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+router.post("/ai/parse-insurance-card", uploadInsuranceCard.fields([
+  { name: "front", maxCount: 1 },
+  { name: "back", maxCount: 1 },
+]), async (req, res) => {
+  try {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const front = files?.front?.[0];
+    const back = files?.back?.[0];
+
+    if (!front && !back) {
+      res.status(400).json({ error: "At least one insurance card image is required" });
+      return;
+    }
+
+    const imageContent: any[] = [];
+    if (front) {
+      imageContent.push({
+        type: "image",
+        source: { type: "base64", media_type: front.mimetype as any, data: front.buffer.toString("base64") },
+      });
+      imageContent.push({ type: "text", text: "Above is the FRONT of the insurance card." });
+    }
+    if (back) {
+      imageContent.push({
+        type: "image",
+        source: { type: "base64", media_type: back.mimetype as any, data: back.buffer.toString("base64") },
+      });
+      imageContent.push({ type: "text", text: "Above is the BACK of the insurance card." });
+    }
+
+    imageContent.push({
+      type: "text",
+      text: `You are a medical billing specialist. Extract all insurance information from this card and return it as JSON.
+Extract these fields if present:
+- insuranceProvider (insurance company name)
+- insuranceMemberId (member ID, subscriber ID)
+- insuranceGroupNumber (group number, group ID)
+- insuranceCarrierPhone (customer service / provider phone number on the card)
+
+Return ONLY valid JSON with these exact field names. Use null for fields not found.
+Do not include any explanation, only the JSON object.`,
+    });
+
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 500,
+      messages: [{ role: "user", content: imageContent }],
+    });
+
+    const textContent = response.content.find(c => c.type === "text");
+    if (!textContent || textContent.type !== "text") {
+      res.status(500).json({ error: "Failed to parse insurance card" });
       return;
     }
 
