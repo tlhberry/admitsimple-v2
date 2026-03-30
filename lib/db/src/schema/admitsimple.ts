@@ -318,6 +318,23 @@ export const dailyTaskCompletions = pgTable("daily_task_completions", {
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
+// ─── Patient Stays ────────────────────────────────────────────────────────────
+export const patientStays = pgTable("patient_stays", {
+  id: serial("id").primaryKey(),
+  inquiryId: integer("inquiry_id").references(() => inquiries.id),
+  patientName: varchar("patient_name", { length: 255 }).notNull(),
+  bedId: integer("bed_id").references(() => beds.id),
+  admitDate: timestamp("admit_date").defaultNow(),
+  expectedDischargeDate: timestamp("expected_discharge_date"),
+  actualDischargeDate: timestamp("actual_discharge_date"),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PatientStay = typeof patientStays.$inferSelect;
+
 // ─── Saved Reports ────────────────────────────────────────────────────────────
 export const savedReports = pgTable("saved_reports", {
   id: serial("id").primaryKey(),

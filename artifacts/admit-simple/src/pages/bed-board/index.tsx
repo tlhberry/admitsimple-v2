@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, BedDouble, Brain, AlertTriangle, Sparkles, RefreshCw, X } from "lucide-react";
+import {
+  Loader2, BedDouble, Brain, AlertTriangle, Sparkles, RefreshCw, X,
+  UserPlus, LogOut, BookmarkCheck, Info, Clock, ShieldCheck,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Bed = {
   id: number;
@@ -18,6 +21,7 @@ type Bed = {
   gender: string | null;
   expectedDischargeDate: string | null;
   notes: string | null;
+  updatedAt: string | null;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -25,19 +29,309 @@ const STATUS_COLORS: Record<string, string> = {
   occupied:  "border-rose-500/40 bg-rose-500/8",
   reserved:  "border-amber-400/40 bg-amber-400/8",
 };
-
 const STATUS_BADGE: Record<string, string> = {
   available: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   occupied:  "bg-rose-500/20 text-rose-400 border-rose-500/30",
   reserved:  "bg-amber-400/20 text-amber-400 border-amber-400/30",
 };
-
 const STATUS_DOT: Record<string, string> = {
   available: "bg-emerald-400",
   occupied:  "bg-rose-400",
   reserved:  "bg-amber-400",
 };
 
+// ── Assign Patient Dialog ─────────────────────────────────────────────────────
+function AssignModal({
+  bed,
+  mode,
+  onClose,
+  onDone,
+}: {
+  bed: Bed;
+  mode: "assign" | "reserve";
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { toast } = useToast();
+  const [patientName, setPatientName] = useState("");
+  const [gender, setGender] = useState("");
+  const [dateField, setDateField] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isAssign = mode === "assign";
+  const dateLabel = isAssign ? "Expected Discharge Date" : "Scheduled Admit Date";
+  const endpoint = isAssign ? `/api/beds/${bed.id}/assign` : `/api/beds/${bed.id}/reserve`;
+
+  const handleSubmit = async () => {
+    if (!patientName.trim() && isAssign) {
+      toast({ title: "Patient name is required", variant: "destructive" }); return;
+    }
+    setLoading(true);
+    try {
+      const body = isAssign
+        ? { patientName: patientName.trim(), gender: gender || null, expectedDischargeDate: dateField || null, notes: notes || null }
+        : { patientName: patientName.trim() || null, gender: gender || null, scheduledAdmitDate: dateField || null, notes: notes || null };
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) throw new Error("Request failed");
+      toast({ title: isAssign ? `${patientName} assigned to ${bed.name}` : `${bed.name} reserved` });
+      onDone();
+    } catch {
+      toast({ title: "Failed to update bed", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-foreground text-base">
+              {isAssign ? "Assign Patient" : "Reserve Bed"}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Bed {bed.name} · {bed.unit}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+              Patient Name {isAssign && <span className="text-rose-400">*</span>}
+            </label>
+            <Input
+              value={patientName}
+              onChange={e => setPatientName(e.target.value)}
+              placeholder={isAssign ? "Full name" : "Optional — pending name"}
+              className="h-9 rounded-xl bg-muted border-border text-foreground"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Gender</label>
+            <Select value={gender || "unassigned"} onValueChange={v => setGender(v === "unassigned" ? "" : v)}>
+              <SelectTrigger className="h-9 rounded-xl bg-muted border-border text-foreground">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border text-foreground">
+                <SelectItem value="unassigned">Not specified</SelectItem>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">{dateLabel}</label>
+            <Input
+              type="date"
+              value={dateField}
+              onChange={e => setDateField(e.target.value)}
+              className="h-9 rounded-xl bg-muted border-border text-foreground"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Notes</label>
+            <Input
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Optional notes"
+              className="h-9 rounded-xl bg-muted border-border text-foreground"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 h-9 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : isAssign ? "Assign Patient" : "Reserve Bed"}
+          </Button>
+          <Button onClick={onClose} variant="outline" className="h-9 px-4 rounded-xl border-border text-foreground hover:bg-muted text-sm">
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Bed Card ─────────────────────────────────────────────────────────────────
+function BedCard({ bed, groupBy, onAction }: { bed: Bed; groupBy: string | null; onAction: (bed: Bed, action: "assign" | "reserve") => void; }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [dischargeConfirm, setDischargeConfirm] = useState(false);
+  const [discharging, setDischarging] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const handleDischarge = async () => {
+    setDischarging(true);
+    try {
+      const resp = await fetch(`/api/beds/${bed.id}/discharge`, { method: "POST", credentials: "include" });
+      if (!resp.ok) throw new Error("Discharge failed");
+      queryClient.invalidateQueries({ queryKey: ["/api/beds"] });
+      toast({ title: `${bed.currentPatientName} discharged from ${bed.name}` });
+      setDischargeConfirm(false);
+    } catch {
+      toast({ title: "Discharge failed", variant: "destructive" });
+    } finally {
+      setDischarging(false);
+    }
+  };
+
+  const handleClearReservation = async () => {
+    setClearing(true);
+    try {
+      const resp = await fetch(`/api/beds/${bed.id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "available" }),
+      });
+      if (!resp.ok) throw new Error("Clear failed");
+      queryClient.invalidateQueries({ queryKey: ["/api/beds"] });
+      toast({ title: `${bed.name} is now available` });
+    } catch {
+      toast({ title: "Failed to clear reservation", variant: "destructive" });
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const handleAdmitFromReserve = () => onAction(bed, "assign");
+
+  return (
+    <div className={cn(
+      "rounded-2xl border-2 p-3.5 flex flex-col gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg",
+      STATUS_COLORS[bed.status] ?? "border-border bg-card"
+    )}>
+      {/* Top row: name + badge */}
+      <div className="flex items-center justify-between">
+        <span className="font-bold text-foreground text-sm">{bed.name}</span>
+        <span className={cn(
+          "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+          STATUS_BADGE[bed.status]
+        )}>
+          <span className={cn("w-1.5 h-1.5 rounded-full", STATUS_DOT[bed.status])} />
+          {bed.status}
+        </span>
+      </div>
+
+      {/* Unit label if not grouped by unit */}
+      {!groupBy && (
+        <p className="text-[10px] text-muted-foreground font-medium -mt-1">{bed.unit}</p>
+      )}
+
+      {/* Content by status */}
+      {bed.status === "occupied" && bed.currentPatientName ? (
+        <div className="space-y-0.5 flex-1">
+          <p className="text-xs text-foreground font-semibold truncate">{bed.currentPatientName}</p>
+          {bed.gender && <p className="text-[10px] text-muted-foreground capitalize">{bed.gender}</p>}
+          {bed.expectedDischargeDate && (
+            <p className="text-[10px] text-muted-foreground">
+              DC: {new Date(bed.expectedDischargeDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </p>
+          )}
+          {bed.notes && <p className="text-[10px] text-muted-foreground/70 italic truncate">{bed.notes}</p>}
+        </div>
+      ) : bed.status === "reserved" ? (
+        <div className="space-y-0.5 flex-1">
+          <p className="text-[10px] text-amber-400 font-semibold">Reserved</p>
+          {bed.currentPatientName && <p className="text-xs text-foreground font-medium truncate">{bed.currentPatientName}</p>}
+          {bed.gender && <p className="text-[10px] text-muted-foreground capitalize">{bed.gender}</p>}
+          {bed.expectedDischargeDate && (
+            <p className="text-[10px] text-muted-foreground">
+              Admit: {new Date(bed.expectedDischargeDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </p>
+          )}
+          {bed.notes && <p className="text-[10px] text-muted-foreground/70 italic truncate">{bed.notes}</p>}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 flex-1">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <p className="text-[10px] text-emerald-400 font-semibold">Open</p>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="mt-auto pt-1 border-t border-white/5">
+        {bed.status === "available" && (
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => onAction(bed, "assign")}
+              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+            >
+              <UserPlus className="w-3 h-3" /> Assign
+            </button>
+            <button
+              onClick={() => onAction(bed, "reserve")}
+              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 rounded-lg bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 transition-colors"
+            >
+              <BookmarkCheck className="w-3 h-3" /> Reserve
+            </button>
+          </div>
+        )}
+
+        {bed.status === "occupied" && (
+          dischargeConfirm ? (
+            <div className="flex gap-1.5">
+              <button
+                onClick={handleDischarge}
+                disabled={discharging}
+                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-rose-500/30 text-rose-300 hover:bg-rose-500/40 transition-colors"
+              >
+                {discharging ? <Loader2 className="w-3 h-3 animate-spin" /> : "Confirm DC"}
+              </button>
+              <button
+                onClick={() => setDischargeConfirm(false)}
+                className="flex-1 text-[10px] py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setDischargeConfirm(true)}
+              className="w-full flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-colors"
+            >
+              <LogOut className="w-3 h-3" /> Discharge Patient
+            </button>
+          )
+        )}
+
+        {bed.status === "reserved" && (
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleAdmitFromReserve}
+              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+            >
+              <UserPlus className="w-3 h-3" /> Admit Now
+            </button>
+            <button
+              onClick={handleClearReservation}
+              disabled={clearing}
+              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              {clearing ? <Loader2 className="w-3 h-3 animate-spin" /> : <><X className="w-3 h-3" /> Clear</>}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ────────────────────────────────────────────────────────────────
 export default function BedBoard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -51,6 +345,8 @@ export default function BedBoard() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState<{ type: "answer" | "prediction"; text: string } | null>(null);
 
+  const [modal, setModal] = useState<{ bed: Bed; mode: "assign" | "reserve" } | null>(null);
+
   const { data: beds, isLoading } = useQuery<Bed[]>({
     queryKey: ["/api/beds"],
     queryFn: async () => {
@@ -63,7 +359,6 @@ export default function BedBoard() {
 
   const allBeds = beds ?? [];
 
-  // Apply filters
   const filtered = allBeds.filter(b => {
     if (filterUnit !== "all" && b.unit.toLowerCase() !== filterUnit.toLowerCase()) return false;
     if (filterStatus !== "all" && b.status !== filterStatus) return false;
@@ -84,11 +379,17 @@ export default function BedBoard() {
   const upcomingDischarges = allBeds.filter(b => {
     if (!b.expectedDischargeDate || b.status !== "occupied") return false;
     const d = new Date(b.expectedDischargeDate);
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 2);
-    return d <= tomorrow;
+    const twoDaysOut = new Date(); twoDaysOut.setDate(twoDaysOut.getDate() + 2);
+    return d <= twoDaysOut;
   });
 
-  // Group filtered beds
+  // Last updated timestamp (most recent bed update)
+  const lastUpdated = allBeds.reduce<Date | null>((latest, b) => {
+    if (!b.updatedAt) return latest;
+    const d = new Date(b.updatedAt);
+    return !latest || d > latest ? d : latest;
+  }, null);
+
   const grouped = (() => {
     if (!groupBy) return { All: filtered };
     return filtered.reduce<Record<string, Bed[]>>((acc, b) => {
@@ -114,7 +415,6 @@ export default function BedBoard() {
       });
       if (!resp.ok) throw new Error("AI request failed");
       const data = await resp.json();
-
       if (data.type === "filter" && data.filters) {
         const f = data.filters;
         if (f.unit !== undefined) setFilterUnit(f.unit ?? "all");
@@ -129,7 +429,7 @@ export default function BedBoard() {
       } else if (data.type === "prediction") {
         setAiMessage({ type: "prediction", text: data.answer });
       }
-    } catch (err: any) {
+    } catch {
       toast({ title: "AI request failed", variant: "destructive" });
     } finally {
       setAiLoading(false);
@@ -147,22 +447,41 @@ export default function BedBoard() {
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            <BedDouble className="w-7 h-7 text-primary" /> Bed Board
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Real-time bed availability and census tracking.</p>
+      {/* ── Internal Tracking Banner ── */}
+      <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-start gap-3 flex-1">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+            <BedDouble className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base font-bold text-foreground">Admissions Bed Board</h1>
+              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                <ShieldCheck className="w-3 h-3" /> Internal Tracking
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+              <Info className="w-3 h-3 shrink-0" />
+              This board is managed by the admissions team and is not synced with the EMR.
+            </p>
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/beds"] })}
-          className="gap-2 rounded-xl border-border"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Refresh
-        </Button>
+        <div className="flex items-center gap-3 sm:shrink-0">
+          {lastUpdated && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Last updated: {lastUpdated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/beds"] })}
+            className="gap-1.5 rounded-xl border-border text-xs h-8"
+          >
+            <RefreshCw className="w-3 h-3" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* KPI strip */}
@@ -170,7 +489,9 @@ export default function BedBoard() {
         <Card className={cn("rounded-2xl border", availBg)}>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium mb-1">Available</p>
-            <p className={cn("text-3xl font-bold", availColor)}>{available}<span className="text-base text-muted-foreground font-normal"> / {total}</span></p>
+            <p className={cn("text-3xl font-bold", availColor)}>
+              {available}<span className="text-base text-muted-foreground font-normal"> / {total}</span>
+            </p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl border-rose-500/20 bg-rose-500/5">
@@ -188,13 +509,16 @@ export default function BedBoard() {
         <Card className="rounded-2xl border-border bg-muted/30">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium mb-1">Occupancy</p>
-            <p className="text-3xl font-bold text-foreground">{total > 0 ? Math.round((occupied / total) * 100) : 0}<span className="text-base text-muted-foreground font-normal">%</span></p>
+            <p className="text-3xl font-bold text-foreground">
+              {total > 0 ? Math.round((occupied / total) * 100) : 0}
+              <span className="text-base text-muted-foreground font-normal">%</span>
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Alerts */}
-      {available <= 2 && (
+      {available <= 2 && available < total && (
         <div className="mb-4 flex items-center gap-3 p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 text-sm">
           <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
           <span><strong>Low availability:</strong> Only {available} bed{available !== 1 ? "s" : ""} remaining.</span>
@@ -203,7 +527,10 @@ export default function BedBoard() {
       {upcomingDischarges.length > 0 && (
         <div className="mb-4 flex items-center gap-3 p-3 rounded-xl border border-amber-400/30 bg-amber-400/10 text-amber-300 text-sm">
           <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-          <span><strong>{upcomingDischarges.length} discharge{upcomingDischarges.length !== 1 ? "s" : ""} in the next 48 hrs:</strong> {upcomingDischarges.map(b => b.currentPatientName).join(", ")}.</span>
+          <span>
+            <strong>{upcomingDischarges.length} discharge{upcomingDischarges.length !== 1 ? "s" : ""} in the next 48 hrs:</strong>{" "}
+            {upcomingDischarges.map(b => b.currentPatientName).join(", ")}.
+          </span>
         </div>
       )}
 
@@ -225,7 +552,6 @@ export default function BedBoard() {
 
       {/* AI input + Filters row */}
       <div className="flex flex-col lg:flex-row gap-3 mb-6">
-        {/* AI input */}
         <div className="flex gap-2 flex-1">
           <div className="relative flex-1">
             <Brain className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/60" />
@@ -248,7 +574,6 @@ export default function BedBoard() {
           </Button>
         </div>
 
-        {/* Manual filters */}
         <div className="flex gap-2 flex-wrap">
           <Select value={filterUnit} onValueChange={setFilterUnit}>
             <SelectTrigger className="w-36 h-10 rounded-xl bg-muted border-border text-foreground text-sm">
@@ -306,7 +631,7 @@ export default function BedBoard() {
         </div>
       )}
 
-      {/* Bed grid — grouped */}
+      {/* Bed grid */}
       {!isLoading && (
         <div className="space-y-8">
           {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, groupBeds]) => (
@@ -320,57 +645,12 @@ export default function BedBoard() {
               )}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {groupBeds.map(bed => (
-                  <div
+                  <BedCard
                     key={bed.id}
-                    className={cn(
-                      "rounded-2xl border-2 p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-lg",
-                      STATUS_COLORS[bed.status] ?? "border-border bg-card"
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-foreground text-sm">{bed.name}</span>
-                      <span className={cn(
-                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                        STATUS_BADGE[bed.status]
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", STATUS_DOT[bed.status])} />
-                        {bed.status}
-                      </span>
-                    </div>
-
-                    {!groupBy && (
-                      <p className="text-[10px] text-muted-foreground font-medium mb-2">{bed.unit}</p>
-                    )}
-
-                    {bed.status === "occupied" && bed.currentPatientName ? (
-                      <div className="mt-1 space-y-1">
-                        <p className="text-xs text-foreground font-semibold truncate">{bed.currentPatientName}</p>
-                        {bed.gender && (
-                          <p className="text-[10px] text-muted-foreground capitalize">{bed.gender}</p>
-                        )}
-                        {bed.expectedDischargeDate && (
-                          <p className="text-[10px] text-muted-foreground">
-                            DC: {new Date(bed.expectedDischargeDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </p>
-                        )}
-                      </div>
-                    ) : bed.status === "reserved" ? (
-                      <div className="mt-1">
-                        <p className="text-[10px] text-amber-400 font-medium">Reserved</p>
-                        {bed.gender && <p className="text-[10px] text-muted-foreground capitalize">{bed.gender}</p>}
-                        {bed.expectedDischargeDate && (
-                          <p className="text-[10px] text-muted-foreground">
-                            Admit: {new Date(bed.expectedDischargeDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-1 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <p className="text-[10px] text-emerald-400 font-semibold">Open</p>
-                      </div>
-                    )}
-                  </div>
+                    bed={bed}
+                    groupBy={groupBy}
+                    onAction={(b, mode) => setModal({ bed: b, mode })}
+                  />
                 ))}
               </div>
             </div>
@@ -385,6 +665,19 @@ export default function BedBoard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Assign / Reserve modal */}
+      {modal && (
+        <AssignModal
+          bed={modal.bed}
+          mode={modal.mode}
+          onClose={() => setModal(null)}
+          onDone={() => {
+            setModal(null);
+            queryClient.invalidateQueries({ queryKey: ["/api/beds"] });
+          }}
+        />
       )}
     </Layout>
   );
