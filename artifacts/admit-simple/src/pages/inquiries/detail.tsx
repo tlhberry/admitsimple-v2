@@ -89,6 +89,55 @@ export default function InquiryDetail() {
     staleTime: 60000,
   });
 
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+    queryFn: () => fetch("/api/users", { credentials: "include" }).then(r => r.json()),
+    staleTime: 60000,
+  });
+
+  // Intake Details inline edit
+  const [editingIntake, setEditingIntake] = useState(false);
+  const [savingIntake, setSavingIntake] = useState(false);
+  const [intakeEdit, setIntakeEdit] = useState({
+    levelOfCare: "", dob: "", insuranceProvider: "", insuranceMemberId: "", assignedTo: "",
+  });
+
+  const handleStartEditIntake = () => {
+    const inq = inquiry as any;
+    setIntakeEdit({
+      levelOfCare: inq?.levelOfCare ?? "",
+      dob: inq?.dob ?? "",
+      insuranceProvider: inq?.insuranceProvider ?? "",
+      insuranceMemberId: inq?.insuranceMemberId ?? "",
+      assignedTo: inq?.assignedTo ? String(inq.assignedTo) : "none",
+    });
+    setEditingIntake(true);
+  };
+
+  const handleSaveIntake = async () => {
+    setSavingIntake(true);
+    try {
+      await fetch(`/api/inquiries/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...intakeEdit,
+          assignedTo: intakeEdit.assignedTo === "none" ? null : intakeEdit.assignedTo,
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
+      await refetch();
+      setEditingIntake(false);
+      toast({ title: "Intake details updated" });
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSavingIntake(false);
+    }
+  };
+
   const handleStartEditLeadSource = () => {
     setLeadSourceEdit({
       referralSource: (inquiry as any)?.referralSource ?? "",
@@ -524,11 +573,96 @@ Keep it warm, concise, and professional. Include a request for the other facilit
 
               <Card className="rounded-2xl border-border">
                 <CardHeader className="bg-muted/40 border-b border-border py-4">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                    <FileText className="w-4 h-4 text-muted-foreground" /> Intake Details
+                  <CardTitle className="text-sm font-semibold flex items-center justify-between text-foreground">
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" /> Intake Details
+                    </span>
+                    {!editingIntake && (
+                      <button
+                        onClick={handleStartEditIntake}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors font-normal"
+                      >
+                        <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-5">
+                  {editingIntake ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Level of Care</label>
+                          <Select value={intakeEdit.levelOfCare || "none"} onValueChange={v => setIntakeEdit(p => ({ ...p, levelOfCare: v === "none" ? "" : v }))}>
+                            <SelectTrigger className="h-9 rounded-lg text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— None —</SelectItem>
+                              <SelectItem value="Detox">Detox</SelectItem>
+                              <SelectItem value="Residential">Residential</SelectItem>
+                              <SelectItem value="PHP">PHP</SelectItem>
+                              <SelectItem value="IOP">IOP</SelectItem>
+                              <SelectItem value="OP">Outpatient (OP)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Date of Birth</label>
+                          <Input
+                            type="date"
+                            value={intakeEdit.dob}
+                            onChange={e => setIntakeEdit(p => ({ ...p, dob: e.target.value }))}
+                            className="h-9 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Insurance Provider</label>
+                          <Input
+                            value={intakeEdit.insuranceProvider}
+                            onChange={e => setIntakeEdit(p => ({ ...p, insuranceProvider: e.target.value }))}
+                            placeholder="e.g. BlueCross BlueShield"
+                            className="h-9 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Member ID</label>
+                          <Input
+                            value={intakeEdit.insuranceMemberId}
+                            onChange={e => setIntakeEdit(p => ({ ...p, insuranceMemberId: e.target.value }))}
+                            placeholder="e.g. BCB123456789"
+                            className="h-9 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Assigned To</label>
+                          <Select value={intakeEdit.assignedTo || "none"} onValueChange={v => setIntakeEdit(p => ({ ...p, assignedTo: v }))}>
+                            <SelectTrigger className="h-9 rounded-lg text-sm"><SelectValue placeholder="Select staff..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— Unassigned —</SelectItem>
+                              {users.map((u: any) => (
+                                <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={handleSaveIntake}
+                          disabled={savingIntake}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {savingIntake ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingIntake(false)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-3 h-3" /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <DataPoint label="Level of Care" value={inq.levelOfCare} />
                     <DataPoint label="Date of Birth" value={inq.dob} />
@@ -536,6 +670,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                     <DataPoint label="Member ID" value={inq.insuranceMemberId} />
                     <DataPoint label="Assigned To" value={inq.assignedToName} />
                   </dl>
+                  )}
 
                   {/* Lead Source Section */}
                   <div className="mt-5 pt-5 border-t border-border/50">
