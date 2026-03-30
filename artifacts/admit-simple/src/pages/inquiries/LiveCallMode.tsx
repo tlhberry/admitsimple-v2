@@ -12,9 +12,93 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Phone, Clock, Save, CheckCircle2,
   Loader2, XCircle, SendHorizontal, ShieldCheck, CalendarClock,
-  PhoneOff, Lock, ChevronDown,
+  PhoneOff, Lock, ChevronDown, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// ── Referral Source typeahead ─────────────────────────────────────────────────
+function ReferralSourceInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [query, setQuery] = useState(value);
+  const [options, setOptions] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch all referral sources once
+  useEffect(() => {
+    fetch("/api/referrals", { credentials: "include" })
+      .then(r => r.json())
+      .then((data: any[]) => {
+        const names = data.map((d: any) => d.name).filter(Boolean);
+        setOptions(names);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Keep query in sync if value changes externally (e.g. seeding)
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = query.trim()
+    ? options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  const select = (name: string) => {
+    setQuery(name);
+    onChange(name);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value);
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Type to search or enter free text…"
+          className="h-12 rounded-xl bg-muted border-border text-foreground text-base pl-9"
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+          {filtered.map(name => (
+            <button
+              key={name}
+              type="button"
+              onMouseDown={() => select(name)}
+              className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Call timer ────────────────────────────────────────────────────────────────
 function useCallTimer() {
@@ -166,7 +250,6 @@ function LiveSelect({ value, onChange, children, disabled }: {
 }
 
 const LOC_OPTIONS = ["Detox", "Residential", "PHP", "IOP"] as const;
-const REFERRAL_OPTIONS = ["Google PPC", "Organic Google", "Therapist", "Hospital", "Previous Client", "Other"];
 const SUBSTANCE_OPTIONS = ["Alcohol", "Opioids", "Benzos", "Stimulants", "Marijuana", "Multiple", "Other"];
 const RELATIONSHIP_OPTIONS = ["Mother", "Father", "Spouse", "Friend", "Other"];
 
@@ -244,8 +327,7 @@ export function LiveCallMode({ id }: { id: number }) {
   const [patientPhone, setPatientPhone] = useState("");
 
   // Call intake
-  const [referralSource, setReferralSource] = useState("none");
-  const [referralSourceOther, setReferralSourceOther] = useState("");
+  const [referralSource, setReferralSource] = useState("");
   const [presentingProblem, setPresentingProblem] = useState("");
   const [levelOfCareItems, setLevelOfCareItems] = useState<string[]>([]);
   const [primarySubstance, setPrimarySubstance] = useState("none");
@@ -275,9 +357,7 @@ export function LiveCallMode({ id }: { id: number }) {
       setPatientPhone(inq.patientPhone || "");
 
       // Call intake
-      const src = inq.referralSource || inq.ctmSource || "";
-      setReferralSource(REFERRAL_OPTIONS.includes(src) ? src : src ? "Other" : "none");
-      if (src && !REFERRAL_OPTIONS.includes(src) && src !== "none") setReferralSourceOther(src);
+      setReferralSource(inq.referralSource || inq.ctmSource || "");
       setPresentingProblem(inq.presentingProblem || "");
       const loc = inq.levelOfCare || "";
       setLevelOfCareItems(loc ? loc.split(",").map((s: string) => s.trim()).filter(Boolean) : []);
@@ -297,11 +377,6 @@ export function LiveCallMode({ id }: { id: number }) {
     setSaveStatus("saving");
     pendingRef.current = false;
 
-    const resolvedReferralSource =
-      referralSource === "none" ? "" :
-      referralSource === "Other" ? referralSourceOther :
-      referralSource;
-
     try {
       await fetch(`/api/inquiries/${id}`, {
         method: "PUT",
@@ -316,7 +391,7 @@ export function LiveCallMode({ id }: { id: number }) {
           callerRelationship: callerIsNotPatient ? (callerRelationship === "none" ? "" : callerRelationship) : "",
           patientPhone: callerIsNotPatient ? patientPhone : "",
           // Call intake
-          referralSource: resolvedReferralSource,
+          referralSource,
           presentingProblem,
           levelOfCare: levelOfCareItems.join(", "),
           primarySubstance: primarySubstance === "none" ? "" : primarySubstance,
@@ -332,7 +407,7 @@ export function LiveCallMode({ id }: { id: number }) {
     id, seeded, isOwnedByOther,
     firstName, lastName, dob, insuranceProvider, insuranceMemberId, notes,
     callerIsNotPatient, callerName, callerPhone, callerRelationship, patientPhone,
-    referralSource, referralSourceOther, presentingProblem, levelOfCareItems, primarySubstance,
+    referralSource, presentingProblem, levelOfCareItems, primarySubstance,
     queryClient,
   ]);
 
@@ -511,7 +586,7 @@ export function LiveCallMode({ id }: { id: number }) {
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold text-foreground">
-                Patient Phone Number <span className="text-rose-400">*</span>
+                Patient Phone Number <span className="text-muted-foreground font-normal text-xs">(optional)</span>
               </Label>
               <Input
                 value={patientPhone}
@@ -528,18 +603,10 @@ export function LiveCallMode({ id }: { id: number }) {
 
         <div className="space-y-1.5">
           <Label className="text-sm font-semibold text-foreground">Referral Source</Label>
-          <LiveSelect value={referralSource} onChange={v => { setReferralSource(v); scheduleSave(); }}>
-            <option value="none">Select source…</option>
-            {REFERRAL_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-          </LiveSelect>
-          {referralSource === "Other" && (
-            <Input
-              value={referralSourceOther}
-              onChange={e => { setReferralSourceOther(e.target.value); scheduleSave(); }}
-              placeholder="Specify source…"
-              className="h-11 rounded-xl bg-muted border-border text-foreground text-base mt-2"
-            />
-          )}
+          <ReferralSourceInput
+            value={referralSource}
+            onChange={v => { setReferralSource(v); scheduleSave(); }}
+          />
         </div>
 
         <div className="space-y-1.5">
