@@ -5,12 +5,193 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, FileText, Sparkles, Trash2, Brain, Download, Search, TableIcon, ExternalLink } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, FileText, Sparkles, Trash2, Brain, Download, Search, TableIcon, ExternalLink, AlertCircle, ArrowRight, TrendingDown, Users, Globe, BarChart3 } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+
+// ── Admissions Insights Component ────────────────────────────────
+function AdmissionsInsights() {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/reports/admissions-insights"],
+    queryFn: () => fetch("/api/reports/admissions-insights", { credentials: "include" }).then(r => r.json()),
+    staleTime: 60000,
+    refetchInterval: 120000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-16 text-muted-foreground gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm">Loading admissions insights…</p>
+      </div>
+    );
+  }
+
+  const funnel: { stage: string; count: number; pct: number | null }[] = data?.funnel ?? [];
+  const topReps: { name: string; admits: number }[] = data?.topReps ?? [];
+  const topReferrals: { source: string; admits: number }[] = data?.topReferrals ?? [];
+  const lostReasons: { reason: string; count: number }[] = data?.lostReasons ?? [];
+  const needsFollowUp: number = data?.needsFollowUp ?? 0;
+  const maxAdmits = Math.max(...topReps.map(r => r.admits), 1);
+  const maxReferrals = Math.max(...topReferrals.map(r => r.admits), 1);
+  const totalLost = lostReasons.reduce((a, b) => a + b.count, 0) || 1;
+
+  // Color ramp for funnel stages
+  const funnelColors = ["text-primary", "text-blue-400", "text-violet-400", "text-emerald-400"];
+  const funnelBg = ["bg-primary/15", "bg-blue-500/15", "bg-violet-500/15", "bg-emerald-500/15"];
+
+  return (
+    <div className="p-5 space-y-5 h-full overflow-y-auto">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-primary" /> Admissions Insights
+        </h3>
+        <span className="text-xs text-muted-foreground">Live data</span>
+      </div>
+
+      {/* Follow-up alert banner */}
+      {needsFollowUp > 0 && (
+        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-sm font-semibold text-amber-300">
+            {needsFollowUp} lead{needsFollowUp !== 1 ? "s" : ""} need follow-up — no activity in 24h
+          </p>
+        </div>
+      )}
+
+      {/* 2×2 grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* 1. Conversion Funnel */}
+        <div className="bg-muted/40 border border-border rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <ArrowRight className="w-3.5 h-3.5" /> Conversion Funnel
+          </h4>
+          <div className="space-y-2.5">
+            {funnel.map((step, i) => (
+              <div key={step.stage} className="flex items-center gap-3">
+                <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0", funnelBg[i], funnelColors[i])}>
+                  {step.count}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs font-medium text-foreground truncate">{step.stage}</span>
+                    {step.pct !== null && (
+                      <span className={cn("text-[10px] font-bold ml-2 shrink-0", step.pct >= 50 ? "text-emerald-400" : step.pct >= 25 ? "text-amber-400" : "text-rose-400")}>
+                        {step.pct}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all", funnelBg[i].replace("/15", "/60"))}
+                      style={{ width: `${funnel[0]?.count ? Math.round((step.count / funnel[0].count) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. Top BD Reps */}
+        <div className="bg-muted/40 border border-border rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" /> Top BD Reps
+          </h4>
+          {topReps.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No admits recorded yet</p>
+          ) : (
+            <div className="space-y-2.5">
+              {topReps.map((rep, i) => (
+                <div key={rep.name} className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 border border-primary/20">
+                    {rep.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-foreground truncate">{rep.name}</span>
+                      <span className="text-[10px] font-bold text-primary ml-2 shrink-0">{rep.admits}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary/50 transition-all"
+                        style={{ width: `${Math.round((rep.admits / maxAdmits) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Top Referral Sources */}
+        <div className="bg-muted/40 border border-border rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5" /> Top Referral Sources
+          </h4>
+          {topReferrals.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No referral data yet</p>
+          ) : (
+            <div className="space-y-2.5">
+              {topReferrals.map(ref => (
+                <div key={ref.source} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-foreground truncate">{ref.source}</span>
+                      <span className="text-[10px] font-bold text-blue-400 ml-2 shrink-0">{ref.admits} admit{ref.admits !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-blue-500/50 transition-all"
+                        style={{ width: `${Math.round((ref.admits / maxReferrals) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 4. Lost Leads Breakdown */}
+        <div className="bg-muted/40 border border-border rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <TrendingDown className="w-3.5 h-3.5" /> Lost Leads Breakdown
+          </h4>
+          {lostReasons.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No lost leads recorded</p>
+          ) : (
+            <div className="space-y-2.5">
+              {lostReasons.map(r => (
+                <div key={r.reason} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-foreground truncate">{r.reason}</span>
+                      <span className="text-[10px] font-bold text-rose-400 ml-2 shrink-0">{r.count}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-rose-500/40 transition-all"
+                        style={{ width: `${Math.round((r.count / totalLost) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
 
 export default function Reports() {
   const { data: reports, isLoading } = useListReports();
@@ -319,16 +500,7 @@ export default function Reports() {
                 </CardContent>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-[600px] text-muted-foreground">
-                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-5 border border-border">
-                  <FileText className="w-9 h-9 opacity-40" />
-                </div>
-                <p className="text-lg font-semibold text-foreground">Select or Generate a Report</p>
-                <p className="text-sm mt-2 max-w-sm text-center">Choose a report type and click Generate to create an AI-powered executive summary.</p>
-                <Button onClick={handleGenerate} className="mt-6 h-10 px-6 rounded-xl gap-2">
-                  <Brain className="w-4 h-4" /> Generate Report
-                </Button>
-              </div>
+              <AdmissionsInsights />
             )}
           </Card>
         </div>

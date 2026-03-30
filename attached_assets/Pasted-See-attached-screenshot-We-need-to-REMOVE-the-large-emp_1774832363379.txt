@@ -1,0 +1,127 @@
+See attached screenshot.
+
+We need to REMOVE the large empty box on the bottom right that says:
+"Select or Generate a Report"
+
+This section is redundant and should be replaced with real, useful data.
+
+-----------------------------------
+GOAL
+-----------------------------------
+Replace that empty box with an "Admissions Insights" dashboard that shows high-value, real-time metrics admissions teams actually use daily.
+
+-----------------------------------
+NEW SECTION TITLE
+-----------------------------------
+"Admissions Insights"
+
+-----------------------------------
+LAYOUT (INSIDE THAT BOX)
+-----------------------------------
+
+Create a 2x2 grid of cards:
+
+-----------------------------------
+
+1. CONVERSION FUNNEL
+-----------------------------------
+Show pipeline flow:
+
+- Inquiries
+- VOB Completed
+- Scheduled to Admit
+- Admitted
+
+Display:
+- Count at each stage
+- Conversion % between stages
+
+-----------------------------------
+
+2. TOP BD REPS
+-----------------------------------
+Show:
+- Rep Name
+- # of Admits (this week or month)
+
+Sort:
+- Highest admits first
+
+-----------------------------------
+
+3. TOP REFERRAL SOURCES
+-----------------------------------
+Show:
+- Referral Source Name
+- # of Admits
+- Optional: Conversion Rate
+
+-----------------------------------
+
+4. LOST LEADS BREAKDOWN
+-----------------------------------
+Show reasons from "Did Not Admit":
+
+- Cannot afford
+- Clinical not appropriate
+- Medicaid / Medicare
+- Other
+
+Display as:
+- List OR small chart
+
+-----------------------------------
+OPTIONAL (IF SPACE ALLOWS)
+-----------------------------------
+
+Add small banner at top:
+
+"⚠️ X Leads Need Follow-Up"
+
+Based on:
+- No activity in last 24 hours
+
+-----------------------------------
+DATA REQUIREMENTS
+-----------------------------------
+
+Pull from:
+- inquiries
+- admissions
+- referral_sources
+- users
+- did_not_admit_reason
+
+-----------------------------------
+UI REQUIREMENTS
+-----------------------------------
+
+- Match existing dark theme
+- Use same card styling as dashboard
+- Clean spacing and alignment
+- No empty states
+- Data should load automatically (no button click)
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not keep the "Generate Report" box
+- Do not add another AI input (already exists above)
+- Do not make this interactive-heavy, keep it fast and readable
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+When user opens Reports page, they instantly see:
+
+- Where leads are dropping off
+- Who is performing
+- Which sources are producing
+- Why leads are being lost
+
+No extra clicks required.
+
+-----------------------------------
+END
