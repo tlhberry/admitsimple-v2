@@ -201,6 +201,16 @@ router.get("/admissions-performance", async (req, res) => {
     const weekAdmits = Number(weekAdmitsRow.count);
     const weekConversion = weekLeads > 0 ? Math.round((weekAdmits / weekLeads) * 100) : 0;
 
+    // ── 1b. Month Performance ─────────────────────────────────────────────────
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [monthLeadsRow] = await db.select({ count: count() }).from(inquiries)
+      .where(gte(inquiries.createdAt, monthStart));
+    const [monthAdmitsRow] = await db.select({ count: count() }).from(inquiries)
+      .where(and(gte(inquiries.createdAt, monthStart), eq(inquiries.status, "admitted")));
+    const monthLeads = Number(monthLeadsRow.count);
+    const monthAdmits = Number(monthAdmitsRow.count);
+    const monthConversion = monthLeads > 0 ? Math.round((monthAdmits / monthLeads) * 100) : 0;
+
     // ── 2. Referral Sources ──────────────────────────────────────────────────
     const refRows = await db.select({
       source: inquiries.referralSource,
@@ -313,7 +323,8 @@ router.get("/admissions-performance", async (req, res) => {
       ));
 
     res.json({
-      week: { leads: weekLeads, admits: weekAdmits, conversion: weekConversion },
+      week:  { leads: weekLeads,  admits: weekAdmits,  conversion: weekConversion },
+      month: { leads: monthLeads, admits: monthAdmits, conversion: monthConversion },
       referralSources: referralSources2,
       topPerformers: {
         admissionsRep: repAdmits[0] ? { name: repAdmits[0].name, admits: Number(repAdmits[0].admits) } : null,

@@ -100,6 +100,7 @@ export default function Dashboard() {
   const isLoading = perfLoading || ccLoading;
 
   const week     = perf?.week     ?? { leads: 0, admits: 0, conversion: 0 };
+  const month    = perf?.month    ?? { leads: 0, admits: 0, conversion: 0 };
   const refs     = (perf?.referralSources ?? []) as any[];
   const perf_    = perf?.topPerformers ?? { admissionsRep: null, bdRep: null, leadRep: null };
   const calls    = perf?.calls    ?? { missedToday: 0, missedWeek: 0, answerRate: 100 };
@@ -185,9 +186,9 @@ export default function Dashboard() {
             )}
           </Section>
 
-          {/* ── 2. This Week ────────────────────────────────────────────── */}
+          {/* ── 2. This Week + This Month ───────────────────────────────── */}
           <Section title="This Week">
-            <div className="flex gap-8">
+            <div className="flex gap-8 mb-4">
               <div>
                 <div className="text-3xl font-extrabold text-foreground tabular-nums">{week.leads}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Leads</div>
@@ -199,6 +200,23 @@ export default function Dashboard() {
               <div>
                 <div className="text-3xl font-extrabold text-primary tabular-nums">{week.conversion}%</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">CVR</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-6 pt-3 border-t border-border/50">
+              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest shrink-0">This Month</p>
+              <div className="flex gap-6">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-extrabold text-foreground tabular-nums">{month.leads}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Leads</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-extrabold text-emerald-400 tabular-nums">{month.admits}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Admits</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-extrabold text-primary tabular-nums">{month.conversion}%</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">CVR</span>
+                </div>
               </div>
             </div>
           </Section>
