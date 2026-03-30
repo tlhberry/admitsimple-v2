@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity,
   Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check,
-  ShieldCheck, XCircle, SendHorizontal, AlertTriangle, Play,
+  ShieldCheck, XCircle, SendHorizontal, AlertTriangle, Play, ArrowRight,
 } from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -171,6 +171,97 @@ function AuditLogCard({ inquiryId, parsedAt, vobData, onTabChange }: {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Pipeline Stage Tracker ────────────────────────────────────────────────────
+
+const LEGACY_STATUS_MAP: Record<string, string> = {
+  new: "New Inquiry",
+  contacted: "Initial Contact",
+  qualified: "Insurance Verification",
+  "Clinical Assessment": "Scheduled to Admit",
+};
+const TERMINAL_STAGES = new Set(["Did Not Admit", "Discharged", "Non-Viable"]);
+
+function PipelineStageTracker({ stages, currentStatus }: { stages: any[]; currentStatus: string }) {
+  const resolved = LEGACY_STATUS_MAP[currentStatus] ?? currentStatus;
+  const isTerminal = TERMINAL_STAGES.has(resolved);
+
+  const mainStages = [...stages]
+    .filter(s => !TERMINAL_STAGES.has(s.name))
+    .sort((a: any, b: any) => a.order - b.order);
+
+  const currentIdx = mainStages.findIndex((s: any) => s.name === resolved);
+
+  return (
+    <div className="mt-4 pt-4 border-t border-border/50">
+      {isTerminal ? (
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {mainStages.map((_: any, i: number) => (
+              <div key={i} className="w-2 h-1.5 rounded-full bg-muted-foreground/20" />
+            ))}
+          </div>
+          <span className="text-xs text-muted-foreground">Pipeline closed — <span className="font-semibold text-foreground">{resolved}</span></span>
+        </div>
+      ) : (
+        <>
+          {/* Desktop: full stepper */}
+          <div className="hidden sm:flex items-start overflow-x-auto pb-1 gap-0">
+            {mainStages.map((stage: any, idx: number) => {
+              const done = idx < currentIdx;
+              const active = idx === currentIdx;
+              return (
+                <div key={stage.id} className="flex items-center flex-1 min-w-0">
+                  <div className="flex flex-col items-center flex-shrink-0">
+                    <div className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all shrink-0",
+                      done ? "bg-primary text-primary-foreground" :
+                      active ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
+                      "bg-muted border border-border text-muted-foreground/50"
+                    )}>
+                      {done ? <Check className="w-2.5 h-2.5" /> : idx + 1}
+                    </div>
+                    <span className={cn(
+                      "text-[9px] mt-1 font-medium text-center leading-tight max-w-[52px] break-words",
+                      active ? "text-primary font-bold" :
+                      done ? "text-muted-foreground" :
+                      "text-muted-foreground/40"
+                    )}>
+                      {stage.name}
+                    </span>
+                  </div>
+                  {idx < mainStages.length - 1 && (
+                    <div className={cn(
+                      "flex-1 h-px min-w-[4px] mx-1 mb-3",
+                      idx < currentIdx ? "bg-primary" : "bg-border"
+                    )} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Mobile: pill track */}
+          <div className="sm:hidden flex items-center gap-2.5">
+            <div className="flex items-center gap-1">
+              {mainStages.map((_: any, i: number) => (
+                <div key={i} className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  i === currentIdx ? "w-5 bg-primary" :
+                  i < currentIdx ? "w-2 bg-primary/60" :
+                  "w-2 bg-muted-foreground/20"
+                )} />
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Step {currentIdx + 1} of {mainStages.length} —{" "}
+              <span className="text-foreground font-semibold">{resolved}</span>
+            </span>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -367,6 +458,14 @@ export default function InquiryDetail() {
     queryFn: () => fetch("/api/referrals", { credentials: "include" }).then(r => r.json()),
     staleTime: 60000,
   });
+
+  const { data: pipelineStages = [] } = useQuery<any[]>({
+    queryKey: ["/api/pipeline/stages"],
+    queryFn: () => fetch("/api/pipeline/stages", { credentials: "include" }).then(r => r.json()),
+    staleTime: 60000,
+  });
+
+  const [movingStage, setMovingStage] = useState(false);
 
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
@@ -604,6 +703,45 @@ Keep it warm, concise, and professional. Include a request for the other facilit
   const isNonViable = inq.status === "Non-Viable";
   const hasReferralOut = !!inq.referralOutAt;
 
+  // Pipeline stage advancement
+  const resolvedStatus = LEGACY_STATUS_MAP[inq.status] ?? inq.status;
+  const mainStages = [...pipelineStages]
+    .filter((s: any) => !TERMINAL_STAGES.has(s.name))
+    .sort((a: any, b: any) => a.order - b.order);
+  const currentStageIdx = mainStages.findIndex((s: any) => s.name === resolvedStatus);
+  const nextStage = currentStageIdx >= 0 && currentStageIdx < mainStages.length - 1
+    ? mainStages[currentStageIdx + 1]
+    : null;
+  const isTerminalStage = TERMINAL_STAGES.has(resolvedStatus);
+  const isAtLastStage = currentStageIdx === mainStages.length - 1;
+
+  const handleMoveToNextStage = async () => {
+    if (!nextStage) return;
+    // "Scheduled to Admit" → "Admitted" uses the Convert to Patient flow
+    if (resolvedStatus === "Scheduled to Admit") {
+      await handleConvert();
+      return;
+    }
+    setMovingStage(true);
+    try {
+      await fetch(`/api/inquiries/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStage.name }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/inquiries"] });
+      toast({ title: `Moved to ${nextStage.name}` });
+      await refetch();
+    } catch {
+      toast({ title: "Failed to update stage", variant: "destructive" });
+    } finally {
+      setMovingStage(false);
+    }
+  };
+
   const tabLabel = (tab: string) => {
     if (tab === "clinical_ai") return "Pre-Screen / AI";
     if (tab === "vob") return "Insurance / VOB";
@@ -671,8 +809,21 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             {inq.email && <div className="flex items-center gap-1.5"><Mail className="w-4 h-4" />{inq.email}</div>}
             <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />Added {formatDate(inq.createdAt)}</div>
           </div>
+          {pipelineStages.length > 0 && (
+            <PipelineStageTracker stages={pipelineStages} currentStatus={inq.status} />
+          )}
         </div>
         <div className="flex flex-wrap gap-3">
+          {nextStage && !isTerminalStage && !isNonViable && !hasReferralOut && (
+            <Button
+              onClick={handleMoveToNextStage}
+              disabled={movingStage || convertToPatient.isPending}
+              className="rounded-xl h-10 bg-primary hover:bg-primary/90 text-primary-foreground border-0 gap-2 font-semibold shadow-sm shadow-primary/20"
+            >
+              {movingStage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              {resolvedStatus === "Scheduled to Admit" ? "Admit Patient" : `→ ${nextStage.name}`}
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowFacesheet(true)}
