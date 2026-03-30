@@ -93,12 +93,12 @@ export default function Pipeline() {
 
   return (
     <Layout>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Admissions Pipeline</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Drag and drop inquiries to update their status.</p>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground tracking-tight">Pipeline</h1>
+          <p className="text-muted-foreground mt-1 text-sm hidden sm:block">Drag and drop inquiries to update their status.</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="h-10 px-4 rounded-xl gap-2 font-semibold shadow-md flex-shrink-0">
+        <Button onClick={() => setShowCreate(true)} className="h-9 px-4 rounded-xl gap-1.5 font-semibold shadow-md flex-shrink-0">
           <Plus className="w-4 h-4" /> New Inquiry
         </Button>
       </div>
