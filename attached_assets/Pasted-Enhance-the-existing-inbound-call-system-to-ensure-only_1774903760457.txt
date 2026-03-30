@@ -1,0 +1,138 @@
+Enhance the existing inbound call system to ensure only one admissions rep owns and edits each call/inquiry.
+
+🎯 GOAL
+One call = one rep
+No duplicate work
+No overwriting data
+Clean real-time experience
+🧩 1. UPDATE DATABASE
+
+Update Inquiry table:
+
+Add fields:
+
+assigned_to (user_id)
+is_locked (boolean, default false)
+locked_at (timestamp)
+call_status (ringing, active, completed, missed)
+⚙️ 2. ASSIGNMENT LOGIC (CTM FIRST)
+
+In:
+
+POST /api/ctm/inbound-call
+
+If CTM provides agent_id:
+Map agent_id → user_id
+Assign:
+assigned_to = user_id
+is_locked = true
+call_status = “active”
+
+👉 Only send notification to that user
+
+🟡 3. FALLBACK: CLAIM SYSTEM
+
+If NO agent_id:
+
+Send event to all reps:
+{
+  "type": "INCOMING_CALL",
+  "inquiryId": "123",
+  "phone": "+15551234567",
+  "claimable": true
+}
+Create endpoint:
+
+POST /api/inquiry/:id/claim
+
+Behavior:
+
+If is_locked = false:
+assign to current user
+set is_locked = true
+set locked_at = now
+return success
+If already locked:
+return:
+“Already claimed by [Rep Name]”
+🔒 4. FRONTEND LOCK BEHAVIOR
+
+When opening inquiry:
+
+If user is assigned owner:
+
+✅ Full edit access
+
+If NOT owner:
+
+❌ Read-only mode
+
+Show banner:
+👉 “This call is being handled by [Rep Name]”
+
+📲 5. NOTIFICATION LOGIC
+If assigned:
+Only assigned rep gets notification
+If claimable:
+All reps get:
+👉 “Incoming Call – Tap to Claim”
+⏱️ 6. AUTO-REASSIGN (IMPORTANT)
+
+If:
+
+Inquiry not claimed within 15 seconds
+
+Then:
+
+Re-send notification to all reps
+Mark as “unclaimed”
+🔄 7. CALL STATUS TRACKING
+
+Update statuses:
+
+“ringing” → webhook received
+“active” → claimed or assigned
+“completed” → call ended
+“missed” → no one claimed
+📊 8. ADMIN VIEW (SIMPLE)
+
+Create basic view:
+
+“Active Calls”
+
+Show:
+
+Caller number
+Assigned rep
+Call duration
+Status
+⚡ 9. REAL-TIME SYNC
+
+Use WebSockets:
+
+When:
+
+Claimed
+Assigned
+Locked
+
+Broadcast update so all UIs reflect instantly
+
+🚫 10. PREVENT DUPLICATES
+Block multiple claims
+Block edits from non-owner
+Always enforce backend validation (not just frontend)
+🎯 FINAL EXPERIENCE
+Best case:
+Call comes in
+CTM assigns rep
+Only that rep notified
+They open + work live
+Fallback:
+Call comes in
+All reps see “Tap to Claim”
+First rep claims
+Others locked out
+🔥 RULE TO FOLLOW
+
+👉 One call = one owner = one source of truth

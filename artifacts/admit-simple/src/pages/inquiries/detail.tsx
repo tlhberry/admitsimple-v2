@@ -1,4 +1,4 @@
-import { useParams, Link, useLocation } from "wouter";
+import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useGetInquiry, useListActivities } from "@workspace/api-client-react";
 import { useAIFeatures } from "@/hooks/use-ai";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
@@ -12,10 +12,11 @@ import {
 } from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PreAssessmentSection } from "@/components/PreAssessmentForms";
 import { VOBForm } from "@/components/VOBForm";
 import { AdmitReviewModal } from "@/components/AdmitReviewModal";
+import { LiveCallMode } from "./LiveCallMode";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -418,6 +419,11 @@ export default function InquiryDetail() {
   const params = useParams<{ id: string }>();
   const id = parseInt(params?.id || "0");
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
+  const isLiveMode = searchParams.get("mode") === "live";
+  const intentParam = searchParams.get("intent");
+
   const { data: inquiry, isLoading, refetch } = useGetInquiry(id, { query: { enabled: !!id } });
   const { data: activities } = useListActivities({ inquiryId: id }, { query: { enabled: !!id } });
   const { summarizeInquiry } = useAIFeatures();
@@ -479,6 +485,17 @@ export default function InquiryDetail() {
   const [intakeEdit, setIntakeEdit] = useState({
     levelOfCare: "", dob: "", insuranceProvider: "", insuranceMemberId: "", assignedTo: "",
   });
+
+  // Auto-open modals from ?intent= param (set by LiveCallMode "What's Next?")
+  useEffect(() => {
+    if (!intentParam) return;
+    if (intentParam === "admit") setShowAdmitReview(true);
+    else if (intentParam === "nonadmit") setShowNonAdmit(true);
+    else if (intentParam === "refer") setShowReferOut(true);
+  }, [intentParam]);
+
+  // Live Call Mode — full-screen distraction-free intake
+  if (isLiveMode) return <LiveCallMode id={id} />;
 
   const handleStartEditIntake = () => {
     const inq = inquiry as any;

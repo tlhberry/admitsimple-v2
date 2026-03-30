@@ -17,6 +17,7 @@ import bdReportsRouter from "./bdReports";
 import auditLogsRouter from "./auditLogs";
 import bedsRouter from "./beds";
 import savedReportsRouter from "./savedReports";
+import eventsRouter from "./events";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(bdReportsRouter);
 router.use(auditLogsRouter);
 router.use(bedsRouter);
 router.use(savedReportsRouter);
+router.use(eventsRouter);
 
 export default router;

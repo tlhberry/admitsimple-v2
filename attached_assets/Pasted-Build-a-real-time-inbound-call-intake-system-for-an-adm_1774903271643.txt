@@ -1,0 +1,156 @@
+Build a real-time inbound call intake system for an admissions CRM using CallTrackingMetrics (CTM), optimized for mobile and live call usage.
+
+🎯 CORE FUNCTION
+
+When a call comes in:
+
+Rep gets instant notification
+Taps it → opens live inquiry screen
+Can enter info during the call
+Everything auto-saves
+🧩 TECH STACK
+
+Use:
+
+Frontend: React + TypeScript (mobile-first UI)
+Backend: Node.js + Express
+Database: PostgreSQL (Drizzle ORM)
+Real-time: WebSockets (Socket.io)
+Notifications: Web push (or Firebase if easier)
+🔔 1. CTM WEBHOOK
+
+Create endpoint:
+
+POST /api/ctm/inbound-call
+
+CTM will send:
+
+caller_number (E.164)
+call_id
+timestamp
+tracking_source
+⚙️ 2. BACKEND LOGIC
+
+When webhook fires:
+
+Search DB for existing inquiry by phone number
+If found → return existing inquiry
+If not → create new inquiry with:
+phone number
+status = “Active Call”
+call_id
+created_at
+Assign inquiry to rep (for now: logged-in user or default user)
+Emit WebSocket event:
+{
+  "type": "INCOMING_CALL",
+  "inquiryId": "123",
+  "phone": "+15551234567"
+}
+📲 3. REAL-TIME NOTIFICATION
+
+Frontend listens via WebSocket.
+
+When event received:
+
+Show in-app toast + push notification
+
+Notification:
+
+Title: Incoming Call
+Body: phone number
+CTA: “Open Inquiry”
+🔗 4. DEEP LINK
+
+Clicking notification routes to:
+
+/inquiry/{id}?mode=live
+
+📱 5. LIVE CALL UI (VERY IMPORTANT)
+
+Build a mobile-first “Active Call” screen
+
+Top Section:
+Badge: “Active Call”
+Phone number
+Call timer (start on open)
+Form (FAST ENTRY ONLY):
+Name
+DOB
+Insurance Provider
+Member ID
+Notes (large text box)
+UX RULES:
+Large inputs (thumb-friendly)
+No clutter
+No unnecessary fields
+Auto-save every 2–3 seconds
+Show “Saved” indicator
+🔄 6. AUTO-SAVE
+
+Create:
+
+PATCH /api/inquiry/:id
+
+Save on change (debounced)
+No submit button required
+📞 7. CALL END HANDLING
+
+Create endpoint:
+
+POST /api/ctm/call-ended
+
+Update:
+
+status → “Call Completed”
+save duration
+After call ends:
+
+Show modal:
+
+“What’s next?”
+
+Buttons:
+Client No Admit
+Refer Out 
+Send VOB
+Schedule Follow-Up
+🧠 8. SMART LOGIC
+If phone matches existing inquiry → reuse it
+If multiple → use most recent
+Store call history under inquiry
+📊 9. DATABASE SCHEMA
+
+Inquiry table:
+
+id
+name
+phone
+dob
+insurance_provider
+member_id
+notes
+status (Active Call, Completed, etc)
+call_id
+created_at
+updated_at
+⚡ 10. PERFORMANCE REQUIREMENTS
+Notification appears instantly (<1 sec)
+Inquiry opens immediately
+No loading delays
+Must work smoothly on iPhone
+🎯 FINAL EXPERIENCE
+Call comes in
+Rep gets notification
+Taps → inquiry opens instantly
+Types while talking
+Everything saves automatically
+Call ends → next step prompt
+🔥 IMPORTANT
+
+This should feel like:
+👉 a live call assistant, not a CRM form
+
+Speed > complexity
+Mobile > desktop
+Real-time > refresh-based

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { inquiries, activities, settings } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { broadcastSSE } from "../lib/sse";
 
 const router = Router();
 
@@ -159,30 +160,56 @@ router.post("/webhooks/ctm", async (req, res) => {
 
     const notes = noteLines.join("\n");
 
-    // ── Insert inquiry ─────────────────────────────────────────────────────
-    const [inquiry] = await db
-      .insert(inquiries)
-      .values({
-        firstName,
-        lastName,
-        phone,
-        referralSource,
-        referralDetails,
-        onlineSource,
-        referralOrigin,
-        ctmCallId,
-        ctmTrackingNumber,
-        ctmSource,
-        callDurationSeconds,
-        callRecordingUrl,
-        callDateTime,
-        searchKeywords: ctmKeyword || null,
-        status: "new",
-        priority: "medium",
-        notes,
+    // ── Find existing inquiry by phone (dedup) ─────────────────────────────
+    let inquiry: typeof inquiries.$inferSelect | null = null;
+    if (phone) {
+      const [existing] = await db
+        .select()
+        .from(inquiries)
+        .where(eq(inquiries.phone, phone))
+        .orderBy(desc(inquiries.createdAt))
+        .limit(1);
+      if (existing) inquiry = existing;
+    }
+
+    // ── Create or update inquiry ───────────────────────────────────────────
+    if (inquiry) {
+      // Update CTM fields on existing inquiry
+      await db.update(inquiries).set({
+        ctmCallId: ctmCallId ?? inquiry.ctmCallId,
+        ctmTrackingNumber: ctmTrackingNumber ?? inquiry.ctmTrackingNumber,
+        ctmSource: ctmSource ?? inquiry.ctmSource,
+        callDurationSeconds: callDurationSeconds ?? inquiry.callDurationSeconds,
+        callRecordingUrl: callRecordingUrl ?? inquiry.callRecordingUrl,
+        callDateTime: callDateTime ?? inquiry.callDateTime,
         updatedAt: new Date(),
-      })
-      .returning();
+      }).where(eq(inquiries.id, inquiry.id));
+    } else {
+      const [created] = await db
+        .insert(inquiries)
+        .values({
+          firstName,
+          lastName,
+          phone,
+          referralSource,
+          referralDetails,
+          onlineSource,
+          referralOrigin,
+          ctmCallId,
+          ctmTrackingNumber,
+          ctmSource,
+          callDurationSeconds,
+          callRecordingUrl,
+          callDateTime,
+          searchKeywords: ctmKeyword || null,
+          status: "new",
+          priority: "medium",
+          notes,
+          updatedAt: new Date(),
+        })
+        .returning();
+      inquiry = created;
+    }
 
     // ── Log call activity ──────────────────────────────────────────────────
     const activityBody = [
@@ -201,6 +228,17 @@ router.post("/webhooks/ctm", async (req, res) => {
       subject: `Inbound call from ${firstName} ${lastName}`,
       body: activityBody || notes,
       createdAt: callDateTime ?? new Date(),
+    });
+
+    // ── Broadcast real-time event to all connected clients ────────────────
+    broadcastSSE("incoming_call", {
+      inquiryId: inquiry.id,
+      phone,
+      callerName: `${firstName} ${lastName}`.trim(),
+      source: ctmSource || referralSource,
+      callId: ctmCallId,
+      isExisting: !!inquiry,
+      timestamp: new Date().toISOString(),
     });
 
     res.status(200).json({ ok: true, inquiryId: inquiry.id });
