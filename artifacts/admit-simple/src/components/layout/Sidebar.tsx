@@ -16,7 +16,6 @@ import {
   BedDouble,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import logoImg from "@assets/ChatGPT_Image_Mar_29,_2026,_08_28_12_AM_1774787305208.png";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -74,11 +73,6 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen fixed left-0 top-0 text-sidebar-foreground shadow-xl z-20 transition-all">
-        {/* Logo */}
-        <div className="px-5 py-5 border-b border-sidebar-border/30">
-          <img src={logoImg} alt="AdmitSimple" className="h-8 object-contain" />
-        </div>
-
         <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-4">
           {navSections.map(section => (
             <div key={section.label}>
