@@ -82,7 +82,7 @@ export default function Patients() {
       {!isLoading && (data?.length ?? 0) > 0 && (
         <div className="md:hidden flex flex-col gap-2">
           {data?.map((patient) => (
-            <div key={patient.id} className="bg-card border border-border rounded-xl px-4 py-3.5 flex items-center gap-3">
+            <div key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)} className="bg-card border border-border rounded-xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-primary/40 transition-colors">
               <div className="w-9 h-9 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
                 {patient.firstName?.charAt(0) ?? "?"}
               </div>
@@ -124,7 +124,7 @@ export default function Patients() {
             </thead>
             <tbody className="divide-y divide-border bg-card">
               {data?.map((patient) => (
-                <tr key={patient.id} className="hover:bg-muted/30 transition-colors group">
+                <tr key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)} className="hover:bg-muted/30 transition-colors group cursor-pointer">
                   <td className="px-6 py-4">
                     <div className="font-semibold text-foreground">{patient.firstName} {patient.lastName}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">{patient.phone || patient.email || "—"}</div>
@@ -144,7 +144,7 @@ export default function Patients() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary">View</Button>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }}>View</Button>
                   </td>
                 </tr>
               ))}
