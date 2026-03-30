@@ -43,7 +43,10 @@ export default function Settings() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const { data, isLoading } = useListSettings({ category: undefined });
-  const [activeTab, setActiveTab] = useState("facility");
+  const [activeTab, setActiveTab] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("tab") ?? "facility";
+  });
   const [values, setValues] = useState<SettingMap>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();

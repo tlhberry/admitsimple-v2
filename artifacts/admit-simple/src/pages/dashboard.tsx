@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
+import { useAuth } from "@/hooks/use-auth";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string | null | undefined): string {
@@ -79,6 +80,8 @@ function Section({
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const [showCreate, setShowCreate] = useState(false);
+  const { user } = useAuth();
+  const role = user?.role ?? "admissions";
 
   const { data: perf, isLoading: perfLoading } = useQuery<any>({
     queryKey: ["/api/admissions-performance"],
@@ -364,8 +367,52 @@ export default function Dashboard() {
             )}
           </Section>
 
+          {/* ── Settings (role-based) ────────────────────────────────────── */}
+          <div className="px-4 py-4">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Settings</p>
+            <div className="space-y-1">
+              {role === "admin" && (
+                <>
+                  <SettingsLink label="Facility & System" sub="Name, address, system config" onClick={() => navigate("/settings?tab=facility")} />
+                  <SettingsLink label="User Management" sub="Add, edit or deactivate users" onClick={() => navigate("/settings?tab=users")} />
+                  <SettingsLink label="Admissions Config" sub="Facesheet email, pipeline defaults" onClick={() => navigate("/settings?tab=admissions")} />
+                  <SettingsLink label="AI Settings" sub="Claude prompts and model config" onClick={() => navigate("/settings?tab=ai")} />
+                  <SettingsLink label="Notifications" sub="Alerts and call routing" onClick={() => navigate("/settings?tab=notifications")} />
+                  <SettingsLink label="Integrations" sub="Twilio, webhooks, third-party" onClick={() => navigate("/settings?tab=integrations")} />
+                </>
+              )}
+              {role === "admissions" && (
+                <>
+                  <SettingsLink label="Notifications" sub="Call alerts and reminders" onClick={() => navigate("/settings?tab=notifications")} />
+                  <SettingsLink label="AI Settings" sub="AI assist preferences" onClick={() => navigate("/settings?tab=ai")} />
+                </>
+              )}
+              {role === "bd" && (
+                <>
+                  <SettingsLink label="My Accounts" sub="Referral sources and contacts" onClick={() => navigate("/referrals")} />
+                  <SettingsLink label="Notifications" sub="Lead alerts and reminders" onClick={() => navigate("/settings?tab=notifications")} />
+                </>
+              )}
+            </div>
+          </div>
+
         </div>
       )}
     </Layout>
+  );
+}
+
+function SettingsLink({ label, sub, onClick }: { label: string; sub: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between px-3 py-3 rounded-xl hover:bg-muted/40 active:scale-[0.98] transition-all group"
+    >
+      <div className="text-left">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{sub}</p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+    </button>
   );
 }
