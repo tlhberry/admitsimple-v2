@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useListReports, useDeleteReport, useGenerateAiReport } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileText, Sparkles, Trash2, Brain, Download, Search,
-  TableIcon, ExternalLink, AlertCircle, ArrowRight, TrendingDown,
-  Users, Globe, BarChart3, BookmarkPlus, CheckCircle2, RefreshCw,
+  TableIcon, ExternalLink, AlertCircle,
+  BookmarkPlus, CheckCircle2, RefreshCw,
 } from "lucide-react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -17,143 +17,160 @@ import ReactMarkdown from "react-markdown";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
-// ── Admissions Insights Component ────────────────────────────────
+// ── Admissions Insights — vertical performance feed ──────────────
 function AdmissionsInsights() {
+  const [, navigate] = useLocation();
   const { data, isLoading } = useQuery<any>({
-    queryKey: ["/api/reports/admissions-insights"],
-    queryFn: () => fetch("/api/reports/admissions-insights", { credentials: "include" }).then(r => r.json()),
+    queryKey: ["/api/admissions-performance"],
+    queryFn: () => fetch("/api/admissions-performance", { credentials: "include" }).then(r => r.json()),
     staleTime: 60000,
-    refetchInterval: 120000,
+    refetchInterval: 60000,
   });
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-16 text-muted-foreground gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm">Loading admissions insights…</p>
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+        <Loader2 className="w-7 h-7 animate-spin text-primary" />
+        <p className="text-sm">Loading…</p>
       </div>
     );
   }
 
-  const funnel = data?.conversionFunnel ?? [];
-  const bdReps = data?.topBdReps ?? [];
-  const sources = data?.topReferralSources ?? [];
-  const lostLeads = data?.lostLeadsBreakdown ?? [];
-  const totalLost = lostLeads.reduce((s: number, r: any) => s + r.count, 0);
-  const totalInquiries = funnel.find((f: any) => f.stage === "Total Inquiries")?.count ?? 0;
+  const week   = data?.week   ?? { leads: 0, admits: 0, conversion: 0 };
+  const refs   = (data?.referralSources ?? []) as { source: string; leads: number; admits: number; conversion: number }[];
+  const perf   = data?.topPerformers ?? { admissionsRep: null, leadRep: null, bdRep: null };
+  const calls  = data?.calls  ?? { missedToday: 0, totalToday: 0, missedWeek: 0, totalWeek: 0, answerRate: 100 };
+  const speed  = data?.speed  ?? { avgHoursToAdmit: null, sampleSize: 0 };
+  const pipe   = data?.pipeline ?? { active: 0, vobPending: 0, readyToAdmit: 0 };
+
+  const formatSpeed = (h: number | null) => h === null ? "No data" : h < 48 ? `${h} hrs` : `${Math.round(h / 24)} days`;
+
+  function Section({
+    title, badge, onClick, children,
+  }: { title: string; badge?: string; onClick?: () => void; children: ReactNode }) {
+    return (
+      <div
+        onClick={onClick}
+        className={cn(
+          "px-5 py-4 border-b border-border/60 last:border-b-0",
+          onClick && "cursor-pointer hover:bg-muted/20 active:bg-muted/40 transition-colors",
+        )}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
+          {badge && <span className="text-[10px] text-muted-foreground/60">{badge} →</span>}
+        </div>
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <div className="p-5 h-full">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold text-foreground text-base">Admissions Insights</h3>
-        </div>
-        <span className="text-xs text-muted-foreground font-medium bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20">Live data</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        {/* Conversion Funnel */}
-        <div className="bg-muted/40 rounded-xl p-4 border border-border">
-          <div className="flex items-center gap-1.5 mb-3">
-            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Conversion Funnel</p>
+    <div className="divide-y divide-border/0">
+      {/* 1 — This Week */}
+      <Section title="This Week">
+        <div className="flex gap-6">
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tabular-nums">{week.leads}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Leads</div>
           </div>
-          {funnel.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No data yet</p>
-          ) : (
-            <div className="space-y-2">
-              {funnel.map((f: any, i: number) => {
-                const pct = f.stage === "Total Inquiries" ? null : totalInquiries > 0 ? Math.round((f.count / totalInquiries) * 100) : 0;
-                return (
-                  <div key={i} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                        <span className="text-[9px] font-bold text-primary">{f.count}</span>
-                      </div>
-                      <span className="text-xs text-foreground truncate">{f.stage}</span>
-                    </div>
-                    {pct !== null && (
-                      <span className={`text-xs font-semibold shrink-0 ${pct >= 50 ? "text-green-400" : pct >= 20 ? "text-amber-400" : "text-rose-400"}`}>{pct}%</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Top BD Reps */}
-        <div className="bg-muted/40 rounded-xl p-4 border border-border">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Users className="w-3.5 h-3.5 text-muted-foreground" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Top BD Reps</p>
+          <div>
+            <div className="text-2xl font-extrabold text-emerald-400 tabular-nums">{week.admits}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Admits</div>
           </div>
-          {bdReps.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No admits recorded yet</p>
-          ) : (
-            <div className="space-y-2">
-              {bdReps.map((r: any, i: number) => (
-                <div key={i} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] text-muted-foreground shrink-0 w-3">{i + 1}.</span>
-                    <span className="text-xs text-foreground truncate">{r.rep}</span>
-                  </div>
-                  <span className="text-xs font-bold text-primary shrink-0">{r.admits}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Top Referral Sources */}
-        <div className="bg-muted/40 rounded-xl p-4 border border-border">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Top Referral Sources</p>
+          <div>
+            <div className="text-2xl font-extrabold text-primary tabular-nums">{week.conversion}%</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Conversion</div>
           </div>
-          {sources.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No referral data yet</p>
-          ) : (
-            <div className="space-y-2">
-              {sources.map((s: any, i: number) => (
-                <div key={i} className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-foreground truncate">{s.source}</span>
-                  <span className="text-xs font-semibold text-foreground shrink-0">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
+      </Section>
 
-        {/* Lost Leads */}
-        <div className="bg-muted/40 rounded-xl p-4 border border-border">
-          <div className="flex items-center gap-1.5 mb-3">
-            <TrendingDown className="w-3.5 h-3.5 text-muted-foreground" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Lost Leads Breakdown</p>
-          </div>
-          {lostLeads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No lost leads yet</p>
-          ) : (
-            <div className="space-y-2.5">
-              {lostLeads.map((r: any, i: number) => (
-                <div key={i} className="space-y-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-foreground truncate max-w-[70%]">{r.reason}</span>
-                    <span className="text-xs font-bold text-rose-400 shrink-0">{r.count}</span>
-                  </div>
-                  <div className="h-1 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-rose-500/40 transition-all"
-                      style={{ width: `${Math.round((r.count / totalLost) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+      {/* 2 — Referral Sources */}
+      <Section title="Top Referral Sources" badge="Sources" onClick={() => navigate("/referrals")}>
+        <div className="space-y-2">
+          {refs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity this week</p>
+          ) : refs.slice(0, 6).map((r, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-sm text-foreground truncate flex-1 pr-3">{r.source}</span>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0 tabular-nums">
+                {r.leads} → <span className="text-emerald-400">{r.admits}</span>
+                <span className="text-muted-foreground/50 ml-1">({r.conversion}%)</span>
+              </span>
             </div>
-          )}
+          ))}
         </div>
-      </div>
+      </Section>
+
+      {/* 3 — Top Performers */}
+      <Section title="Top Performers" badge="Reps" onClick={() => navigate("/inquiries?tab=admitted")}>
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs text-muted-foreground">Closer</span>
+            <span className="text-sm font-bold text-foreground">
+              {perf.admissionsRep
+                ? `${perf.admissionsRep.name} — ${perf.admissionsRep.admits} admits`
+                : "No data this week"}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs text-muted-foreground">Top Credit</span>
+            <span className="text-sm font-bold text-foreground">
+              {perf.bdRep
+                ? `${perf.bdRep.name} — ${perf.bdRep.leads} admits`
+                : perf.leadRep
+                  ? `${perf.leadRep.name} — ${perf.leadRep.leads} leads`
+                  : "No data this week"}
+            </span>
+          </div>
+        </div>
+      </Section>
+
+      {/* 4 — Call Performance */}
+      <Section title="Calls" badge="Calls" onClick={() => navigate("/calls/active")}>
+        <div className="flex gap-6">
+          <div>
+            <div className={cn("text-2xl font-extrabold tabular-nums", calls.missedToday > 0 ? "text-rose-400" : "text-foreground")}>{calls.missedToday}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Missed Today</div>
+          </div>
+          <div>
+            <div className={cn("text-2xl font-extrabold tabular-nums", calls.missedWeek > 0 ? "text-amber-400" : "text-foreground")}>{calls.missedWeek}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Missed Week</div>
+          </div>
+          <div>
+            <div className={cn("text-2xl font-extrabold tabular-nums", calls.answerRate >= 80 ? "text-emerald-400" : "text-amber-400")}>{calls.answerRate}%</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Answer Rate</div>
+          </div>
+        </div>
+      </Section>
+
+      {/* 5 — Speed */}
+      <Section title="Speed to Admit">
+        <div>
+          <div className="text-3xl font-extrabold text-primary tabular-nums">{formatSpeed(speed.avgHoursToAdmit)}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+            avg time · {speed.sampleSize} admit{speed.sampleSize !== 1 ? "s" : ""} this week
+          </div>
+        </div>
+      </Section>
+
+      {/* 6 — Pipeline */}
+      <Section title="Pipeline" badge="Pipeline" onClick={() => navigate("/pipeline")}>
+        <div className="flex gap-6">
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tabular-nums">{pipe.active}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Active</div>
+          </div>
+          <div>
+            <div className={cn("text-2xl font-extrabold tabular-nums", pipe.vobPending > 5 ? "text-amber-400" : "text-foreground")}>{pipe.vobPending}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">VOB</div>
+          </div>
+          <div>
+            <div className={cn("text-2xl font-extrabold tabular-nums", pipe.readyToAdmit > 0 ? "text-emerald-400" : "text-foreground")}>{pipe.readyToAdmit}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ready {pipe.readyToAdmit > 0 ? "🔥" : ""}</div>
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }
