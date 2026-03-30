@@ -1,0 +1,171 @@
+We are updating the admissions pipeline stages and adding scheduling + communication features.
+
+DO NOT break existing pipeline logic.
+
+-----------------------------------
+GOAL
+-----------------------------------
+1. Simplify pipeline stages
+2. Add scheduling + reminders in pre-admit stage
+3. Improve post-admit tracking (discharged + alumni)
+4. Enhance non-admit follow-up + referral tracking
+
+-----------------------------------
+PIPELINE STAGE CHANGES
+-----------------------------------
+
+1. REMOVE / HIDE:
+- "Clinical Assessment" stage (do not delete, just hide for now)
+
+-----------------------------------
+
+2. RENAME STAGE:
+
+Old:
+- "Clinical Assessment"
+
+New:
+- "Scheduled to Admit"
+
+-----------------------------------
+SCHEDULED TO ADMIT STAGE
+-----------------------------------
+
+Inside this stage:
+
+Admissions rep can:
+- Schedule an appointment (intake/admission date)
+
+INTEGRATION:
+- Use calendar API (Google Calendar and/or Outlook)
+
+When appointment is created:
+- Save date/time to inquiry
+- Link to calendar event
+
+-----------------------------------
+TEXT REMINDERS
+-----------------------------------
+
+Automatically send reminder texts:
+
+- Immediately after scheduling:
+  "You're scheduled for admission on [date/time]"
+
+- 24 hours before appointment
+
+- Morning of appointment
+
+Use existing SMS system if available
+
+-----------------------------------
+STAGE CHANGE
+-----------------------------------
+
+Replace:
+
+Old:
+- "Admissions Decision"
+
+New:
+- "Admitted"
+
+-----------------------------------
+POST-ADMIT STAGE
+-----------------------------------
+
+Add new stage:
+
+- "Discharged"
+
+-----------------------------------
+DISCHARGED FUNCTIONALITY
+-----------------------------------
+
+When a client moves to "Discharged":
+
+- Add them to "Alumni" bucket
+
+Features:
+1. Bulk messaging:
+   - Send texts to all discharged clients
+   - Use for events, updates, alumni engagement
+
+2. Individual follow-ups:
+   - Automated check-in texts
+   - Ask outcome questions (ex: "How are you doing?")
+
+3. Store responses for outcomes tracking
+
+-----------------------------------
+DID NOT ADMIT STAGE
+-----------------------------------
+
+Below "Discharged", add:
+
+- "Did Not Admit"
+
+-----------------------------------
+DID NOT ADMIT FUNCTIONALITY
+-----------------------------------
+
+For these inquiries:
+
+1. Messaging:
+- Ability to text individually or in bulk
+- Re-engagement campaigns ("dead leads")
+
+2. Referral tracking:
+- Track where the client was referred
+- Store referral destination (facility/provider)
+
+3. Follow-up:
+- Optional automated check-ins
+
+-----------------------------------
+DATA TRACKING
+-----------------------------------
+
+Store:
+- appointment_date
+- calendar_event_id
+- reminder_sent (timestamps)
+- discharge_date
+- alumni_status
+- referral_destination
+- follow_up_messages
+
+-----------------------------------
+UI REQUIREMENTS
+-----------------------------------
+
+- Scheduling must be simple (1-click calendar integration)
+- Reminder texts must be automatic (no manual work)
+- Alumni + Did Not Admit should be clearly separated buckets
+- Messaging UI should support bulk + individual
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not remove existing data
+- Do not break pipeline transitions
+- Do not overcomplicate scheduling flow
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+Admissions flow becomes:
+
+Inquiry → VOB → Scheduled to Admit → Admitted → Discharged (Alumni)
+                                              ↘ Did Not Admit
+
+With:
+- Scheduling + reminders built in
+- Alumni engagement
+- Dead lead reactivation
+- Referral tracking
+
+-----------------------------------
+END
