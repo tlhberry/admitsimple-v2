@@ -68,6 +68,10 @@ export default function InquiryDetail() {
   const [nonAdmitNotes, setNonAdmitNotes] = useState("");
   const [submittingNonAdmit, setSubmittingNonAdmit] = useState(false);
 
+  // Appointment scheduling
+  const [appointmentInput, setAppointmentInput] = useState("");
+  const [savingAppointment, setSavingAppointment] = useState(false);
+
   // Refer Out modal
   const [showReferOut, setShowReferOut] = useState(false);
   const [referOutType, setReferOutType] = useState("none");
@@ -190,6 +194,28 @@ Keep it warm, concise, and professional. Include a request for the other facilit
     }
   };
 
+  const handleSaveAppointment = async () => {
+    if (!appointmentInput) return;
+    setSavingAppointment(true);
+    try {
+      await fetch(`/api/inquiries/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentDate: new Date(appointmentInput).toISOString() }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/inquiries"] });
+      await refetch();
+      setAppointmentInput("");
+      toast({ title: "Admission appointment saved!" });
+    } catch {
+      toast({ title: "Failed to save appointment", variant: "destructive" });
+    } finally {
+      setSavingAppointment(false);
+    }
+  };
+
   const tabs = [
     "overview",
     "vob",
@@ -222,13 +248,13 @@ Keep it warm, concise, and professional. Include a request for the other facilit
           preAssessmentCompleted: "yes",
           preAssessmentDate: new Date().toISOString(),
           preAssessmentNotes: notes,
-          status: "Clinical Assessment",
+          status: "Scheduled to Admit",
         }),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/pipeline/inquiries"] });
-      toast({ title: "Pre-Assessment complete! Inquiry moved to Clinical Assessment." });
+      toast({ title: "Pre-Assessment complete! Inquiry moved to Scheduled to Admit." });
       await refetch();
       setActiveTab("overview");
     } catch {
@@ -386,6 +412,98 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         <div className={cn("space-y-5", (activeTab === "pre_assessment" || activeTab === "vob") ? "" : "lg:col-span-2")}>
           {activeTab === "overview" && (
             <>
+              {/* ── Scheduled to Admit: Appointment Card ── */}
+              {inq.status === "Scheduled to Admit" && (
+                <Card className="rounded-2xl border-primary/30 bg-primary/5">
+                  <CardHeader className="bg-primary/10 border-b border-primary/20 py-4">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-primary">
+                      <Calendar className="w-4 h-4" /> Admission Appointment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-5 space-y-4">
+                    {(inq as any).appointmentDate ? (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground font-medium mb-1">Scheduled For</p>
+                          <p className="text-lg font-bold text-foreground">
+                            {new Date((inq as any).appointmentDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                          </p>
+                          <p className="text-sm text-primary font-medium">
+                            {new Date((inq as any).appointmentDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center">
+                          <Calendar className="w-6 h-6 text-primary" />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No appointment scheduled yet.</p>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <input
+                        type="datetime-local"
+                        value={appointmentInput}
+                        onChange={e => setAppointmentInput(e.target.value)}
+                        className="flex-1 h-9 px-3 rounded-xl bg-muted border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveAppointment}
+                        disabled={!appointmentInput || savingAppointment}
+                        className="rounded-xl h-9 px-4"
+                      >
+                        {savingAppointment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (inq as any).appointmentDate ? "Update" : "Schedule"}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      SMS and calendar reminders require Twilio + Google Calendar integration — contact your admin to enable.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* ── Did Not Admit: Referral Destination ── */}
+              {inq.status === "Did Not Admit" && (
+                <Card className="rounded-2xl border-rose-500/20 bg-rose-500/5">
+                  <CardHeader className="bg-rose-500/10 border-b border-rose-500/15 py-4">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-rose-400">
+                      <XCircle className="w-4 h-4" /> Did Not Admit — Follow-Up
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-5 space-y-3">
+                    {(inq as any).referralDestination && (
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium mb-1">Referred To</p>
+                        <p className="text-sm font-semibold text-foreground">{(inq as any).referralDestination}</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Referred to facility / provider..."
+                        defaultValue={(inq as any).referralDestination || ""}
+                        id="referral-dest-input"
+                        className="h-9 rounded-xl text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl h-9 px-4 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                        onClick={async () => {
+                          const val = (document.getElementById("referral-dest-input") as HTMLInputElement)?.value;
+                          if (!val) return;
+                          await fetch(`/api/inquiries/${id}`, { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ referralDestination: val }) });
+                          queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+                          await refetch();
+                          toast({ title: "Referral destination saved" });
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="rounded-2xl border-border">
                 <CardHeader className="bg-muted/40 border-b border-border py-4">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">

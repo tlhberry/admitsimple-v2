@@ -2,7 +2,7 @@ import { useGetPipelineInquiries } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Clock, MoreHorizontal, ExternalLink, Plus } from "lucide-react";
+import { Loader2, Clock, MoreHorizontal, ExternalLink, Plus, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
@@ -114,6 +114,14 @@ export default function Pipeline() {
                                 <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-colors" />
                               </div>
                             </div>
+                            {(item as any).appointmentDate && (
+                              <div className="flex items-center gap-1.5 text-[11px] font-medium text-primary bg-primary/10 px-2 py-1 rounded-md mb-2">
+                                <CalendarCheck className="w-3 h-3 flex-shrink-0" />
+                                {new Date((item as any).appointmentDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                {" · "}
+                                {new Date((item as any).appointmentDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                              </div>
+                            )}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted/60 px-2 py-1 rounded-md">
                                 <Clock className="w-3 h-3" />

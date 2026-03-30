@@ -69,6 +69,12 @@ export const inquiries = pgTable("inquiries", {
   referralOutAt: timestamp("referral_out_at"),
   referralOutType: varchar("referral_out_type", { length: 20 }),
   referralOutMessage: text("referral_out_message"),
+  // Scheduled to Admit
+  appointmentDate: timestamp("appointment_date"),
+  calendarEventId: varchar("calendar_event_id", { length: 255 }),
+  reminderSentAt: jsonb("reminder_sent_at"),
+  // Did Not Admit tracking
+  referralDestination: varchar("referral_destination", { length: 255 }),
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });

@@ -27,7 +27,8 @@ router.get("/pipeline/inquiries", async (req, res) => {
       .orderBy(asc(pipelineStages.order));
 
     // Statuses that mean the inquiry is no longer in the active pipeline
-    const excludedStatuses = ["admitted", "declined", "discharged", "closed", "converted"];
+    // Note: lowercase "admitted"/"discharged" = old legacy statuses; title-case are pipeline stages
+    const excludedStatuses = ["admitted", "declined", "closed", "converted", "Non-Viable", "Referred Out"];
 
     // Fetch all active inquiries (exclude end-stage statuses)
     const allInquiries = await db
@@ -39,6 +40,7 @@ router.get("/pipeline/inquiries", async (req, res) => {
         priority: inquiries.priority,
         assignedTo: inquiries.assignedTo,
         assignedToName: users.name,
+        appointmentDate: inquiries.appointmentDate,
         createdAt: inquiries.createdAt,
         updatedAt: inquiries.updatedAt,
       })
@@ -53,6 +55,9 @@ router.get("/pipeline/inquiries", async (req, res) => {
       "new": "New Inquiry",
       "contacted": "Initial Contact",
       "qualified": "Insurance Verification",
+      "Clinical Assessment": "Scheduled to Admit", // renamed stage
+      "Admissions Decision": "Admitted",           // renamed stage
+      "Did Not Admit": "Did Not Admit",            // explicit pass-through
       // anything that already equals a stage name passes through below
     };
 

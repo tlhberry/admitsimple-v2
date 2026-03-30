@@ -53,6 +53,9 @@ const fullInquirySelect = {
   referralOutAt: inquiries.referralOutAt,
   referralOutType: inquiries.referralOutType,
   referralOutMessage: inquiries.referralOutMessage,
+  appointmentDate: inquiries.appointmentDate,
+  calendarEventId: inquiries.calendarEventId,
+  referralDestination: inquiries.referralDestination,
 };
 
 router.get("/inquiries", async (req, res) => {
@@ -159,11 +162,12 @@ router.put("/inquiries/:id", async (req, res) => {
       "firstName","lastName","phone","email","dob","insuranceProvider","insuranceMemberId",
       "primaryDiagnosis","substanceHistory","medicalHistory","mentalHealthHistory","levelOfCare",
       "referralSource","referralContact","searchKeywords","status","priority","notes",
-      "preAssessmentCompleted","preAssessmentNotes",
+      "preAssessmentCompleted","preAssessmentNotes","calendarEventId","referralDestination",
     ];
     fields.forEach(f => { if (data[f] !== undefined) update[f] = data[f]; });
     if (data.assignedTo !== undefined) update.assignedTo = data.assignedTo ? parseInt(data.assignedTo) : null;
     if (data.preAssessmentDate !== undefined) update.preAssessmentDate = data.preAssessmentDate ? new Date(data.preAssessmentDate) : null;
+    if (data.appointmentDate !== undefined) update.appointmentDate = data.appointmentDate ? new Date(data.appointmentDate) : null;
     await db.update(inquiries).set(update).where(eq(inquiries.id, id));
     await logAudit(req, "Updated Inquiry", "inquiry", id);
 
