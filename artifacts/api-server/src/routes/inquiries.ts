@@ -57,6 +57,19 @@ const fullInquirySelect = {
   calendarEventId: inquiries.calendarEventId,
   referralDestination: inquiries.referralDestination,
   inquiryNumber: inquiries.inquiryNumber,
+  // CTM fields
+  ctmCallId: inquiries.ctmCallId,
+  ctmTrackingNumber: inquiries.ctmTrackingNumber,
+  ctmSource: inquiries.ctmSource,
+  callDurationSeconds: inquiries.callDurationSeconds,
+  callRecordingUrl: inquiries.callRecordingUrl,
+  callDateTime: inquiries.callDateTime,
+  referralDetails: inquiries.referralDetails,
+  onlineSource: inquiries.onlineSource,
+  referralOrigin: inquiries.referralOrigin,
+  transcription: inquiries.transcription,
+  aiExtractedData: inquiries.aiExtractedData,
+  callSummary: inquiries.callSummary,
 };
 
 // Constants for tab filtering

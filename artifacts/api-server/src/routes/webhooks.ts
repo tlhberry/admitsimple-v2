@@ -8,13 +8,13 @@ const router = Router();
 /**
  * POST /webhooks/ctm
  * Call Tracking Metrics webhook — no session auth required.
- * Secured by a shared secret token checked against X-CTM-Token header
- * or the "token" query/body field that CTM includes.
+ * Secured by a shared secret token checked against X-CTM-Token header.
  *
  * CTM sends application/x-www-form-urlencoded with the following fields:
- *   caller_number, caller_name, caller_city, caller_state,
- *   called_number, tracking_label, call_status, recording_url,
- *   first_call, duration, agent_name, agent_email
+ *   caller_name, caller_number, tracking_number, call_id, duration,
+ *   call_start_time, recording_url, source, location (city/state)
+ *   plus: caller_city, caller_state, tracking_label, call_status,
+ *         agent_name, agent_email, first_call, keyword
  */
 router.post("/webhooks/ctm", async (req, res) => {
   try {
@@ -39,61 +39,127 @@ router.post("/webhooks/ctm", async (req, res) => {
 
     const body = req.body as Record<string, string>;
 
-    const callerName: string = body.caller_number_name || body.caller_name || "";
+    // ── Caller identity ────────────────────────────────────────────────────
+    const callerName: string = body.caller_name || body.caller_number_name || "";
     const nameParts = callerName.trim().split(/\s+/);
     const firstName = nameParts[0] || "Unknown";
     const lastName = nameParts.slice(1).join(" ") || "Caller";
-
     const phone = body.caller_number || "";
-    const trackingLabel = body.tracking_label || "";
-    const callerCity = body.caller_city || "";
-    const callerState = body.caller_state || "";
-    const callStatus = body.call_status || "";
-    const recordingUrl = body.recording_url || "";
-    const duration = body.duration ? parseInt(body.duration, 10) : null;
-    const agentName = body.agent_name || "";
-    const calledNumber = body.called_number || "";
-    const ctmKeyword = body.keyword || body.search_keyword || "";
 
-    // Map CTM tracking label to referral source.
-    // If the campaign is Google-based, classify as Google PPC or Google Organic.
-    let referralSource = trackingLabel || "Call Tracking Metrics";
-    const labelLower = trackingLabel.toLowerCase();
-    if (labelLower.includes("google")) {
-      const isPPC =
-        labelLower.includes("ppc") ||
-        labelLower.includes("paid") ||
-        labelLower.includes("cpc") ||
-        labelLower.includes("adwords") ||
-        labelLower.includes("ads");
-      const isOrganic =
-        labelLower.includes("organic") || labelLower.includes("seo");
-      if (isOrganic) {
-        referralSource = "Google Organic";
-      } else if (isPPC) {
-        referralSource = "Google PPC";
-      } else {
-        referralSource = "Google PPC";
-      }
+    // ── CTM raw fields ─────────────────────────────────────────────────────
+    const ctmCallId = body.call_id || null;
+    // CTM may send `tracking_number` or `called_number`
+    const ctmTrackingNumber = body.tracking_number || body.called_number || null;
+    // CTM's traffic source field (e.g. "google_ads", "facebook", "organic")
+    const ctmSource = body.source || null;
+    const callDurationSeconds = body.duration ? parseInt(body.duration, 10) : null;
+    const callRecordingUrl = body.recording_url || null;
+
+    // call_start_time may be ISO string or unix timestamp
+    let callDateTime: Date | null = null;
+    if (body.call_start_time) {
+      const parsed = new Date(
+        /^\d+$/.test(body.call_start_time)
+          ? parseInt(body.call_start_time, 10) * 1000
+          : body.call_start_time
+      );
+      if (!isNaN(parsed.getTime())) callDateTime = parsed;
     }
 
+    // ── Source / referral mapping ──────────────────────────────────────────
+    // referralDetails = raw CTM source as-is (e.g. "google_ads")
+    const referralDetails = ctmSource || body.tracking_label || null;
+
+    // Derive human-friendly referralSource and internal onlineSource
+    const srcLower = (ctmSource || body.tracking_label || "").toLowerCase();
+    let referralSource = "Call Tracking Metrics";
+    let onlineSource: string | null = null;
+
+    if (srcLower.includes("google")) {
+      const isPPC =
+        srcLower.includes("ppc") ||
+        srcLower.includes("paid") ||
+        srcLower.includes("cpc") ||
+        srcLower.includes("adwords") ||
+        srcLower.includes("ads") ||
+        srcLower === "google_ads";
+      const isOrganic =
+        srcLower.includes("organic") || srcLower.includes("seo");
+      if (isOrganic) {
+        referralSource = "Google Organic";
+        onlineSource = "google_organic";
+      } else {
+        referralSource = "Google PPC";
+        onlineSource = "google_ppc";
+      }
+    } else if (srcLower.includes("facebook") || srcLower.includes("fb")) {
+      referralSource = "Facebook";
+      onlineSource = "facebook";
+    } else if (srcLower.includes("bing")) {
+      referralSource = "Bing Ads";
+      onlineSource = "bing_ppc";
+    } else if (srcLower.includes("organic") || srcLower.includes("seo")) {
+      referralSource = "Organic Search";
+      onlineSource = "organic";
+    } else if (srcLower.includes("direct")) {
+      referralSource = "Direct";
+      onlineSource = "direct";
+    } else if (srcLower) {
+      referralSource = referralDetails || "Call Tracking Metrics";
+      onlineSource = srcLower.replace(/\s+/g, "_");
+    }
+
+    // All CTM inquiries originate online
+    const referralOrigin = "online";
+
+    // ── Location & extra metadata ──────────────────────────────────────────
+    const callerCity = body.caller_city || "";
+    const callerState = body.caller_state || "";
     const locationNote = [callerCity, callerState].filter(Boolean).join(", ");
-    const notes = [
+    const trackingLabel = body.tracking_label || "";
+    const callStatus = body.call_status || "";
+    const agentName = body.agent_name || "";
+    const ctmKeyword = body.keyword || body.search_keyword || "";
+
+    // ── Auto-generated initial notes (spec: Call ID, Tracking Number, Duration, Time, Location) ──
+    const durationDisplay =
+      callDurationSeconds !== null
+        ? `${Math.floor(callDurationSeconds / 60)}m ${callDurationSeconds % 60}s`
+        : null;
+
+    const callTimeDisplay = callDateTime
+      ? callDateTime.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : null;
+
+    const noteLines = [
       `📞 Inbound call via Call Tracking Metrics`,
-      trackingLabel ? `Campaign: ${trackingLabel}` : null,
-      calledNumber ? `Tracking number: ${calledNumber}` : null,
-      locationNote ? `Caller location: ${locationNote}` : null,
-      callStatus ? `Call status: ${callStatus}` : null,
-      duration !== null ? `Duration: ${duration}s` : null,
-      agentName ? `Answered by: ${agentName}` : null,
-      recordingUrl ? `Recording: ${recordingUrl}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
+      ctmCallId ? `Call ID: ${ctmCallId}` : null,
+      ctmTrackingNumber ? `Tracking Number: ${ctmTrackingNumber}` : null,
+      trackingLabel && trackingLabel !== ctmTrackingNumber
+        ? `Campaign: ${trackingLabel}`
+        : null,
+      durationDisplay ? `Call Duration: ${durationDisplay}` : null,
+      callTimeDisplay ? `Call Time: ${callTimeDisplay}` : null,
+      locationNote ? `Caller Location: ${locationNote}` : null,
+      ctmSource ? `Ad Source: ${ctmSource}` : null,
+      callStatus ? `Call Status: ${callStatus}` : null,
+      agentName ? `Answered By: ${agentName}` : null,
+    ].filter(Boolean);
 
-    const isGoogleSource =
-      referralSource === "Google PPC" || referralSource === "Google Organic";
+    if (callRecordingUrl) {
+      noteLines.push(`Recording: ${callRecordingUrl}`);
+    }
 
+    const notes = noteLines.join("\n");
+
+    // ── Insert inquiry ─────────────────────────────────────────────────────
     const [inquiry] = await db
       .insert(inquiries)
       .values({
@@ -101,7 +167,16 @@ router.post("/webhooks/ctm", async (req, res) => {
         lastName,
         phone,
         referralSource,
-        searchKeywords: isGoogleSource && ctmKeyword ? ctmKeyword : null,
+        referralDetails,
+        onlineSource,
+        referralOrigin,
+        ctmCallId,
+        ctmTrackingNumber,
+        ctmSource,
+        callDurationSeconds,
+        callRecordingUrl,
+        callDateTime,
+        searchKeywords: ctmKeyword || null,
         status: "new",
         priority: "medium",
         notes,
@@ -109,12 +184,23 @@ router.post("/webhooks/ctm", async (req, res) => {
       })
       .returning();
 
+    // ── Log call activity ──────────────────────────────────────────────────
+    const activityBody = [
+      callStatus ? `Status: ${callStatus}` : null,
+      durationDisplay ? `Duration: ${durationDisplay}` : null,
+      agentName ? `Answered by: ${agentName}` : null,
+      locationNote ? `Caller location: ${locationNote}` : null,
+      callRecordingUrl ? `Recording: ${callRecordingUrl}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     await db.insert(activities).values({
       inquiryId: inquiry.id,
       type: "call",
       subject: `Inbound call from ${firstName} ${lastName}`,
-      body: notes,
-      createdAt: new Date(),
+      body: activityBody || notes,
+      createdAt: callDateTime ?? new Date(),
     });
 
     res.status(200).json({ ok: true, inquiryId: inquiry.id });

@@ -77,6 +77,22 @@ export const inquiries = pgTable("inquiries", {
   referralDestination: varchar("referral_destination", { length: 255 }),
   // Unique inquiry number (INQ-000001)
   inquiryNumber: varchar("inquiry_number", { length: 20 }),
+  // ── Call Tracking Metrics (CTM) fields ────────────────────────────────────
+  // Raw CTM data stored as-is
+  ctmCallId: varchar("ctm_call_id", { length: 100 }),
+  ctmTrackingNumber: varchar("ctm_tracking_number", { length: 50 }),
+  ctmSource: varchar("ctm_source", { length: 100 }),
+  callDurationSeconds: integer("call_duration_seconds"),
+  callRecordingUrl: text("call_recording_url"),
+  callDateTime: timestamp("call_date_time"),
+  // Profile fields derived from CTM data
+  referralDetails: varchar("referral_details", { length: 255 }),
+  onlineSource: varchar("online_source", { length: 100 }),
+  referralOrigin: varchar("referral_origin", { length: 50 }),
+  // AI / transcription fields (populated after call)
+  transcription: text("transcription"),
+  aiExtractedData: text("ai_extracted_data"),
+  callSummary: text("call_summary"),
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });

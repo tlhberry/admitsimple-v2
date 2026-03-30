@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity,
   Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check,
-  ShieldCheck, XCircle, SendHorizontal, AlertTriangle,
+  ShieldCheck, XCircle, SendHorizontal, AlertTriangle, Play,
 } from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -868,18 +868,92 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <dt className="text-xs font-medium text-muted-foreground mb-1">Source</dt>
-                          <dd className="text-sm font-semibold text-foreground">{inq.referralSource || "—"}</dd>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <dt className="text-xs font-medium text-muted-foreground mb-1">Source</dt>
+                            <dd className="text-sm font-semibold text-foreground">{inq.referralSource || "—"}</dd>
+                          </div>
+                          {(inq as any).referralOrigin && (
+                            <div>
+                              <dt className="text-xs font-medium text-muted-foreground mb-1">Origin</dt>
+                              <dd className="text-sm font-semibold text-foreground capitalize">{(inq as any).referralOrigin}</dd>
+                            </div>
+                          )}
+                          {(inq as any).referralDetails && (
+                            <div>
+                              <dt className="text-xs font-medium text-muted-foreground mb-1">Ad Source</dt>
+                              <dd className="text-sm font-semibold text-foreground font-mono text-xs">{(inq as any).referralDetails}</dd>
+                            </div>
+                          )}
+                          {(inq as any).onlineSource && (
+                            <div>
+                              <dt className="text-xs font-medium text-muted-foreground mb-1">Online Source</dt>
+                              <dd className="text-sm font-semibold text-foreground font-mono text-xs">{(inq as any).onlineSource}</dd>
+                            </div>
+                          )}
+                          {inq.searchKeywords && (
+                            <div className="sm:col-span-2">
+                              <dt className="text-xs font-medium text-muted-foreground mb-1">Search Keywords</dt>
+                              <dd className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                                <Search className="w-3.5 h-3.5 text-primary shrink-0" />
+                                {inq.searchKeywords}
+                              </dd>
+                            </div>
+                          )}
                         </div>
-                        {inq.searchKeywords && (
-                          <div className="sm:col-span-2">
-                            <dt className="text-xs font-medium text-muted-foreground mb-1">Search Keywords</dt>
-                            <dd className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                              <Search className="w-3.5 h-3.5 text-primary shrink-0" />
-                              {inq.searchKeywords}
-                            </dd>
+
+                        {/* CTM Call Details — shown when inquiry came via CTM webhook */}
+                        {(inq as any).ctmCallId && (
+                          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Phone className="w-3.5 h-3.5 text-primary" />
+                              <span className="text-xs font-semibold text-primary uppercase tracking-wider">CTM Call Details</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
+                              <div>
+                                <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Call ID</dt>
+                                <dd className="text-xs font-mono text-foreground">{(inq as any).ctmCallId}</dd>
+                              </div>
+                              {(inq as any).ctmTrackingNumber && (
+                                <div>
+                                  <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Tracking Number</dt>
+                                  <dd className="text-xs font-mono text-foreground">{(inq as any).ctmTrackingNumber}</dd>
+                                </div>
+                              )}
+                              {(inq as any).callDurationSeconds != null && (
+                                <div>
+                                  <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Duration</dt>
+                                  <dd className="text-xs font-semibold text-foreground">
+                                    {Math.floor((inq as any).callDurationSeconds / 60)}m {(inq as any).callDurationSeconds % 60}s
+                                  </dd>
+                                </div>
+                              )}
+                              {(inq as any).callDateTime && (
+                                <div>
+                                  <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Call Time</dt>
+                                  <dd className="text-xs font-semibold text-foreground">
+                                    {new Date((inq as any).callDateTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                                  </dd>
+                                </div>
+                              )}
+                              {(inq as any).ctmSource && (
+                                <div>
+                                  <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">CTM Source</dt>
+                                  <dd className="text-xs font-mono text-foreground">{(inq as any).ctmSource}</dd>
+                                </div>
+                              )}
+                            </div>
+                            {(inq as any).callRecordingUrl && (
+                              <a
+                                href={(inq as any).callRecordingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors mt-1"
+                              >
+                                <Play className="w-3 h-3" /> Listen to Recording
+                              </a>
+                            )}
                           </div>
                         )}
                       </div>

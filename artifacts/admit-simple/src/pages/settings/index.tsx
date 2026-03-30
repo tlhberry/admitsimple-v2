@@ -248,15 +248,28 @@ export default function Settings() {
                     </Button>
                   </div>
                 </div>
-                <div className="bg-muted/40 rounded-xl border border-border p-4 text-sm space-y-2">
-                  <p className="font-semibold text-foreground">Fields mapped from CTM</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs font-mono text-muted-foreground">
-                    <span><strong className="text-foreground">caller_number</strong> → Phone</span>
-                    <span><strong className="text-foreground">caller_name</strong> → First / Last name</span>
-                    <span><strong className="text-foreground">tracking_label</strong> → Referral source</span>
-                    <span><strong className="text-foreground">caller_city / state</strong> → Notes</span>
-                    <span><strong className="text-foreground">call_status</strong> → Notes</span>
-                    <span><strong className="text-foreground">recording_url</strong> → Notes</span>
+                <div className="bg-muted/40 rounded-xl border border-border p-4 text-sm space-y-4">
+                  <div>
+                    <p className="font-semibold text-foreground mb-2">CTM Fields → Stored As</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-mono text-muted-foreground">
+                      <span><strong className="text-foreground">caller_name</strong> → First / Last Name</span>
+                      <span><strong className="text-foreground">caller_number</strong> → Phone</span>
+                      <span><strong className="text-foreground">call_id</strong> → CTM Call ID</span>
+                      <span><strong className="text-foreground">tracking_number</strong> → CTM Tracking Number</span>
+                      <span><strong className="text-foreground">source</strong> → CTM Source (raw)</span>
+                      <span><strong className="text-foreground">duration</strong> → Call Duration (seconds)</span>
+                      <span><strong className="text-foreground">call_start_time</strong> → Call Date/Time</span>
+                      <span><strong className="text-foreground">recording_url</strong> → Recording URL (clickable)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground mb-2">Derived Profile Fields</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-mono text-muted-foreground">
+                      <span><strong className="text-foreground">referralSource</strong> — e.g. "Google PPC"</span>
+                      <span><strong className="text-foreground">referralDetails</strong> — raw source, e.g. "google_ads"</span>
+                      <span><strong className="text-foreground">onlineSource</strong> — e.g. "google_ppc"</span>
+                      <span><strong className="text-foreground">referralOrigin</strong> — always "online"</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
