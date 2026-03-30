@@ -340,4 +340,88 @@ router.get("/admissions-performance", async (req, res) => {
   }
 });
 
+// ── Command Center (Home Dashboard) ────────────────────────────────────────
+router.get("/dashboard/command-center", async (req, res) => {
+  try {
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 3600000);
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 3600000);
+
+    // Ready to Admit — has appointment date, not yet admitted/discharged
+    const readyRows = await db.select({
+      id: inquiries.id,
+      firstName: inquiries.firstName,
+      lastName: inquiries.lastName,
+      status: inquiries.status,
+      appointmentDate: inquiries.appointmentDate,
+      updatedAt: inquiries.updatedAt,
+    }).from(inquiries)
+      .where(and(
+        sql`${inquiries.appointmentDate} IS NOT NULL`,
+        sql`${inquiries.status} NOT IN ('admitted','discharged','did_not_admit','referred_out')`,
+      ))
+      .orderBy(asc(inquiries.appointmentDate))
+      .limit(10);
+
+    // Stuck leads — active leads not updated in 24+ hours in VOB or pre-assessment
+    const [stuckVob] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        eq(inquiries.status, "insurance_verification"),
+        lte(inquiries.updatedAt, twentyFourHoursAgo),
+      ));
+    const [stuckPreAssess] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        eq(inquiries.status, "pre_assessment"),
+        lte(inquiries.updatedAt, twentyFourHoursAgo),
+      ));
+    const [stuckInitial] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        sql`${inquiries.status} IN ('new','initial_contact')`,
+        lte(inquiries.updatedAt, fortyEightHoursAgo),
+      ));
+
+    // Recent missed calls — list for action
+    const missedCallRows = await db.select({
+      id: inquiries.id,
+      firstName: inquiries.firstName,
+      lastName: inquiries.lastName,
+      phone: inquiries.phone,
+      callDateTime: inquiries.callDateTime,
+      callStatus: inquiries.callStatus,
+    }).from(inquiries)
+      .where(and(
+        sql`${inquiries.callStatus} = 'missed'`,
+        sql`${inquiries.callDateTime} IS NOT NULL`,
+      ))
+      .orderBy(desc(inquiries.callDateTime))
+      .limit(8);
+
+    res.json({
+      readyToAdmit: readyRows.map(r => ({
+        id: r.id,
+        name: `${r.firstName} ${r.lastName}`,
+        status: r.status,
+        appointmentDate: r.appointmentDate,
+        updatedAt: r.updatedAt,
+      })),
+      stuckLeads: {
+        vob: Number(stuckVob.count),
+        preAssess: Number(stuckPreAssess.count),
+        initialContact: Number(stuckInitial.count),
+        total: Number(stuckVob.count) + Number(stuckPreAssess.count) + Number(stuckInitial.count),
+      },
+      missedCalls: missedCallRows.map(r => ({
+        id: r.id,
+        name: `${r.firstName} ${r.lastName}`,
+        phone: r.phone,
+        callDateTime: r.callDateTime,
+        callStatus: r.callStatus,
+      })),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

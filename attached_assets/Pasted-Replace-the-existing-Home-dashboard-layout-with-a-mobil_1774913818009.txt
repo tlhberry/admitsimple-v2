@@ -1,0 +1,171 @@
+Replace the existing Home dashboard layout with a mobile-first Admissions Command Center.
+
+Delete all current dashboard sections and rebuild using the structure below.
+
+🔴 1. REMOVE EVERYTHING CURRENT
+Delete:
+Pipeline Breakdown chart
+Admissions Insights cards
+Any duplicate metric sections
+Any charts or grids
+
+Start clean.
+
+🟢 2. CREATE NEW HOME DASHBOARD (STACKED SECTIONS)
+
+All sections should be full-width, stacked vertically, mobile-first.
+
+🔲 SECTION 1: 🔥 READY TO ADMIT (TOP PRIORITY)
+
+Title:
+👉 “🔥 Ready to Admit”
+
+Show list of leads that are:
+
+VOB complete OR
+Final stage before admit
+
+Display per row:
+
+Name
+Status (ex: “VOB Complete”)
+Last activity (ex: “2 hrs ago”)
+
+👉 Tap = open inquiry
+
+🔲 SECTION 2: THIS WEEK PERFORMANCE
+
+Title:
+👉 “This Week”
+
+Display:
+
+Leads: XX
+Admits: XX
+Conversion: XX%
+
+Large bold numbers
+
+🔲 SECTION 3: REFERRAL SOURCES
+
+Title:
+👉 “Top Referral Sources”
+
+List format:
+
+Google PPC
+18 → 6 (33%)
+
+Therapist
+10 → 4 (40%)
+
+Sort by admits descending
+
+👉 Tap source → open filtered inquiries
+
+🔲 SECTION 4: CALL PERFORMANCE
+
+Title:
+👉 “Calls”
+
+Display:
+
+Missed Today: X
+Missed Week: X
+Answer Rate: XX%
+
+👉 Tap → open calls screen
+
+🔲 SECTION 5: TOP PERFORMERS
+
+Title:
+👉 “Top Performers”
+
+Display:
+
+Admissions Rep
+Austin — 6 admits
+
+BD Rep
+Sarah — 14 leads
+
+🔲 SECTION 6: SPEED TO ADMIT
+
+Title:
+👉 “Speed”
+
+Display:
+
+Avg Time to Admit
+18 hrs
+
+🔲 SECTION 7: PIPELINE SNAPSHOT
+
+Title:
+👉 “Pipeline”
+
+Display:
+
+Active: X
+VOB: X
+Ready: X 🔥
+
+👉 Tap → open pipeline
+
+🔲 SECTION 8: ⚠ STUCK LEADS
+
+Title:
+👉 “Stuck > 24 hrs”
+
+Display:
+
+In VOB: X
+In Pre-Assess: X
+🔲 SECTION 9: MISSED CALLS (ACTIONABLE)
+
+Title:
+👉 “Missed Calls”
+
+List:
+
++15551234567 (5 min ago)
++15559876543 (12 min ago)
+
+👉 Tap = call back or open inquiry
+
+📱 3. UI REQUIREMENTS
+Mobile-first (vertical scroll only)
+No charts
+No cards grid
+Use simple sections with:
+Title
+Data list
+Tight spacing
+Large tap targets
+⚡ 4. INTERACTIONS
+
+Everything must be tappable:
+
+Leads → open inquiries list
+Sources → filtered view
+Missed calls → callback
+Ready to admit → open lead
+🎨 5. DESIGN RULES
+Dark theme (existing)
+Subtle dividers between sections
+Bold numbers for key metrics
+Minimal icons (optional)
+🚫 DO NOT
+Add charts
+Add unnecessary filters
+Duplicate data across sections
+Slow down load time
+🔥 FINAL GOAL
+
+This dashboard should answer instantly:
+
+Who can I admit right now?
+Where are leads coming from?
+Are we missing calls?
+Who’s performing?
+What needs attention?
