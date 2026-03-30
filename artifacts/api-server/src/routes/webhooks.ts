@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { inquiries, activities, settings } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { broadcastSSE } from "../lib/sse";
+import { inquiries, activities, settings, users } from "@workspace/db/schema";
+import { eq, desc, ilike } from "drizzle-orm";
+import { broadcastSSE, sendSSEToUser } from "../lib/sse";
 
 const router = Router();
 
@@ -172,9 +172,24 @@ router.post("/webhooks/ctm", async (req, res) => {
       if (existing) inquiry = existing;
     }
 
+    // ── Agent-to-user matching (by name, case-insensitive fuzzy) ────────────
+    let assignedUserId: number | null = null;
+    if (agentName) {
+      const [matchedUser] = await db
+        .select({ id: users.id, name: users.name })
+        .from(users)
+        .where(ilike(users.name, `%${agentName.split(" ")[0]}%`))
+        .limit(1);
+      if (matchedUser) assignedUserId = matchedUser.id;
+    }
+
+    const isDirectlyAssigned = assignedUserId !== null;
+    const newCallStatus = isDirectlyAssigned ? "active" : "ringing";
+
     // ── Create or update inquiry ───────────────────────────────────────────
+    const isExisting = inquiry !== null;
     if (inquiry) {
-      // Update CTM fields on existing inquiry
+      // Update CTM fields + call ownership on existing inquiry
       await db.update(inquiries).set({
         ctmCallId: ctmCallId ?? inquiry.ctmCallId,
         ctmTrackingNumber: ctmTrackingNumber ?? inquiry.ctmTrackingNumber,
@@ -182,6 +197,12 @@ router.post("/webhooks/ctm", async (req, res) => {
         callDurationSeconds: callDurationSeconds ?? inquiry.callDurationSeconds,
         callRecordingUrl: callRecordingUrl ?? inquiry.callRecordingUrl,
         callDateTime: callDateTime ?? inquiry.callDateTime,
+        callStatus: newCallStatus,
+        ...(isDirectlyAssigned ? {
+          assignedTo: assignedUserId,
+          isLocked: true,
+          lockedAt: new Date(),
+        } : {}),
         updatedAt: new Date(),
       }).where(eq(inquiries.id, inquiry.id));
     } else {
@@ -205,6 +226,12 @@ router.post("/webhooks/ctm", async (req, res) => {
           status: "new",
           priority: "medium",
           notes,
+          callStatus: newCallStatus,
+          ...(isDirectlyAssigned ? {
+            assignedTo: assignedUserId,
+            isLocked: true,
+            lockedAt: new Date(),
+          } : {}),
           updatedAt: new Date(),
         })
         .returning();
@@ -230,16 +257,54 @@ router.post("/webhooks/ctm", async (req, res) => {
       createdAt: callDateTime ?? new Date(),
     });
 
-    // ── Broadcast real-time event to all connected clients ────────────────
-    broadcastSSE("incoming_call", {
+    // ── Broadcast real-time event ──────────────────────────────────────────
+    const ssePayload = {
       inquiryId: inquiry.id,
       phone,
       callerName: `${firstName} ${lastName}`.trim(),
       source: ctmSource || referralSource,
       callId: ctmCallId,
-      isExisting: !!inquiry,
+      isExisting,
+      claimable: !isDirectlyAssigned,
+      assignedUserId,
+      callStatus: newCallStatus,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    if (isDirectlyAssigned && assignedUserId) {
+      // Only notify the assigned rep
+      sendSSEToUser(assignedUserId, "incoming_call", ssePayload);
+    } else {
+      // All reps — first to claim wins
+      broadcastSSE("incoming_call", ssePayload);
+    }
+
+    // ── Auto-miss timer (15 seconds if still ringing) ─────────────────────
+    if (!isDirectlyAssigned) {
+      const inquiryId = inquiry.id;
+      setTimeout(async () => {
+        try {
+          const [current] = await db
+            .select({ callStatus: inquiries.callStatus })
+            .from(inquiries)
+            .where(eq(inquiries.id, inquiryId));
+
+          if (current?.callStatus === "ringing") {
+            await db.update(inquiries).set({
+              callStatus: "missed",
+              updatedAt: new Date(),
+            }).where(eq(inquiries.id, inquiryId));
+
+            broadcastSSE("call_status", {
+              inquiryId,
+              status: "missed",
+            });
+          }
+        } catch {
+          // Non-critical; best-effort
+        }
+      }, 15000);
+    }
 
     res.status(200).json({ ok: true, inquiryId: inquiry.id });
   } catch (err) {

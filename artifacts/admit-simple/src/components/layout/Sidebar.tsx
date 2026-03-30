@@ -14,7 +14,9 @@ import {
   Building2,
   Activity,
   BedDouble,
+  Phone,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 
 export function Sidebar() {
@@ -25,6 +27,15 @@ export function Sidebar() {
   const isActive = (href: string) =>
     href === "/" ? location === "/" : location.startsWith(href);
 
+  // Live call count badge
+  const { data: activeCalls = [] } = useQuery<any[]>({
+    queryKey: ["/api/calls/active"],
+    queryFn: () => fetch("/api/calls/active", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+  const liveCallCount = activeCalls.length;
+
   const navSections = [
     {
       label: "Admissions",
@@ -33,6 +44,7 @@ export function Sidebar() {
         { icon: ClipboardList, label: "Inquiries",  href: "/inquiries" },
         { icon: Users,         label: "Patients",   href: "/patients" },
         { icon: GitBranch,     label: "Pipeline",   href: "/pipeline" },
+        { icon: Phone,         label: "Active Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const },
       ],
     },
     {
@@ -82,6 +94,7 @@ export function Sidebar() {
               <div className="space-y-0.5">
                 {section.items.map(item => {
                   const active = isActive(item.href);
+                  const anyItem = item as any;
                   return (
                     <Link key={item.href} href={item.href} className="block">
                       <div className={cn(
@@ -94,7 +107,17 @@ export function Sidebar() {
                           "w-[18px] h-[18px] shrink-0 transition-colors",
                           active ? "text-primary" : "text-sidebar-foreground group-hover:text-white"
                         )} />
-                        <span className="text-sm">{item.label}</span>
+                        <span className="text-sm flex-1">{item.label}</span>
+                        {anyItem.badge && (
+                          <span className={cn(
+                            "ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
+                            anyItem.badgeColor === "rose"
+                              ? "bg-rose-500 text-white"
+                              : "bg-primary text-white"
+                          )}>
+                            {anyItem.badge}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   );

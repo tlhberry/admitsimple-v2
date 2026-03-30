@@ -85,7 +85,8 @@ lib/
 13. **Refer Out** — "Refer Out" modal with Text/Email method, AI-generated message, records referral out with amber badge
 14. **Settings** — Facility info, notifications, AI configuration (admin-only)
 15. **User Management** — Admin-only Users tab in Settings: list all users, create with auto-generated initials and password generator, edit role, disable/enable, reset password; role-based access control (Admin / Admissions Rep / BD Rep)
-16. **Real-Time Inbound Call System** — SSE-based push notifications; IncomingCallBanner slides in from top-right with phone number + "Open Live Intake" button; `?mode=live` URL param renders LiveCallMode (distraction-free, no sidebar) with call timer, auto-saving fast-entry form, and "End Call — What's Next?" modal with 5 post-call action paths; CTM webhook at `POST /api/webhooks/ctm` deduplicates by phone before creating new inquiries and broadcasts SSE `incoming_call` event to all connected clients
+16. **Real-Time Inbound Call System** — SSE-based push notifications; IncomingCallBanner slides in from top-right; CTM webhook at `POST /api/webhooks/ctm` deduplicates by phone, sets `callStatus = "ringing"`, broadcasts SSE; 15-second auto-miss timer; agent_name-to-user fuzzy match for direct assignment with targeted SSE
+17. **Call Ownership / One-Call-One-Owner** — `callStatus` (ringing/active/completed/missed), `isLocked`, `lockedAt` columns; `POST /api/inquiries/:id/claim` atomically locks a call to the first claimant (409 if race-lost); `GET /api/calls/active` admin view; LiveCallMode auto-claims on entry and shows lock screen if owned by another rep; Active Calls page at `/calls/active` shows all live calls with Claim/Resume/View actions; sidebar badge counts active calls; detail.tsx shows amber "Call in Progress" banner when another rep owns the active call
 
 ## BD Module (routes/bd.ts)
 

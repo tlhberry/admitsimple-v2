@@ -3,6 +3,7 @@ import { useGetInquiry, useListActivities } from "@workspace/api-client-react";
 import { useAIFeatures } from "@/hooks/use-ai";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { Layout } from "@/components/layout/Layout";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -430,6 +431,7 @@ export default function InquiryDetail() {
   const { convertToPatient, updateInquiry } = useInquiriesMutations();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const isPreAssessment = inquiry?.status === "Pre-Assessment";
   const defaultTab = "overview";
@@ -770,6 +772,29 @@ Keep it warm, concise, and professional. Include a request for the other facilit
           </Link>
         );
       })()}
+
+      {/* ── Active call lock banner ───────────────────────────────────────── */}
+      {inq.callStatus === "active" && inq.isLocked && inq.assignedTo !== (user as any)?.id && (
+        <div className="mb-5 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3.5">
+          <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+            <Phone className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-300">Call in Progress</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              This inquiry is being handled on a live call by{" "}
+              <span className="font-semibold text-foreground">{inq.assignedToName || "a rep"}</span>
+              . Avoid editing until the call ends.
+            </p>
+          </div>
+          <Link
+            href="/calls/active"
+            className="shrink-0 text-xs font-semibold text-amber-400 hover:text-amber-300 border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            View Active Calls
+          </Link>
+        </div>
+      )}
 
       {/* Header */}
       <div className="bg-card rounded-2xl p-5 md:p-7 border border-border mb-6 flex flex-col md:flex-row md:items-start justify-between gap-5 relative overflow-hidden">

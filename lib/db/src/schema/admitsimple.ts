@@ -97,6 +97,10 @@ export const inquiries = pgTable("inquiries", {
   transcription: text("transcription"),
   aiExtractedData: text("ai_extracted_data"),
   callSummary: text("call_summary"),
+  // ── Call ownership / locking ───────────────────────────────────────────────
+  callStatus: varchar("call_status", { length: 20 }),     // ringing | active | completed | missed
+  isLocked: boolean("is_locked").notNull().default(false), // true = owned by one rep
+  lockedAt: timestamp("locked_at"),                        // when ownership was claimed
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });

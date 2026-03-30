@@ -4,8 +4,8 @@ type EventHandler = (data: any) => void;
 
 /**
  * Subscribes to server-sent events from /api/events.
+ * Supported events: incoming_call, call_claimed, call_status, ping
  * Automatically reconnects on connection loss.
- * Pass a stable handlers object (use useCallback or useMemo on values).
  */
 export function useLiveEvents(handlers: Record<string, EventHandler>) {
   const handlersRef = useRef(handlers);
@@ -16,18 +16,22 @@ export function useLiveEvents(handlers: Record<string, EventHandler>) {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let active = true;
 
+    const EVENTS = ["incoming_call", "call_claimed", "call_status", "call_status_update"];
+
     const connect = () => {
       if (!active) return;
 
       try {
         es = new EventSource("/api/events", { withCredentials: true });
 
-        es.addEventListener("incoming_call", (e: MessageEvent) => {
-          try {
-            const data = JSON.parse(e.data);
-            handlersRef.current["incoming_call"]?.(data);
-          } catch {}
-        });
+        for (const eventName of EVENTS) {
+          es.addEventListener(eventName, (e: MessageEvent) => {
+            try {
+              const data = JSON.parse(e.data);
+              handlersRef.current[eventName]?.(data);
+            } catch {}
+          });
+        }
 
         es.onerror = () => {
           es?.close();

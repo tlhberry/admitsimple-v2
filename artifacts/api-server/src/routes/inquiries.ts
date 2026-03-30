@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { inquiries, users, patients, auditLogs } from "@workspace/db/schema";
-import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt } from "drizzle-orm";
+import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
 import { logAudit } from "../lib/logAudit";
+import { broadcastSSE, sendSSEToUser } from "../lib/sse";
 import archiver from "archiver";
 
 const router = Router();
@@ -74,6 +75,10 @@ const fullInquirySelect = {
   transcription: inquiries.transcription,
   aiExtractedData: inquiries.aiExtractedData,
   callSummary: inquiries.callSummary,
+  // Call ownership
+  callStatus: inquiries.callStatus,
+  isLocked: inquiries.isLocked,
+  lockedAt: inquiries.lockedAt,
 };
 
 // Constants for tab filtering
@@ -579,6 +584,114 @@ router.get("/inquiries/:id/audit-log", async (req, res) => {
       .where(eq(auditLogs.inquiryId, id))
       .orderBy(desc(auditLogs.createdAt));
     res.json(rows);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /api/calls/active — live & ringing calls (admin view) ──────────────
+router.get("/calls/active", async (req, res) => {
+  try {
+    const rows = await db
+      .select({
+        id: inquiries.id,
+        firstName: inquiries.firstName,
+        lastName: inquiries.lastName,
+        phone: inquiries.phone,
+        callStatus: inquiries.callStatus,
+        isLocked: inquiries.isLocked,
+        lockedAt: inquiries.lockedAt,
+        assignedTo: inquiries.assignedTo,
+        assignedToName: users.name,
+        callDateTime: inquiries.callDateTime,
+        ctmSource: inquiries.ctmSource,
+      })
+      .from(inquiries)
+      .leftJoin(users, eq(inquiries.assignedTo, users.id))
+      .where(sql`${inquiries.callStatus} IN ('ringing', 'active')`)
+      .orderBy(desc(inquiries.callDateTime));
+    res.json(rows);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/inquiries/:id/claim — atomically claim an inquiry for this rep ─
+router.post("/inquiries/:id/claim", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const sess = req.session as any;
+    const userId: number = sess?.userId;
+
+    if (!userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    // Fetch current state
+    const [current] = await db
+      .select({ isLocked: inquiries.isLocked, assignedTo: inquiries.assignedTo })
+      .from(inquiries)
+      .where(eq(inquiries.id, id));
+
+    if (!current) {
+      res.status(404).json({ error: "Inquiry not found" });
+      return;
+    }
+
+    // Already locked by someone else?
+    if (current.isLocked && current.assignedTo !== userId) {
+      const [owner] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, current.assignedTo!));
+      res.status(409).json({
+        error: "already_claimed",
+        message: `Already claimed by ${owner?.name ?? "another rep"}`,
+        claimedBy: owner?.name ?? "another rep",
+      });
+      return;
+    }
+
+    // Atomic claim
+    await db.update(inquiries).set({
+      assignedTo: userId,
+      isLocked: true,
+      lockedAt: new Date(),
+      callStatus: "active",
+      updatedAt: new Date(),
+    }).where(eq(inquiries.id, id));
+
+    // Fetch rep name
+    const [rep] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
+
+    // Broadcast to all so other reps dismiss their notification
+    broadcastSSE("call_claimed", {
+      inquiryId: id,
+      repId: userId,
+      repName: rep?.name ?? "A rep",
+    });
+
+    res.json({ ok: true, message: "Claimed successfully" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/inquiries/:id/complete-call — mark call completed ────────────
+router.post("/inquiries/:id/complete-call", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.update(inquiries).set({
+      callStatus: "completed",
+      updatedAt: new Date(),
+    }).where(eq(inquiries.id, id));
+
+    broadcastSSE("call_status", { inquiryId: id, status: "completed" });
+    res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
