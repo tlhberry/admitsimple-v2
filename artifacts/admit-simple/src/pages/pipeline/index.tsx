@@ -2,19 +2,22 @@ import { useGetPipelineInquiries } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Brain, Clock, MoreHorizontal, ExternalLink } from "lucide-react";
+import { Loader2, Clock, MoreHorizontal, ExternalLink, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { CreateInquiryForm } from "@/components/CreateInquiryForm";
 import { cn } from "@/lib/utils";
 import { useInquiriesMutations } from "@/hooks/use-inquiries";
 import { PipelineColumn } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 
 export default function Pipeline() {
-  const { data, isLoading } = useGetPipelineInquiries();
+  const { data, isLoading, refetch } = useGetPipelineInquiries();
   const { updateInquiry } = useInquiriesMutations();
   const [, navigate] = useLocation();
   const justDragged = useRef(false);
   const [columns, setColumns] = useState<PipelineColumn[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     if (data) setColumns(data);
@@ -55,17 +58,12 @@ export default function Pipeline() {
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Admissions Pipeline</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Drag and drop inquiries to update their status.</p>
-        </div>
-        <Button className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-xl h-10 px-5 font-semibold">
-          <Brain className="w-4 h-4 mr-2" /> AI Optimize
-        </Button>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Admissions Pipeline</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Drag and drop inquiries to update their status.</p>
       </div>
 
-      <div className="flex flex-col md:flex-row md:overflow-x-auto pb-8 pt-2 gap-4 md:h-[calc(100vh-180px)] md:min-h-[600px]">
+      <div className="flex flex-col md:flex-row md:overflow-x-auto pb-6 pt-2 gap-4 md:h-[calc(100vh-230px)] md:min-h-[500px]">
         <DragDropContext onDragEnd={onDragEnd}>
           {columns.map((col) => (
             <div key={col.stage.id} className="w-full md:min-w-[300px] md:w-[300px] flex flex-col bg-muted/40 rounded-2xl border border-border kanban-col">
@@ -139,6 +137,26 @@ export default function Pipeline() {
           ))}
         </DragDropContext>
       </div>
+
+      {/* Add New Inquiry — bottom of page */}
+      <div className="flex justify-center pt-2 pb-4">
+        <Button
+          onClick={() => setShowCreate(true)}
+          className="h-11 px-8 rounded-xl gap-2 font-semibold shadow-lg"
+        >
+          <Plus className="w-4 h-4" /> New Inquiry
+        </Button>
+      </div>
+
+      <Sheet open={showCreate} onOpenChange={setShowCreate}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0 bg-card border-l border-border">
+          <SheetHeader className="p-6 bg-muted border-b border-border sticky top-0 z-10">
+            <SheetTitle className="text-xl text-foreground">Create New Inquiry</SheetTitle>
+            <SheetDescription className="text-muted-foreground">Enter details manually or use AI to parse a document.</SheetDescription>
+          </SheetHeader>
+          <CreateInquiryForm onSuccess={() => { setShowCreate(false); refetch(); }} />
+        </SheetContent>
+      </Sheet>
     </Layout>
   );
 }
