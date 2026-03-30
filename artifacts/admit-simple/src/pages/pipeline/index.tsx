@@ -197,8 +197,8 @@ export default function Pipeline() {
         </DragDropContext>
       </div>
 
-      {/* Add New Inquiry — bottom of page */}
-      <div className="flex justify-center pt-2 pb-4">
+      {/* Desktop: Add New Inquiry button */}
+      <div className="hidden md:flex justify-center pt-2 pb-4">
         <Button
           onClick={() => setShowCreate(true)}
           className="h-11 px-8 rounded-xl gap-2 font-semibold shadow-lg"
@@ -206,6 +206,15 @@ export default function Pipeline() {
           <Plus className="w-4 h-4" /> New Inquiry
         </Button>
       </div>
+
+      {/* Mobile: Floating action button above bottom nav */}
+      <button
+        onClick={() => setShowCreate(true)}
+        className="md:hidden fixed bottom-20 right-5 z-40 flex items-center gap-2 h-13 px-5 py-3 bg-primary text-white rounded-2xl shadow-xl font-semibold text-sm active:scale-95 transition-transform"
+        style={{ boxShadow: "0 4px 24px rgba(91,200,220,0.35)" }}
+      >
+        <Plus className="w-4 h-4" /> New Inquiry
+      </button>
 
       <Sheet open={showCreate} onOpenChange={setShowCreate}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0 bg-card border-l border-border">
