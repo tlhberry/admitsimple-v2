@@ -223,6 +223,8 @@ router.put("/inquiries/:id", async (req, res) => {
       "primaryDiagnosis","substanceHistory","medicalHistory","mentalHealthHistory","levelOfCare",
       "referralSource","referralContact","searchKeywords","status","priority","notes",
       "preAssessmentCompleted","preAssessmentNotes","calendarEventId","referralDestination",
+      // Live call intake fields
+      "presentingProblem","primarySubstance","callerIsNotPatient","callerName","callerRelationship","patientPhone",
     ];
     fields.forEach(f => { if (data[f] !== undefined) update[f] = data[f]; });
     if (data.assignedTo !== undefined) update.assignedTo = data.assignedTo ? parseInt(data.assignedTo) : null;

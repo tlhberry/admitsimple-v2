@@ -1,0 +1,122 @@
+Modify the existing Active Call screen (do NOT rebuild) with the following additions and adjustments.
+
+🧩 1. ADD NEW FIELDS (INSERT INTO EXISTING LAYOUT)
+➕ Add directly under DOB:
+Referral Source
+Add dropdown field: Referral Source
+Default value: from CTM if available
+Options:
+Google PPC
+Organic Google
+Therapist
+Hospital
+Previous Client
+Other (show text input if selected)
+➕ Add below Referral Source:
+Presenting Problem
+Textarea (2–3 lines max)
+Placeholder: “Why are they calling?”
+➕ Add below Presenting Problem:
+Level of Care (Checkbox Group)
+
+Label:
+👉 “What are they calling about?”
+
+Options (multi-select):
+
+Detox
+Residential
+PHP
+IOP
+➕ Add below Level of Care:
+Primary Substance
+Dropdown
+Options:
+Alcohol
+Opioids
+Benzos
+Stimulants
+Marijuana
+Multiple
+Other
+👤 2. ADD “CALLER IS NOT PATIENT” LOGIC
+➕ Add toggle under name/DOB section:
+
+Checkbox:
+👉 “Caller is NOT the patient”
+
+IF CHECKED:
+
+Show new section:
+
+Primary Contact (Caller)
+Name (text)
+Phone (auto-fill from CTM number)
+Relationship dropdown:
+Mother
+Father
+Spouse
+Friend
+Other
+ALSO ADD:
+Patient Phone Number
+Required when toggle is ON
+Separate from caller phone
+🧾 3. MODIFY EXISTING NOTES FIELD
+Rename:
+
+👉 “Call Tracking Notes”
+
+Behavior:
+Keep auto-filled CTM data
+Keep editable
+UI Change:
+Move to bottom of screen
+Reduce height (smaller textarea)
+Less visual emphasis
+📱 4. UI STRUCTURE (DO NOT REDESIGN, JUST GROUP)
+
+Visually group existing + new fields:
+
+Patient Info
+First Name
+Last Name
+DOB
+Contact Logic
+Caller is NOT patient toggle
+(Conditional caller fields)
+Patient phone (if needed)
+Call Intake (NEW CORE SECTION)
+Referral Source
+Presenting Problem
+Level of Care
+Primary Substance
+Insurance (existing)
+Provider
+Member ID
+Bottom
+Call Tracking Notes (small)
+⚡ 5. KEEP EXISTING BEHAVIOR
+Keep auto-save
+Keep active call timer
+Keep CTM metadata
+Keep “End Call — What’s Next?” button
+🎯 FINAL RESULT
+
+You are NOT changing the flow.
+
+You are:
+
+Making intake smarter
+Covering real-world scenarios (mom calling, etc.)
+Capturing clinical essentials early
+🔥 IMPORTANT
+
+Do NOT:
+
+Add extra steps
+Add validation that slows reps down
+Turn this into a long form
+
+This must still feel:
+👉 fast, minimal, and usable while talking

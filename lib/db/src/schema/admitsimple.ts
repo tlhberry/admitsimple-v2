@@ -101,6 +101,13 @@ export const inquiries = pgTable("inquiries", {
   callStatus: varchar("call_status", { length: 20 }),     // ringing | active | completed | missed
   isLocked: boolean("is_locked").notNull().default(false), // true = owned by one rep
   lockedAt: timestamp("locked_at"),                        // when ownership was claimed
+  // ── Live call intake fields ────────────────────────────────────────────────
+  presentingProblem: text("presenting_problem"),
+  primarySubstance: varchar("primary_substance", { length: 100 }),
+  callerIsNotPatient: boolean("caller_is_not_patient").notNull().default(false),
+  callerName: varchar("caller_name", { length: 255 }),
+  callerRelationship: varchar("caller_relationship", { length: 100 }),
+  patientPhone: varchar("patient_phone", { length: 30 }),
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });
