@@ -174,6 +174,153 @@ function AuditLogCard({ inquiryId, parsedAt, vobData, onTabChange }: {
   );
 }
 
+// ─── Admission Snapshot Card ───────────────────────────────────────────────────
+
+function RiskBadge({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div className={cn(
+      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border",
+      active
+        ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
+        : "bg-muted/30 border-border text-muted-foreground/60"
+    )}>
+      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", active ? "bg-rose-400" : "bg-muted-foreground/30")} />
+      {label}
+    </div>
+  );
+}
+
+function SnapRow({ label, value }: { label: string; value?: string | number | null | JSX.Element }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 py-1.5 border-b border-border/40 last:border-0">
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+      <span className="text-xs font-semibold text-foreground text-right">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function AdmissionSnapshotCard({ inq }: { inq: any }) {
+  const preScreening = inq?.preScreeningData as any;
+  const nursing = inq?.nursingAssessmentData as any;
+  const vob = inq?.vobData as any;
+
+  // Risk flags derived from pre-screening / nursing assessment
+  const detoxRequired = Array.isArray(preScreening?.withdrawalSymptoms) && preScreening.withdrawalSymptoms.length > 0;
+  const suicideRisk =
+    preScreening?.suicidalIdeation &&
+    preScreening.suicidalIdeation !== "None" &&
+    preScreening.suicidalIdeation !== "";
+  const medicalConcern = !!(nursing?.medicalConditions || preScreening?.medicalConditions);
+
+  const anyRisk = detoxRequired || suicideRisk || medicalConcern;
+
+  // Financial
+  const vobVerified = vob?.status === "verified";
+  const estimatedCost = vob?.estimatedCost || null;
+  const paymentDecision = inq?.costAcceptance || null;
+
+  // Key notes — from pre-assessment or nursing summary
+  const keyNotes = [inq?.preAssessmentNotes, preScreening?.additionalNotes, nursing?.additionalNotes]
+    .filter(Boolean)
+    .join("\n")
+    .split("\n")
+    .filter(Boolean)
+    .slice(0, 5);
+
+  return (
+    <Card className="rounded-2xl border-border">
+      <CardHeader className="bg-muted/40 border-b border-border py-4">
+        <CardTitle className="text-sm font-semibold text-foreground">Admission Snapshot</CardTitle>
+      </CardHeader>
+      <CardContent className="p-5 space-y-5">
+
+        {/* Section 1: Admission Details */}
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Admission Details</p>
+          <SnapRow label="Level of Care" value={inq?.levelOfCare} />
+          <SnapRow
+            label="Admit Date"
+            value={inq?.appointmentDate
+              ? new Date(inq.appointmentDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : null}
+          />
+          <SnapRow label="ETA" value={null} />
+          <SnapRow label="Bed Assignment" value={null} />
+        </div>
+
+        {/* Section 2: Financial Snapshot */}
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Financial Snapshot</p>
+          <SnapRow
+            label="Insurance Verified"
+            value={
+              <span className={cn("font-bold", vobVerified ? "text-emerald-400" : "text-amber-400")}>
+                {vob ? (vobVerified ? "Yes" : "Pending") : "—"}
+              </span>
+            }
+          />
+          <SnapRow label="Estimated Cost" value={estimatedCost} />
+          <SnapRow
+            label="Payment Decision"
+            value={
+              paymentDecision ? (
+                <span className={cn("font-bold", paymentDecision === "Cannot Pay" ? "text-rose-400" : "text-emerald-400")}>
+                  {paymentDecision}
+                </span>
+              ) : null
+            }
+          />
+        </div>
+
+        {/* Section 3: Risk Flags */}
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            Risk Flags
+            {!anyRisk && <span className="ml-2 normal-case font-normal text-muted-foreground/60">— none flagged</span>}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <RiskBadge label="Detox Required" active={detoxRequired} />
+            <RiskBadge label="Suicide Risk" active={!!suicideRisk} />
+            <RiskBadge label="Medical Concern" active={medicalConcern} />
+          </div>
+          {suicideRisk && preScreening?.suicidalIdeation && (
+            <p className="text-[10px] text-rose-400 mt-1.5 pl-1">SI: {preScreening.suicidalIdeation}</p>
+          )}
+        </div>
+
+        {/* Section 4: Key Notes */}
+        {keyNotes.length > 0 ? (
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Key Notes</p>
+            <ul className="space-y-1">
+              {keyNotes.map((note, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/80">
+                  <span className="text-primary shrink-0 mt-0.5">•</span>
+                  <span>{note.replace(/^[•\-]\s*/, "")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Key Notes</p>
+            <p className="text-xs text-muted-foreground/50 italic">Complete pre-screen to populate notes</p>
+          </div>
+        )}
+
+        {/* Section 5: Logistics */}
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Logistics</p>
+          <SnapRow label="Arrival Method" value={null} />
+          <SnapRow label="Bringing Medications" value={null} />
+          <SnapRow label="Family Contact" value={null} />
+          <p className="text-[10px] text-muted-foreground/50 italic mt-1.5">Edit in Facesheet to record logistics details</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function InquiryDetail() {
@@ -526,6 +673,13 @@ Keep it warm, concise, and professional. Include a request for the other facilit
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowFacesheet(true)}
+            className="rounded-xl h-10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-2"
+          >
+            <FileText className="w-4 h-4" /> Facesheet
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowNonAdmit(true)}
@@ -962,17 +1116,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl border-border">
-                <CardHeader className="bg-muted/40 border-b border-border py-4">
-                  <CardTitle className="text-sm font-semibold text-foreground">Clinical History</CardTitle>
-                </CardHeader>
-                <CardContent className="p-5 space-y-5">
-                  <TextBlock label="Primary Diagnosis" text={inq.primaryDiagnosis} />
-                  <TextBlock label="Substance Use History" text={inq.substanceHistory} />
-                  <TextBlock label="Medical History" text={inq.medicalHistory} />
-                  <TextBlock label="Mental Health History" text={inq.mentalHealthHistory} />
-                </CardContent>
-              </Card>
+              <AdmissionSnapshotCard inq={inq} />
 
               {inq.preAssessmentCompleted === "yes" && (
                 <Card className="rounded-2xl border-emerald-500/25 bg-emerald-500/5">

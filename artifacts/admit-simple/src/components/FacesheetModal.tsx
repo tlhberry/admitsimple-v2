@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, X, Send, FileText, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, X, Send, FileText, Copy, CheckCircle2, AlertTriangle, ShieldAlert, Pill } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -16,24 +16,28 @@ type FacesheetData = {
   dob: string;
   phone: string;
   email: string;
-  // Admission details
+  // Section 1: Admission Details
   levelOfCare: string;
   admitDate: string;
   eta: string;
   bed: string;
-  // Insurance
+  // Section 2: Financial Snapshot
   insuranceProvider: string;
   insuranceMemberId: string;
   insuranceGroupNumber: string;
   vobVerified: "yes" | "no" | "pending";
   estimatedCost: string;
-  // Clinical
-  substanceUseHistory: string;
-  mentalHealthNotes: string;
-  medications: string;
-  riskFlags: string;
-  // Notes
-  admissionsNotes: string;
+  paymentDecision: string;
+  // Section 3: Risk Flags (toggles)
+  detoxRequired: "yes" | "no";
+  suicideRisk: "yes" | "no";
+  medicalConcern: "yes" | "no";
+  // Section 4: Key Notes
+  keyNotes: string;
+  // Section 5: Logistics
+  arrivalMethod: string;
+  bringingMedications: "yes" | "no";
+  familyContact: string;
 };
 
 function buildEmailSubject(data: FacesheetData): string {
@@ -46,41 +50,58 @@ function buildEmailSubject(data: FacesheetData): string {
 }
 
 function buildEmailBody(data: FacesheetData): string {
-  const line = (label: string, value: string) =>
-    `${label}: ${value || "—"}`;
+  const line = (label: string, value: string) => `${label}: ${value || "—"}`;
+  const flag = (label: string, val: "yes" | "no") => `${val === "yes" ? "⚠ YES" : "✓ No"}  ${label}`;
+
+  const riskSection = [
+    flag("Detox Required", data.detoxRequired),
+    flag("Suicide Risk", data.suicideRisk),
+    flag("Medical Concern", data.medicalConcern),
+  ].join("\n");
+
+  const keyNotesFormatted = data.keyNotes
+    ? data.keyNotes
+        .split("\n")
+        .filter(Boolean)
+        .map(l => `• ${l.replace(/^[•\-]\s*/, "")}`)
+        .join("\n")
+    : "—";
 
   return [
     "===== ADMISSION FACESHEET =====",
     "",
-    "── SECTION 1: DEMOGRAPHICS ──────────────────",
+    "── DEMOGRAPHICS ──────────────────────────────",
     line("Full Name", `${data.firstName} ${data.lastName}`),
     line("Date of Birth", data.dob),
     line("Phone", data.phone),
     line("Email", data.email),
     "",
-    "── SECTION 2: ADMISSION DETAILS ────────────",
+    "── ADMISSION DETAILS ─────────────────────────",
     line("Level of Care", data.levelOfCare),
     line("Admit Date", data.admitDate ? new Date(data.admitDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : ""),
     line("ETA", data.eta),
     line("Bed Assignment", data.bed),
     "",
-    "── SECTION 3: INSURANCE ────────────────────",
-    line("Provider", data.insuranceProvider),
+    "── FINANCIAL SNAPSHOT ────────────────────────",
+    line("Insurance Provider", data.insuranceProvider),
     line("Member ID", data.insuranceMemberId),
     line("Group #", data.insuranceGroupNumber),
-    line("VOB Verified", data.vobVerified),
+    line("Insurance Verified", data.vobVerified),
     line("Estimated Cost", data.estimatedCost),
+    line("Payment Decision", data.paymentDecision),
     "",
-    "── SECTION 4: CLINICAL SUMMARY ─────────────",
-    line("Substance Use History", data.substanceUseHistory),
-    line("Mental Health Notes", data.mentalHealthNotes),
-    line("Medications", data.medications),
-    line("Risk Flags", data.riskFlags),
+    "── RISK FLAGS ────────────────────────────────",
+    riskSection,
     "",
-    "── SECTION 5: NOTES ───────────────────────",
-    data.admissionsNotes || "—",
+    "── KEY NOTES ─────────────────────────────────",
+    keyNotesFormatted,
     "",
-    "============================================",
+    "── LOGISTICS ─────────────────────────────────",
+    line("Arrival Method", data.arrivalMethod),
+    line("Bringing Medications", data.bringingMedications),
+    line("Family Contact", data.familyContact),
+    "",
+    "==============================================",
     "Sent via AdmitSimple Admissions CRM",
   ].join("\n");
 }
@@ -108,6 +129,37 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
+function RiskToggle({
+  label,
+  value,
+  onChange,
+  icon,
+}: {
+  label: string;
+  value: "yes" | "no";
+  onChange: (v: "yes" | "no") => void;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(value === "yes" ? "no" : "yes")}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+        value === "yes"
+          ? "border-rose-500/50 bg-rose-500/10 text-rose-400"
+          : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"
+      )}
+    >
+      <span className={cn("w-4 h-4 shrink-0", value === "yes" ? "text-rose-400" : "text-muted-foreground/50")}>{icon}</span>
+      <span className="flex-1 text-left">{label}</span>
+      <span className={cn("text-xs font-bold tracking-wide", value === "yes" ? "text-rose-400" : "text-muted-foreground/40")}>
+        {value === "yes" ? "YES" : "NO"}
+      </span>
+    </button>
+  );
+}
+
 const inputCls = "h-9 rounded-xl bg-muted border-border text-foreground text-sm";
 const textareaCls = "rounded-xl bg-muted border-border text-foreground text-sm resize-none";
 
@@ -119,7 +171,6 @@ type Props = {
 export function FacesheetModal({ inquiry, onClose }: Props) {
   const { toast } = useToast();
 
-  // Fetch admission email recipient from settings
   const { data: settings } = useQuery<any[]>({
     queryKey: ["/api/settings"],
     queryFn: () => fetch("/api/settings", { credentials: "include" }).then(r => r.json()),
@@ -128,13 +179,28 @@ export function FacesheetModal({ inquiry, onClose }: Props) {
   const settingsMap = (settings ?? []).reduce<Record<string, string>>((acc, s) => { acc[s.key] = s.value || ""; return acc; }, {});
   const recipient = settingsMap["admission_email_recipient"] || "";
 
-  // Today as default admit date
   const todayStr = new Date().toISOString().split("T")[0];
 
-  // Pre-fill pre-screening data if available
   const preScreening = inquiry?.preScreeningData as any;
   const nursing = inquiry?.nursingAssessmentData as any;
   const vob = inquiry?.vobData as any;
+
+  // Derive risk flags from pre-screening data
+  const hasSuicideRisk =
+    preScreening?.suicidalIdeation &&
+    preScreening.suicidalIdeation !== "None" &&
+    preScreening.suicidalIdeation !== "";
+  const hasWithdrawal =
+    Array.isArray(preScreening?.withdrawalSymptoms) && preScreening.withdrawalSymptoms.length > 0;
+  const hasMedicalConcern =
+    !!(nursing?.medicalConditions || preScreening?.medicalConditions || nursing?.medicalConcern);
+
+  // Build key notes from pre-assessment summary
+  const rawNotes = [
+    inquiry?.preAssessmentNotes,
+    preScreening?.additionalNotes,
+    nursing?.additionalNotes,
+  ].filter(Boolean).join("\n");
 
   const [data, setData] = useState<FacesheetData>({
     firstName: inquiry?.firstName || "",
@@ -153,11 +219,14 @@ export function FacesheetModal({ inquiry, onClose }: Props) {
     insuranceGroupNumber: vob?.groupNumber || "",
     vobVerified: vob?.status === "verified" ? "yes" : "pending",
     estimatedCost: vob?.estimatedCost || "",
-    substanceUseHistory: inquiry?.substanceHistory || preScreening?.substanceHistory || nursing?.substanceHistory || "",
-    mentalHealthNotes: inquiry?.mentalHealthHistory || preScreening?.mentalHealthHistory || nursing?.mentalHealthHistory || "",
-    medications: preScreening?.medications || nursing?.medications || "",
-    riskFlags: preScreening?.riskFlags || nursing?.riskFlags || "",
-    admissionsNotes: inquiry?.notes || "",
+    paymentDecision: inquiry?.costAcceptance || "",
+    detoxRequired: hasWithdrawal ? "yes" : "no",
+    suicideRisk: hasSuicideRisk ? "yes" : "no",
+    medicalConcern: hasMedicalConcern ? "yes" : "no",
+    keyNotes: rawNotes || "",
+    arrivalMethod: "",
+    bringingMedications: "no",
+    familyContact: "",
   });
 
   const [copied, setCopied] = useState(false);
@@ -207,7 +276,7 @@ export function FacesheetModal({ inquiry, onClose }: Props) {
             </div>
             <div>
               <h2 className="font-bold text-foreground text-base">Admission Facesheet</h2>
-              <p className="text-xs text-muted-foreground">Review and edit before sending</p>
+              <p className="text-xs text-muted-foreground">Review and edit before sending to clinical team</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
@@ -237,6 +306,8 @@ export function FacesheetModal({ inquiry, onClose }: Props) {
 
         {/* Editable form */}
         <div className="px-6 py-5 space-y-6 overflow-y-auto max-h-[60vh]">
+
+          {/* Demographics */}
           <Section title="Demographics">
             <Field label="First Name">
               <Input value={data.firstName} onChange={e => set("firstName", e.target.value)} className={inputCls} />
@@ -255,6 +326,7 @@ export function FacesheetModal({ inquiry, onClose }: Props) {
             </Field>
           </Section>
 
+          {/* Section 1: Admission Details */}
           <Section title="Admission Details">
             <Field label="Level of Care">
               <Select value={data.levelOfCare || "none"} onValueChange={v => set("levelOfCare", v === "none" ? "" : v)}>
@@ -282,51 +354,125 @@ export function FacesheetModal({ inquiry, onClose }: Props) {
             </Field>
           </Section>
 
-          <Section title="Insurance">
-            <Field label="Provider">
+          {/* Section 2: Financial Snapshot */}
+          <Section title="Financial Snapshot">
+            <Field label="Insurance Provider">
               <Input value={data.insuranceProvider} onChange={e => set("insuranceProvider", e.target.value)} className={inputCls} />
             </Field>
-            <Field label="Member ID">
-              <Input value={data.insuranceMemberId} onChange={e => set("insuranceMemberId", e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Group #">
-              <Input value={data.insuranceGroupNumber} onChange={e => set("insuranceGroupNumber", e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="VOB Verified">
+            <Field label="Insurance Verified">
               <Select value={data.vobVerified} onValueChange={v => set("vobVerified", v as any)}>
+                <SelectTrigger className={inputCls}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  <SelectItem value="yes">Yes — Verified</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Estimated Cost">
+              <Input value={data.estimatedCost} onChange={e => set("estimatedCost", e.target.value)} className={inputCls} placeholder="e.g. $1,500 deductible" />
+            </Field>
+            <Field label="Payment Decision">
+              <Select value={data.paymentDecision || "none"} onValueChange={v => set("paymentDecision", v === "none" ? "" : v)}>
+                <SelectTrigger className={inputCls}>
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  <SelectItem value="none">Not specified</SelectItem>
+                  <SelectItem value="Accepts">Accepts Cost</SelectItem>
+                  <SelectItem value="Cannot Pay">Cannot Pay</SelectItem>
+                  <SelectItem value="Pending">Pending Decision</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </Section>
+
+          {/* Section 3: Risk Flags */}
+          <div>
+            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="flex-1 h-px bg-border" />
+              Risk Flags
+              <span className="flex-1 h-px bg-border" />
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <RiskToggle
+                label="Detox Required"
+                value={data.detoxRequired}
+                onChange={v => set("detoxRequired", v)}
+                icon={<Pill className="w-4 h-4" />}
+              />
+              <RiskToggle
+                label="Suicide Risk"
+                value={data.suicideRisk}
+                onChange={v => set("suicideRisk", v)}
+                icon={<ShieldAlert className="w-4 h-4" />}
+              />
+              <RiskToggle
+                label="Medical Concern"
+                value={data.medicalConcern}
+                onChange={v => set("medicalConcern", v)}
+                icon={<AlertTriangle className="w-4 h-4" />}
+              />
+            </div>
+          </div>
+
+          {/* Section 4: Key Notes */}
+          <div>
+            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="flex-1 h-px bg-border" />
+              Key Notes
+              <span className="flex-1 h-px bg-border" />
+            </h3>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Short bullet points — one per line</Label>
+              <Textarea
+                value={data.keyNotes}
+                onChange={e => set("keyNotes", e.target.value)}
+                className={cn(textareaCls, "min-h-[80px]")}
+                rows={4}
+                placeholder={"Daily alcohol use, 8+ years\nHypertension, liver disease\nMitrazapine 15mg nightly"}
+              />
+            </div>
+          </div>
+
+          {/* Section 5: Logistics */}
+          <Section title="Logistics">
+            <Field label="Arrival Method">
+              <Select value={data.arrivalMethod || "none"} onValueChange={v => set("arrivalMethod", v === "none" ? "" : v)}>
+                <SelectTrigger className={inputCls}>
+                  <SelectValue placeholder="How are they arriving?" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  <SelectItem value="none">Not specified</SelectItem>
+                  <SelectItem value="Self">Self — Driving</SelectItem>
+                  <SelectItem value="Family">Family — Drop off</SelectItem>
+                  <SelectItem value="Uber/Lyft">Uber / Lyft</SelectItem>
+                  <SelectItem value="Transport Service">Transport Service</SelectItem>
+                  <SelectItem value="Law Enforcement">Law Enforcement</SelectItem>
+                  <SelectItem value="Ambulance">Ambulance</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Bringing Medications">
+              <Select value={data.bringingMedications} onValueChange={v => set("bringingMedications", v as any)}>
                 <SelectTrigger className={inputCls}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="yes">Yes</SelectItem>
                   <SelectItem value="no">No</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Estimated Cost" wide>
-              <Input value={data.estimatedCost} onChange={e => set("estimatedCost", e.target.value)} className={inputCls} placeholder="e.g. $1,500 deductible" />
-            </Field>
-          </Section>
-
-          <Section title="Clinical Summary">
-            <Field label="Substance Use History" wide>
-              <Textarea value={data.substanceUseHistory} onChange={e => set("substanceUseHistory", e.target.value)} className={cn(textareaCls, "min-h-[70px]")} rows={3} />
-            </Field>
-            <Field label="Mental Health Notes" wide>
-              <Textarea value={data.mentalHealthNotes} onChange={e => set("mentalHealthNotes", e.target.value)} className={cn(textareaCls, "min-h-[70px]")} rows={3} />
-            </Field>
-            <Field label="Current Medications" wide>
-              <Textarea value={data.medications} onChange={e => set("medications", e.target.value)} className={cn(textareaCls, "min-h-[60px]")} rows={2} placeholder="List current medications" />
-            </Field>
-            <Field label="Risk Flags" wide>
-              <Input value={data.riskFlags} onChange={e => set("riskFlags", e.target.value)} className={inputCls} placeholder="e.g. SI, HI, suicidal ideation" />
-            </Field>
-          </Section>
-
-          <Section title="Admissions Notes">
-            <Field label="Summary Notes" wide>
-              <Textarea value={data.admissionsNotes} onChange={e => set("admissionsNotes", e.target.value)} className={cn(textareaCls, "min-h-[80px]")} rows={3} placeholder="General admissions notes" />
+            <Field label="Family / Emergency Contact" wide>
+              <Input
+                value={data.familyContact}
+                onChange={e => set("familyContact", e.target.value)}
+                className={inputCls}
+                placeholder="Name, relationship, phone"
+              />
             </Field>
           </Section>
         </div>
