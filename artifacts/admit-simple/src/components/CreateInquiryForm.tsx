@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sparkles, Loader2, CheckCircle2, Search, History,
-  CreditCard, X, Camera,
+  CreditCard, X, Camera, Plus, Trash2,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateInquiryBody } from "@workspace/api-client-react";
@@ -41,12 +41,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-function buildTreatmentText(facility: string, year: string, types: string[]): string {
-  const typeStr = types.length > 0 ? ` — ${types.join("/")}` : "";
-  const parts = [facility && `Facility: ${facility}`, year && `Year: ${year}`].filter(Boolean).join(", ");
-  return parts ? `${parts}${typeStr}` : types.length > 0 ? types.join("/") : "Yes";
-}
 
 // ── Insurance card dropzone ───────────────────────────────────────────────────
 function CardDropzone({
@@ -115,16 +109,25 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   const [isScanningCard, setIsScanningCard] = useState(false);
   const [cardScanSuccess, setCardScanSuccess] = useState(false);
 
-  // Treatment history
-  const [hadPreviousTreatment, setHadPreviousTreatment] = useState(false);
-  const [prevFacilityName, setPrevFacilityName] = useState("");
-  const [prevTreatmentYear, setPrevTreatmentYear] = useState("");
-  const [prevTreatmentTypes, setPrevTreatmentTypes] = useState<string[]>([]);
+  // Treatment history — array of entries
+  type TxEntry = { facility: string; year: string; types: string[] };
+  const emptyEntry = (): TxEntry => ({ facility: "", year: "", types: [] });
 
-  const toggleType = (type: string) =>
-    setPrevTreatmentTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
+  const [hadPreviousTreatment, setHadPreviousTreatment] = useState(false);
+  const [txEntries, setTxEntries] = useState<TxEntry[]>([emptyEntry()]);
+
+  const updateEntry = (idx: number, field: keyof TxEntry, value: any) =>
+    setTxEntries(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
+
+  const toggleEntryType = (idx: number, type: string) =>
+    setTxEntries(prev => prev.map((e, i) =>
+      i === idx
+        ? { ...e, types: e.types.includes(type) ? e.types.filter(t => t !== type) : [...e.types, type] }
+        : e
+    ));
+
+  const addEntry = () => setTxEntries(prev => [...prev, emptyEntry()]);
+  const removeEntry = (idx: number) => setTxEntries(prev => prev.filter((_, i) => i !== idx));
 
   const { data: referralSources = [] } = useQuery<any[]>({
     queryKey: ["/api/referrals"],
@@ -210,8 +213,15 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
     const inquiryId = (created as any)?.id;
 
     if (inquiryId) {
-      const treatmentText = hadPreviousTreatment
-        ? buildTreatmentText(prevFacilityName, prevTreatmentYear, prevTreatmentTypes)
+      const treatmentText = hadPreviousTreatment && txEntries.some(e => e.facility || e.year || e.types.length)
+        ? txEntries
+            .filter(e => e.facility || e.year || e.types.length)
+            .map((e, i) => {
+              const typeStr = e.types.length ? ` (${e.types.join("/")})` : "";
+              const parts = [e.facility, e.year].filter(Boolean).join(", ");
+              return `${i + 1}. ${parts || "Treatment center"}${typeStr}`;
+            })
+            .join("\n")
         : "";
 
       // Pre-Cert form
@@ -448,46 +458,73 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
 
             {hadPreviousTreatment && (
-              <div className="space-y-4 pt-1">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-foreground font-medium">Name of Facility</Label>
-                    <Input
-                      value={prevFacilityName}
-                      onChange={e => setPrevFacilityName(e.target.value)}
-                      placeholder="e.g. Sunrise Recovery Center"
-                      className="h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-foreground font-medium">Year of Treatment</Label>
-                    <Input
-                      value={prevTreatmentYear}
-                      onChange={e => setPrevTreatmentYear(e.target.value)}
-                      placeholder="e.g. 2021"
-                      className="h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-foreground font-medium mb-2 block">Type of Treatment</Label>
-                  <div className="flex items-center gap-6">
-                    {["SUD", "MH"].map(type => (
-                      <label key={type} className="flex items-center gap-2 cursor-pointer select-none">
-                        <Checkbox
-                          checked={prevTreatmentTypes.includes(type)}
-                          onCheckedChange={() => toggleType(type)}
-                          className="border-border"
+              <div className="space-y-3 pt-1">
+                {txEntries.map((entry, idx) => (
+                  <div key={idx} className="bg-card rounded-lg border border-border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Treatment #{idx + 1}
+                      </span>
+                      {txEntries.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEntry(idx)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          title="Remove this entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-foreground font-medium text-sm">Name of Facility</Label>
+                        <Input
+                          value={entry.facility}
+                          onChange={e => updateEntry(idx, "facility", e.target.value)}
+                          placeholder="e.g. Sunrise Recovery"
+                          className="h-9 rounded-lg bg-muted border-border text-foreground placeholder:text-muted-foreground text-sm"
                         />
-                        <span className="text-sm font-medium text-foreground">
-                          {type === "SUD" ? "Substance Use Disorder (SUD)" : "Mental Health (MH)"}
-                        </span>
-                      </label>
-                    ))}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-foreground font-medium text-sm">Year</Label>
+                        <Input
+                          value={entry.year}
+                          onChange={e => updateEntry(idx, "year", e.target.value)}
+                          placeholder="e.g. 2021"
+                          className="h-9 rounded-lg bg-muted border-border text-foreground placeholder:text-muted-foreground text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-5">
+                      {["SUD", "MH"].map(type => (
+                        <label key={type} className="flex items-center gap-2 cursor-pointer select-none">
+                          <Checkbox
+                            checked={entry.types.includes(type)}
+                            onCheckedChange={() => toggleEntryType(idx, type)}
+                            className="border-border"
+                          />
+                          <span className="text-sm text-foreground">
+                            {type === "SUD" ? "Substance Use (SUD)" : "Mental Health (MH)"}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addEntry}
+                  className="w-full h-9 rounded-lg border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/50 gap-2"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Another Treatment Center
+                </Button>
                 <p className="text-xs text-muted-foreground">
-                  This will auto-populate the Treatment History section in Pre-Assessment forms.
+                  All entries will auto-populate the Treatment History section in Pre-Assessment forms.
                 </p>
               </div>
             )}
