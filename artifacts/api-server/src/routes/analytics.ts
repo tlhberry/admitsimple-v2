@@ -185,4 +185,159 @@ router.get("/analytics/charts", async (req, res) => {
   }
 });
 
+router.get("/admissions-performance", async (req, res) => {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+
+    // ── 1. Week Performance ──────────────────────────────────────────────────
+    const [weekLeadsRow] = await db.select({ count: count() }).from(inquiries)
+      .where(gte(inquiries.createdAt, weekStart));
+    const [weekAdmitsRow] = await db.select({ count: count() }).from(inquiries)
+      .where(and(gte(inquiries.createdAt, weekStart), eq(inquiries.status, "admitted")));
+    const weekLeads = Number(weekLeadsRow.count);
+    const weekAdmits = Number(weekAdmitsRow.count);
+    const weekConversion = weekLeads > 0 ? Math.round((weekAdmits / weekLeads) * 100) : 0;
+
+    // ── 2. Referral Sources ──────────────────────────────────────────────────
+    const refRows = await db.select({
+      source: inquiries.referralSource,
+      leads: count(),
+    }).from(inquiries)
+      .where(and(sql`${inquiries.referralSource} IS NOT NULL`, gte(inquiries.createdAt, weekStart)))
+      .groupBy(inquiries.referralSource)
+      .orderBy(desc(count()))
+      .limit(8);
+
+    const referralSources2 = await Promise.all(refRows.map(async r => {
+      const [admRow] = await db.select({ count: count() }).from(inquiries)
+        .where(and(eq(inquiries.referralSource, r.source!), eq(inquiries.status, "admitted"), gte(inquiries.createdAt, weekStart)));
+      const leads = Number(r.leads);
+      const admits = Number(admRow.count);
+      return { source: r.source || "Unknown", leads, admits, conversion: leads > 0 ? Math.round((admits/leads)*100) : 0 };
+    }));
+    referralSources2.sort((a,b) => b.admits - a.admits);
+
+    // ── 3. Top Performers ────────────────────────────────────────────────────
+    const repAdmits = await db.select({
+      userId: inquiries.assignedTo,
+      name: users.name,
+      admits: count(),
+    }).from(inquiries)
+      .leftJoin(users, eq(inquiries.assignedTo, users.id))
+      .where(and(sql`${inquiries.assignedTo} IS NOT NULL`, eq(inquiries.status, "admitted"), gte(inquiries.createdAt, weekStart)))
+      .groupBy(inquiries.assignedTo, users.name)
+      .orderBy(desc(count()))
+      .limit(1);
+
+    const repLeads = await db.select({
+      userId: inquiries.assignedTo,
+      name: users.name,
+      leads: count(),
+    }).from(inquiries)
+      .leftJoin(users, eq(inquiries.assignedTo, users.id))
+      .where(and(sql`${inquiries.assignedTo} IS NOT NULL`, gte(inquiries.createdAt, weekStart)))
+      .groupBy(inquiries.assignedTo, users.name)
+      .orderBy(desc(count()))
+      .limit(1);
+
+    // Top credit rep (person who gets credit for the admit) from patients table
+    const bdReps = await db.select({
+      repId: patients.creditUserId,
+      name: users.name,
+      leads: count(),
+    }).from(patients)
+      .leftJoin(users, eq(patients.creditUserId, users.id))
+      .where(and(sql`${patients.creditUserId} IS NOT NULL`, gte(patients.admitDate, weekStart)))
+      .groupBy(patients.creditUserId, users.name)
+      .orderBy(desc(count()))
+      .limit(1);
+
+    // ── 4. Call Performance ───────────────────────────────────────────────────
+    const [totalCallsToday] = await db.select({ count: count() }).from(inquiries)
+      .where(and(sql`${inquiries.callDateTime} IS NOT NULL`, gte(inquiries.callDateTime, todayStart)));
+    const [missedToday] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        sql`${inquiries.callDateTime} IS NOT NULL`,
+        gte(inquiries.callDateTime, todayStart),
+        sql`(${inquiries.callStatus} = 'missed' OR ${inquiries.callDurationSeconds} < 15)`,
+      ));
+    const [totalCallsWeek] = await db.select({ count: count() }).from(inquiries)
+      .where(and(sql`${inquiries.callDateTime} IS NOT NULL`, gte(inquiries.callDateTime, weekStart)));
+    const [missedWeek] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        sql`${inquiries.callDateTime} IS NOT NULL`,
+        gte(inquiries.callDateTime, weekStart),
+        sql`(${inquiries.callStatus} = 'missed' OR ${inquiries.callDurationSeconds} < 15)`,
+      ));
+    const totalW = Number(totalCallsWeek.count);
+    const missedW = Number(missedWeek.count);
+    const answerRate = totalW > 0 ? Math.round(((totalW - missedW) / totalW) * 100) : 100;
+
+    // ── 5. Speed to Admit ─────────────────────────────────────────────────────
+    const admittedThisWeek = await db.select({
+      createdAt: inquiries.createdAt,
+      admitDate: patients.admitDate,
+    }).from(inquiries)
+      .leftJoin(patients, sql`${patients.inquiryId} = ${inquiries.id}`)
+      .where(and(
+        eq(inquiries.status, "admitted"),
+        gte(inquiries.createdAt, weekStart),
+        sql`${patients.admitDate} IS NOT NULL`,
+      ));
+
+    let avgHoursToAdmit: number | null = null;
+    if (admittedThisWeek.length > 0) {
+      const totalMs = admittedThisWeek.reduce((sum, r) => {
+        const diff = new Date(r.admitDate!).getTime() - new Date(r.createdAt!).getTime();
+        return sum + (diff > 0 ? diff : 0);
+      }, 0);
+      avgHoursToAdmit = Math.round((totalMs / admittedThisWeek.length) / 3600000);
+    }
+
+    // ── 6. Pipeline Snapshot ──────────────────────────────────────────────────
+    const [activeCount] = await db.select({ count: count() }).from(inquiries)
+      .where(sql`${inquiries.status} NOT IN ('admitted','discharged','did_not_admit','referred_out')`);
+    const [vobPending] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        sql`${inquiries.vobData} IS NULL`,
+        sql`${inquiries.insuranceProvider} IS NOT NULL`,
+        sql`${inquiries.status} NOT IN ('admitted','discharged','did_not_admit','referred_out')`,
+      ));
+    const [readyToAdmit] = await db.select({ count: count() }).from(inquiries)
+      .where(and(
+        sql`${inquiries.appointmentDate} IS NOT NULL`,
+        sql`${inquiries.status} NOT IN ('admitted','discharged')`,
+      ));
+
+    res.json({
+      week: { leads: weekLeads, admits: weekAdmits, conversion: weekConversion },
+      referralSources: referralSources2,
+      topPerformers: {
+        admissionsRep: repAdmits[0] ? { name: repAdmits[0].name, admits: Number(repAdmits[0].admits) } : null,
+        leadRep: repLeads[0] ? { name: repLeads[0].name, leads: Number(repLeads[0].leads) } : null,
+        bdRep: bdReps[0] ? { name: bdReps[0].name, leads: Number(bdReps[0].leads) } : null,
+      },
+      calls: {
+        missedToday: Number(missedToday.count),
+        totalToday: Number(totalCallsToday.count),
+        missedWeek: missedW,
+        totalWeek: totalW,
+        answerRate,
+      },
+      speed: { avgHoursToAdmit, sampleSize: admittedThisWeek.length },
+      pipeline: {
+        active: Number(activeCount.count),
+        vobPending: Number(vobPending.count),
+        readyToAdmit: Number(readyToAdmit.count),
+      },
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

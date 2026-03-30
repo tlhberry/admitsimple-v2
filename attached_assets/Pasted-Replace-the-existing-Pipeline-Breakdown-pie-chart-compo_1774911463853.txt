@@ -1,0 +1,127 @@
+Replace the existing “Pipeline Breakdown” pie chart component with a new component called:
+
+👉 Admissions Performance Board
+
+Do NOT keep the pie chart or any chart library.
+
+🎯 GOAL
+
+Display real-time admissions performance metrics that are actually useful to an admissions team on a daily basis.
+
+🧩 1. REMOVE EXISTING
+Delete the pie/donut chart component
+Remove any chart libraries tied to it
+Replace that entire section in the UI
+🧱 2. CREATE NEW COMPONENT
+
+Create:
+
+<AdmissionsPerformanceBoard />
+
+Render it in place of the pie chart
+
+🔲 3. CARD 1 — WEEK PERFORMANCE
+
+Display:
+
+Leads This Week
+Admits This Week
+Conversion Rate (%)
+Data logic:
+leads = count of inquiries created this week
+admits = count where status = admitted this week
+conversion = admits / leads
+🔲 4. CARD 2 — REFERRAL SOURCES
+
+Group by referral_source
+
+For each:
+
+Lead count
+Admit count
+Conversion %
+
+Sort by highest admits
+
+Display format:
+
+“Google PPC — 18 → 6 (33%)”
+
+🔲 5. CARD 3 — TOP PERFORMERS
+Admissions Rep (Closer)
+Group by admissions_rep_id
+Sort by admits
+Show top 1:
+Name
+admits
+Conversion rate (optional)
+BD Rep (Lead Generator)
+Group by bd_rep_id
+Sort by leads
+Show top 1:
+Name
+leads
+Conversion rate (optional)
+🔲 6. CARD 4 — CALL PERFORMANCE
+
+From call data:
+
+Missed Calls Today
+Missed Calls This Week
+Answer Rate %
+Logic:
+missed = unclaimed OR duration < 15 sec
+answered = total calls - missed
+answer rate = answered / total
+🔲 7. CARD 5 — SPEED
+
+Display:
+
+👉 Avg Time to Admit
+
+Logic:
+admitted_at - inquiry_created_at
+average across admits this week
+
+Show in:
+
+hours if < 48
+days if larger
+🔲 8. CARD 6 — PIPELINE SNAPSHOT
+
+Display counts:
+
+Active Inquiries
+VOB Pending
+Ready to Admit
+📱 9. UI REQUIREMENTS
+Mobile-first layout (stacked cards)
+No charts, only clean text + numbers
+Each card has:
+Title
+Clean spacing
+Subtle border or background
+🎨 10. STYLING
+Use existing dark theme
+Rounded cards (12–16px radius)
+Padding: 12–16px
+Large bold numbers for KPIs
+Muted labels
+⚡ 11. PERFORMANCE
+Load data on page load
+Refresh every 30–60 seconds (optional)
+Keep queries efficient
+🚫 DO NOT
+Add charts
+Add unnecessary filters
+Overcomplicate UI
+🔥 FINAL RESULT
+
+This replaces a useless visual with a real admissions command center showing:
+
+Performance
+Sources
+Reps
+Calls
+Speed
+Pipeline

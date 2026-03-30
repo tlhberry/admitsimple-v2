@@ -1,17 +1,15 @@
 import { useGetDashboardAnalytics } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight, Plus, Phone, MessageSquare, Settings } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, ClipboardList, ChevronRight, Plus, Phone, MessageSquare, Settings } from "lucide-react";
 import { cn, getStatusColor, formatDate, groupByDay } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { AdmissionsTaskBoard } from "@/components/AdmissionsTaskBoard";
+import { AdmissionsPerformanceBoard } from "@/components/AdmissionsPerformanceBoard";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
 import { useAuth } from "@/hooks/use-auth";
-
-const COLORS = ['#5BC8DC', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
 
 export default function Dashboard() {
   const { data, isLoading } = useGetDashboardAnalytics();
@@ -68,41 +66,14 @@ export default function Dashboard() {
         <KpiCard title="Conversion Rate"    value={`${data.kpi.conversionRate}%`} icon={TrendingUp} href="/analytics" accent="amber"   />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* AI Task Board */}
-        <Card className="lg:col-span-2 rounded-2xl border-border overflow-hidden flex flex-col min-h-[320px] max-h-[420px]">
-          <AdmissionsTaskBoard />
-        </Card>
+      {/* AI Task Board */}
+      <Card className="rounded-2xl border-border overflow-hidden flex flex-col min-h-[320px] max-h-[420px] mb-4">
+        <AdmissionsTaskBoard />
+      </Card>
 
-        {/* Status Donut */}
-        <Card className="rounded-2xl border-border overflow-hidden">
-          <CardHeader className="bg-muted/40 border-b border-border pb-4">
-            <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              Pipeline Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 flex flex-col items-center">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={data.statusBreakdown} cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="count" nameKey="status">
-                  {data.statusBreakdown.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', background: 'hsl(220,17%,26%)', color: '#fff' }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-1 pb-2">
-              {data.statusBreakdown.slice(0, 4).map((item, i) => (
-                <div key={item.status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  {item.status}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Admissions Performance Board */}
+      <div className="mb-6">
+        <AdmissionsPerformanceBoard />
       </div>
 
       {/* Recent Inquiries */}
