@@ -805,8 +805,16 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             )}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
-            {inq.phone && <div className="flex items-center gap-1.5"><Phone className="w-4 h-4" />{inq.phone}</div>}
-            {inq.email && <div className="flex items-center gap-1.5"><Mail className="w-4 h-4" />{inq.email}</div>}
+            {inq.phone && (
+              <a href={`tel:${inq.phone}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                <Phone className="w-4 h-4" />{inq.phone}
+              </a>
+            )}
+            {inq.email && (
+              <a href={`mailto:${inq.email}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                <Mail className="w-4 h-4" />{inq.email}
+              </a>
+            )}
             <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />Added {formatDate(inq.createdAt)}</div>
           </div>
           {pipelineStages.length > 0 && (
