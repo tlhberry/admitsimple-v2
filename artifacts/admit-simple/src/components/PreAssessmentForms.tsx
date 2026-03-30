@@ -781,22 +781,20 @@ export function PreAssessmentSection({ inquiryId, currentNotes = "", onComplete 
               : `Complete all 3 forms to proceed. (${completedCount}/3 done)`}
           </div>
 
-          <div className="flex justify-end">
-            <Button
-              onClick={handleComplete}
-              disabled={!allDone}
-              className={cn(
-                "rounded-xl h-11 px-7 font-semibold gap-2",
-                allDone
-                  ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-              title={!allDone ? "Complete all 3 forms to continue" : undefined}
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              Pre-Assessment Complete – Schedule Admission
-            </Button>
-          </div>
+          <Button
+            onClick={handleComplete}
+            disabled={!allDone}
+            className={cn(
+              "w-full rounded-xl h-12 font-semibold gap-2 text-sm",
+              allDone
+                ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+            title={!allDone ? "Complete all 3 forms to continue" : undefined}
+          >
+            <ClipboardCheck className="w-4 h-4 shrink-0" />
+            Mark Pre-Assessment Complete
+          </Button>
         </CardContent>
       </Card>
     </div>
