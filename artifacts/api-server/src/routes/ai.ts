@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
-import { inquiries, patients, referralSources, pipelineStages, beds } from "@workspace/db/schema";
-import { eq, count, gte, lte, and, sql, desc } from "drizzle-orm";
+import { inquiries, patients, referralSources, pipelineStages, beds, dailyAiTasks, dailyTaskCompletions, activities } from "@workspace/db/schema";
+import { eq, count, gte, lte, and, sql, desc, ne, or, isNull, max } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import Anthropic from "@anthropic-ai/sdk";
 import multer from "multer";
@@ -666,6 +666,204 @@ router.post("/ai/report", async (req, res) => {
     req.log.error(err);
     const msg = err?.message ?? "AI report generation failed";
     res.status(500).json({ error: msg });
+  }
+});
+
+// ─── Daily Admissions Task Board ─────────────────────────────────────────────
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+router.get("/ai/tasks", async (req, res) => {
+  try {
+    const today = todayStr();
+    const userId = (req.session as any).userId as number;
+
+    // 1. Check cache
+    const cached = await db.select().from(dailyAiTasks).where(eq(dailyAiTasks.taskDate, today));
+    let tasksData: any;
+
+    if (cached.length > 0) {
+      tasksData = cached[0].tasksData;
+    } else {
+      // 2. Build inquiry context for AI
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      const activeInquiries = await db
+        .select({
+          id: inquiries.id,
+          firstName: inquiries.firstName,
+          lastName: inquiries.lastName,
+          status: inquiries.status,
+          insuranceProvider: inquiries.insuranceProvider,
+          insuranceMemberId: inquiries.insuranceMemberId,
+          vobData: inquiries.vobData,
+          preCertFormComplete: inquiries.preCertFormComplete,
+          preScreeningData: inquiries.preScreeningData,
+          createdAt: inquiries.createdAt,
+          updatedAt: inquiries.updatedAt,
+        })
+        .from(inquiries)
+        .where(
+          and(
+            ne(inquiries.status, "Admitted"),
+            ne(inquiries.status, "Non-Viable"),
+            ne(inquiries.status, "Did Not Admit"),
+            ne(inquiries.status, "Referred Out"),
+          )
+        )
+        .orderBy(desc(inquiries.updatedAt))
+        .limit(100);
+
+      // Get last activity per inquiry
+      const activityRows = await db
+        .select({
+          inquiryId: activities.inquiryId,
+          lastActivity: max(activities.createdAt),
+        })
+        .from(activities)
+        .groupBy(activities.inquiryId);
+
+      const activityMap = new Map(activityRows.map(r => [r.inquiryId, r.lastActivity]));
+
+      const enriched = activeInquiries.map(inq => ({
+        id: inq.id,
+        name: `${inq.firstName} ${inq.lastName}`,
+        status: inq.status,
+        hasInsurance: !!(inq.insuranceProvider || inq.insuranceMemberId),
+        vobComplete: !!(inq.vobData && Object.keys(inq.vobData as any).length > 0),
+        preCertComplete: inq.preCertFormComplete === "yes",
+        preScreenComplete: !!(inq.preScreeningData && Object.keys(inq.preScreeningData as any).length > 0),
+        lastActivityAt: activityMap.get(inq.id) ?? inq.updatedAt,
+        createdAt: inq.createdAt,
+      }));
+
+      // 3. Call Claude
+      const prompt = `You are an admissions coordinator assistant for an addiction treatment center.
+
+Analyze these active inquiries and categorize them into tasks for today.
+
+Inquiry data:
+${JSON.stringify(enriched, null, 2)}
+
+Rules:
+1. urgent_callbacks: No activity in last 24 hours AND not yet admitted. Priority to newest inquiries.
+2. vobs_needed: Has insurance info but VOB (verification of benefits) is NOT complete.
+3. prescreens_needed: Insurance verified OR no insurance, but pre-screening form not complete.
+4. ready_to_admit: Pre-screening done, VOB done or not needed — fully worked up and ready for admission decision.
+
+Do NOT duplicate a patient across categories. Use best-fit category only.
+Do NOT include patients who don't clearly fit any category.
+
+Return ONLY valid JSON with no other text:
+{
+  "urgent_callbacks": [{"inquiry_id": 1, "patient_name": "John Smith", "task_type": "urgent_callback", "last_activity_time": "ISO timestamp"}],
+  "vobs_needed": [{"inquiry_id": 2, "patient_name": "Jane Doe", "task_type": "vob_needed", "last_activity_time": "ISO timestamp"}],
+  "prescreens_needed": [{"inquiry_id": 3, "patient_name": "Bob K", "task_type": "prescreen_needed", "last_activity_time": "ISO timestamp"}],
+  "ready_to_admit": [{"inquiry_id": 4, "patient_name": "Alice M", "task_type": "ready_to_admit", "last_activity_time": "ISO timestamp"}]
+}`;
+
+      const aiResp = await anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 2000,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const raw = (aiResp.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
+      const jsonStr = raw.replace(/^```json\n?|```$/g, "").trim();
+      tasksData = JSON.parse(jsonStr);
+
+      // 4. Cache it
+      await db.insert(dailyAiTasks).values({ taskDate: today, tasksData }).onConflictDoUpdate({
+        target: dailyAiTasks.taskDate,
+        set: { tasksData, generatedAt: new Date() },
+      });
+    }
+
+    // 5. Apply completions for today/user
+    const completions = await db
+      .select()
+      .from(dailyTaskCompletions)
+      .where(and(eq(dailyTaskCompletions.taskDate, today), eq(dailyTaskCompletions.userId, userId)));
+
+    const completedSet = new Set(completions.map(c => `${c.inquiryId}:${c.taskType}`));
+
+    const applyCompletions = (items: any[]) =>
+      items.map((t: any) => ({ ...t, completed: completedSet.has(`${t.inquiry_id}:${t.task_type}`) }));
+
+    res.json({
+      urgent_callbacks:  applyCompletions(tasksData.urgent_callbacks  ?? []),
+      vobs_needed:       applyCompletions(tasksData.vobs_needed        ?? []),
+      prescreens_needed: applyCompletions(tasksData.prescreens_needed  ?? []),
+      ready_to_admit:    applyCompletions(tasksData.ready_to_admit     ?? []),
+      generatedAt: cached[0]?.generatedAt ?? new Date(),
+    });
+  } catch (err: any) {
+    req.log.error(err);
+    res.status(500).json({ error: err?.message ?? "Failed to generate tasks" });
+  }
+});
+
+router.post("/ai/tasks/complete", async (req, res) => {
+  try {
+    const today = todayStr();
+    const userId = (req.session as any).userId as number;
+    const { inquiryId, taskType } = req.body as { inquiryId: number; taskType: string };
+
+    // Only insert if not already completed
+    const existing = await db.select().from(dailyTaskCompletions).where(
+      and(
+        eq(dailyTaskCompletions.taskDate, today),
+        eq(dailyTaskCompletions.userId, userId),
+        eq(dailyTaskCompletions.inquiryId, inquiryId),
+        eq(dailyTaskCompletions.taskType, taskType),
+      )
+    );
+    if (existing.length === 0) {
+      await db.insert(dailyTaskCompletions).values({ taskDate: today, userId, inquiryId, taskType });
+    }
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to save completion" });
+  }
+});
+
+router.delete("/ai/tasks/complete/:inquiryId/:taskType", async (req, res) => {
+  try {
+    const today = todayStr();
+    const userId = (req.session as any).userId as number;
+    const inquiryId = parseInt(req.params.inquiryId);
+    const { taskType } = req.params;
+
+    await db.delete(dailyTaskCompletions).where(
+      and(
+        eq(dailyTaskCompletions.taskDate, today),
+        eq(dailyTaskCompletions.userId, userId),
+        eq(dailyTaskCompletions.inquiryId, inquiryId),
+        eq(dailyTaskCompletions.taskType, taskType),
+      )
+    );
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to remove completion" });
+  }
+});
+
+// Force-regenerate tasks (clears cache for today)
+router.post("/ai/tasks/regenerate", async (req, res) => {
+  try {
+    const today = todayStr();
+    await db.delete(dailyAiTasks).where(eq(dailyAiTasks.taskDate, today));
+    res.json({ ok: true, message: "Cache cleared — next GET will regenerate" });
+  } catch (err: any) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to clear cache" });
   }
 });
 

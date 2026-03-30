@@ -2,9 +2,10 @@ import { useGetDashboardAnalytics } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn, getStatusColor, formatDate, groupByDay } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
+import { AdmissionsTaskBoard } from "@/components/AdmissionsTaskBoard";
 
 const COLORS = ['#5BC8DC', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
 
@@ -48,27 +49,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* Trend Chart */}
-        <Card className="lg:col-span-2 rounded-2xl border-border overflow-hidden">
-          <CardHeader className="bg-muted/40 border-b border-border pb-4">
-            <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              Inquiries Trend (30 Days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 h-[260px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.inquiriesByDay} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(220,18%,29%)" />
-                <XAxis dataKey="date" tickFormatter={(str) => str.split('-').slice(1).join('/')} stroke="hsl(220,15%,54%)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(220,15%,54%)" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '10px', border: 'none', background: 'hsl(220,17%,26%)', color: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.4)' }}
-                />
-                <Line type="monotone" dataKey="count" stroke="#5BC8DC" strokeWidth={2.5} dot={{ r: 3.5, fill: '#5BC8DC', strokeWidth: 2, stroke: 'hsl(220,17%,22%)' }} activeDot={{ r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
+        {/* AI Task Board */}
+        <Card className="lg:col-span-2 rounded-2xl border-border overflow-hidden flex flex-col min-h-[320px] max-h-[420px]">
+          <AdmissionsTaskBoard />
         </Card>
 
         {/* Status Donut */}

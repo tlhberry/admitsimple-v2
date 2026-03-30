@@ -1,0 +1,181 @@
+We are replacing the "Inquiries Trend (30 Days)" chart with a Daily Admissions Task Board.
+
+DO NOT break any existing dashboard functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+Create a dynamic, AI-powered daily to-do list for admissions reps that shows exactly what needs to be done today.
+
+This replaces the chart with a high-utility task system.
+
+-----------------------------------
+UI (DASHBOARD CARD)
+-----------------------------------
+
+Replace the chart with a new card:
+
+Title:
+"Today's Admissions Tasks"
+
+Sub-sections inside the card:
+
+1. 🔴 Urgent Callbacks
+2. 🟡 VOBs Needed
+3. 🔵 Pre-Screens Needed
+4. 🟢 Ready to Admit / Follow Up
+
+Each section shows a list of tasks.
+
+-----------------------------------
+TASK ITEM UI
+-----------------------------------
+
+Each task row shows:
+
+- Patient Name
+- Short label (ex: "Call back", "Needs VOB", "Verify insurance")
+- Time or age (ex: "2h ago", "Yesterday")
+- Checkbox (mark complete)
+
+Example:
+[ ] John Smith — Needs VOB — 3h ago  
+[ ] Sarah K — Call back — Yesterday
+
+-----------------------------------
+TASK INTERACTION
+-----------------------------------
+
+- User can check off task → marks as completed
+- Completed tasks are hidden or moved to bottom
+- Tasks reset daily
+
+-----------------------------------
+DATA SOURCE
+-----------------------------------
+
+Tasks are generated from:
+
+- inquiries
+- activities
+- pipeline stage
+- timestamps
+
+-----------------------------------
+AI TASK GENERATION
+-----------------------------------
+
+Create endpoint:
+
+POST /api/ai/tasks
+
+-----------------------------------
+AI PROMPT
+-----------------------------------
+
+"You are an admissions coordinator assistant.
+
+Your job is to analyze current inquiries and determine what tasks need to be completed today.
+
+Use this data:
+- inquiry status
+- last activity date
+- pipeline stage
+- insurance status (VOB complete or not)
+
+Generate categorized tasks.
+
+Rules:
+
+1. Urgent Callbacks:
+- No activity in last 24 hours
+- New inquiries not contacted
+
+2. VOBs Needed:
+- Insurance info present but not verified
+
+3. Pre-Screens Needed:
+- Inquiry in early stage without assessment
+
+4. Ready to Admit:
+- Fully verified but not scheduled/admitted
+
+Return JSON:
+
+{
+  urgent_callbacks: [],
+  vobs_needed: [],
+  prescreens_needed: [],
+  ready_to_admit: []
+}
+
+Each item:
+{
+  inquiry_id,
+  patient_name,
+  task_type,
+  last_activity_time
+}
+"
+
+-----------------------------------
+BACKEND LOGIC
+-----------------------------------
+
+1. Fetch all active inquiries
+2. Send to AI
+3. Receive categorized tasks
+4. Store tasks (optional caching)
+5. Return to frontend
+
+-----------------------------------
+TASK COMPLETION
+-----------------------------------
+
+When user checks a task:
+
+- Save:
+  - user_id
+  - inquiry_id
+  - task_type
+  - completed_at
+
+-----------------------------------
+DAILY RESET
+-----------------------------------
+
+- Tasks regenerate fresh every day
+- Completed tasks do NOT carry over
+- New day = new priorities
+
+-----------------------------------
+SMART RULES (IMPORTANT)
+-----------------------------------
+
+- Do NOT duplicate tasks
+- Do NOT show completed tasks again same day
+- Prioritize newest + highest value leads
+
+-----------------------------------
+UI STYLE
+-----------------------------------
+
+- Match existing dark dashboard
+- Clean, minimal rows
+- Color-coded section headers
+- Smooth checkbox interaction
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+Admissions rep opens dashboard and instantly sees:
+
+- Who to call
+- What needs VOB
+- Who is ready to close
+
+No thinking required.
+
+-----------------------------------
+END

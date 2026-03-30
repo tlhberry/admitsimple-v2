@@ -293,6 +293,23 @@ export const insertBedSchema = createInsertSchema(beds).omit({ id: true, created
 export type Bed = typeof beds.$inferSelect;
 export type InsertBed = z.infer<typeof insertBedSchema>;
 
+// ─── Daily AI Task Board ──────────────────────────────────────────────────────
+export const dailyAiTasks = pgTable("daily_ai_tasks", {
+  id: serial("id").primaryKey(),
+  taskDate: varchar("task_date", { length: 10 }).notNull().unique(),
+  tasksData: jsonb("tasks_data").notNull(),
+  generatedAt: timestamp("generated_at").defaultNow(),
+});
+
+export const dailyTaskCompletions = pgTable("daily_task_completions", {
+  id: serial("id").primaryKey(),
+  taskDate: varchar("task_date", { length: 10 }).notNull(),
+  userId: integer("user_id").references(() => users.id),
+  inquiryId: integer("inquiry_id").references(() => inquiries.id),
+  taskType: varchar("task_type", { length: 50 }).notNull(),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
