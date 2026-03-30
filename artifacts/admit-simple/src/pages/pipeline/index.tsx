@@ -51,7 +51,7 @@ export default function Pipeline() {
 
   const handleCardClick = (id: number) => {
     if (justDragged.current) return;
-    navigate(`/inquiries/${id}`);
+    navigate(`/inquiries/${id}?from=pipeline`);
   };
 
   if (isLoading) return <Layout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;

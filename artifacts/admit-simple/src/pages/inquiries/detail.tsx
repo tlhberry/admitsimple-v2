@@ -276,9 +276,18 @@ Keep it warm, concise, and professional. Include a request for the other facilit
 
   return (
     <Layout>
-      <Link href="/inquiries" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-6 transition-colors">
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Inquiries
-      </Link>
+      {(() => {
+        const fromPipeline = new URLSearchParams(window.location.search).get("from") === "pipeline";
+        return (
+          <Link
+            href={fromPipeline ? "/pipeline" : "/inquiries"}
+            className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {fromPipeline ? "Back to Pipeline" : "Back to Inquiries"}
+          </Link>
+        );
+      })()}
 
       {/* Header */}
       <div className="bg-card rounded-2xl p-5 md:p-7 border border-border mb-6 flex flex-col md:flex-row md:items-start justify-between gap-5 relative overflow-hidden">
