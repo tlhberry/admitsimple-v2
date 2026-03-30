@@ -55,7 +55,7 @@ export default function InquiryDetail() {
   const { toast } = useToast();
 
   const isPreAssessment = inquiry?.status === "Pre-Assessment";
-  const defaultTab = isPreAssessment ? "pre_assessment" : "overview";
+  const defaultTab = "overview";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [editingLeadSource, setEditingLeadSource] = useState(false);
@@ -219,7 +219,6 @@ Keep it warm, concise, and professional. Include a request for the other facilit
   const tabs = [
     "overview",
     "vob",
-    ...(isPreAssessment ? ["pre_assessment"] : []),
     "activities",
     "clinical_ai",
   ];
@@ -270,8 +269,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
   const hasReferralOut = !!inq.referralOutAt;
 
   const tabLabel = (tab: string) => {
-    if (tab === "pre_assessment") return "Pre-Assessment";
-    if (tab === "clinical_ai") return "Clinical AI";
+    if (tab === "clinical_ai") return "Pre-Screen / AI";
     if (tab === "vob") return "Insurance / VOB";
     return tab.charAt(0).toUpperCase() + tab.slice(1);
   };
@@ -400,7 +398,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
-              {tab === "pre_assessment" && <ClipboardCheck className="w-3.5 h-3.5" />}
+              {tab === "clinical_ai" && <Brain className="w-3.5 h-3.5" />}
               {tab === "vob" && <ShieldCheck className="w-3.5 h-3.5" />}
               {tabLabel(tab)}
             </button>
@@ -408,8 +406,8 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         </div>
       </div>
 
-      <div className={cn("grid gap-6", (activeTab === "pre_assessment" || activeTab === "vob") ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
-        <div className={cn("space-y-5", (activeTab === "pre_assessment" || activeTab === "vob") ? "" : "lg:col-span-2")}>
+      <div className={cn("grid gap-6", (activeTab === "clinical_ai" || activeTab === "vob") ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
+        <div className={cn("space-y-5", (activeTab === "clinical_ai" || activeTab === "vob") ? "" : "lg:col-span-2")}>
           {activeTab === "overview" && (
             <>
               {/* ── Scheduled to Admit: Appointment Card ── */}
@@ -650,41 +648,43 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             </Card>
           )}
 
-          {activeTab === "pre_assessment" && (
-            <PreAssessmentSection
-              inquiryId={id}
-              currentNotes={inq.preAssessmentNotes || ""}
-              onComplete={handlePreAssessmentComplete}
-            />
-          )}
-
           {activeTab === "clinical_ai" && (
-            <Card className="rounded-2xl border-border border-primary/20 overflow-hidden">
-              <div className="bg-primary/10 p-5 border-b border-primary/20 flex justify-between items-center gap-4">
-                <div>
-                  <h3 className="font-bold text-base text-foreground flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-primary" /> Claude Clinical Summary
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">Generates a concise clinical overview for treatment team review.</p>
+            <div className="space-y-6">
+              {/* ── Pre-Assessment Forms ── */}
+              <PreAssessmentSection
+                inquiryId={id}
+                currentNotes={inq.preAssessmentNotes || ""}
+                onComplete={handlePreAssessmentComplete}
+              />
+
+              {/* ── Claude Clinical Summary ── */}
+              <Card className="rounded-2xl border-border border-primary/20 overflow-hidden">
+                <div className="bg-primary/10 p-5 border-b border-primary/20 flex justify-between items-center gap-4">
+                  <div>
+                    <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-primary" /> Claude Clinical Summary
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">Generates a concise clinical overview for treatment team review.</p>
+                  </div>
+                  <Button onClick={handleGenerateSummary} disabled={summarizeInquiry.isPending} className="rounded-xl shadow-md shadow-primary/20 shrink-0">
+                    {summarizeInquiry.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                    Generate
+                  </Button>
                 </div>
-                <Button onClick={handleGenerateSummary} disabled={summarizeInquiry.isPending} className="rounded-xl shadow-md shadow-primary/20 shrink-0">
-                  {summarizeInquiry.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                  Generate
-                </Button>
-              </div>
-              <CardContent className="p-6 bg-card min-h-[300px]">
-                {aiSummary ? (
-                  <div className="prose max-w-none text-foreground prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground">
-                    <ReactMarkdown>{aiSummary}</ReactMarkdown>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
-                    <Brain className="w-14 h-14 mb-4 opacity-20" />
-                    <p className="text-sm">Click Generate to create an AI summary from intake notes.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <CardContent className="p-6 bg-card min-h-[300px]">
+                  {aiSummary ? (
+                    <div className="prose max-w-none text-foreground prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground">
+                      <ReactMarkdown>{aiSummary}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
+                      <Brain className="w-14 h-14 mb-4 opacity-20" />
+                      <p className="text-sm">Click Generate to create an AI summary from intake notes.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {activeTab === "activities" && (
@@ -726,7 +726,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         </div>
 
         {/* Right sidebar — hide on full-width tabs */}
-        {activeTab !== "pre_assessment" && activeTab !== "vob" && (
+        {activeTab !== "clinical_ai" && activeTab !== "vob" && (
           <div className="space-y-5">
             <Card className="rounded-2xl border-border">
               <CardHeader className="py-4 border-b border-border">
@@ -746,17 +746,15 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                     <Sparkles className="w-4 h-4" /> AI Parsed Intake
                   </div>
                 )}
-                {isPreAssessment && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <button
-                      onClick={() => setActiveTab("pre_assessment")}
-                      className="w-full flex items-center gap-2 p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-400 hover:bg-indigo-500/15 transition-colors"
-                    >
-                      <ClipboardCheck className="w-3.5 h-3.5" />
-                      Open Pre-Assessment Forms
-                    </button>
-                  </div>
-                )}
+                <div className="mt-3 pt-3 border-t border-border">
+                  <button
+                    onClick={() => setActiveTab("clinical_ai")}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-400 hover:bg-indigo-500/15 transition-colors"
+                  >
+                    <ClipboardCheck className="w-3.5 h-3.5" />
+                    Pre-Screen Forms &amp; Clinical AI
+                  </button>
+                </div>
                 <div className="mt-3 pt-3 border-t border-border">
                   <button
                     onClick={() => setActiveTab("vob")}
