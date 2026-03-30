@@ -93,9 +93,14 @@ export default function Pipeline() {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Admissions Pipeline</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Drag and drop inquiries to update their status.</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Admissions Pipeline</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Drag and drop inquiries to update their status.</p>
+        </div>
+        <Button onClick={() => setShowCreate(true)} className="h-10 px-4 rounded-xl gap-2 font-semibold shadow-md flex-shrink-0">
+          <Plus className="w-4 h-4" /> New Inquiry
+        </Button>
       </div>
 
       <div className="flex flex-col md:flex-row md:overflow-x-auto pb-6 pt-2 gap-4 md:h-[calc(100vh-230px)] md:min-h-[500px]">
@@ -196,25 +201,6 @@ export default function Pipeline() {
           ))}
         </DragDropContext>
       </div>
-
-      {/* Desktop: Add New Inquiry button */}
-      <div className="hidden md:flex justify-center pt-2 pb-4">
-        <Button
-          onClick={() => setShowCreate(true)}
-          className="h-11 px-8 rounded-xl gap-2 font-semibold shadow-lg"
-        >
-          <Plus className="w-4 h-4" /> New Inquiry
-        </Button>
-      </div>
-
-      {/* Mobile: Floating action button above bottom nav */}
-      <button
-        onClick={() => setShowCreate(true)}
-        className="md:hidden fixed bottom-20 right-5 z-40 flex items-center gap-2 h-13 px-5 py-3 bg-primary text-white rounded-2xl shadow-xl font-semibold text-sm active:scale-95 transition-transform"
-        style={{ boxShadow: "0 4px 24px rgba(91,200,220,0.35)" }}
-      >
-        <Plus className="w-4 h-4" /> New Inquiry
-      </button>
 
       <Sheet open={showCreate} onOpenChange={setShowCreate}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0 bg-card border-l border-border">
