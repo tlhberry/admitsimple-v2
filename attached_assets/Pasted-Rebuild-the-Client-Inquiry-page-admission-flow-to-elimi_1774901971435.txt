@@ -1,0 +1,142 @@
+Rebuild the Client Inquiry page admission flow to eliminate confusion, reduce duplicate actions, and optimize for mobile usability.
+
+🎯 Core Goal
+
+There should be one clear path to admission with a simple review step before sending the admission email.
+
+🔴 1. Remove Redundancy
+Remove the “Facesheet” button entirely
+Remove duplicate logic between “Facesheet” and “Convert to Patient”
+
+Replace with ONE primary action:
+
+👉 Primary Button: “Admit Patient”
+
+🟢 2. Admit Patient Flow
+
+When user clicks “Admit Patient”:
+
+Open a slide-up modal (mobile-first) that is NOT a form, but a review screen
+
+🧾 3. Rename + Reframe Facesheet
+
+This screen should be labeled:
+
+Header:
+
+“Review & Send Admission”
+
+Subtext:
+
+“This has been auto-filled from intake. Only fix anything missing.”
+
+⚡ 4. Data Handling (IMPORTANT)
+Auto-fill ALL data from:
+Inquiry
+Insurance
+Pre-assessment
+DO NOT present as blank form
+UI Behavior:
+80–90% of fields = read-only
+Only allow editing on key fields:
+Level of care
+Admit date
+Notes
+Any missing required fields
+🚨 5. Missing Data Detection
+
+System should automatically detect missing required fields.
+
+Display:
+Highlight missing fields in RED
+Show inline warnings like:
+“⚠ Insurance ID missing”
+“⚠ DOB incomplete”
+📊 6. Add Admission Readiness Meter
+
+At top of modal, add:
+
+Progress Bar:
+
+“Admission Ready: XX%”
+
+Logic:
+% based on required fields completed
+Clicking it reveals:
+What’s missing
+What’s complete
+
+Goal: Make user feel like they are finishing, not starting over
+
+✅ 7. Final Action
+
+At bottom of modal:
+
+👉 Primary Button: “Confirm & Send Admission”
+
+This action:
+
+Sends admission email (facesheet data)
+Moves client to Admitted stage
+Logs activity in timeline
+🔁 8. Stage Transition Feedback
+
+When admission is confirmed:
+
+Animate transition to Admitted stage
+Show success message:
+
+✅ “Patient Admitted Successfully”
+
+📱 9. Fix Stage Visibility (BIG UX ISSUE)
+
+Replace horizontal scrolling pipeline with:
+
+Option A (Required):
+
+Add a sticky stage progress bar at top
+
+Example:
+Inquiry → Insurance → VOB → Pre-Assessment → Admitted
+Highlight current stage clearly
+
+Option B (Preferred Upgrade):
+
+Add a vertical timeline inside client profile
+
+Example:
+
+✔ Inquiry Created
+✔ Insurance Verified
+✔ VOB Complete
+● Pre-Assessment (current)
+○ Admitted
+
+Allow tapping any step to view/edit
+
+🟡 10. Keep Secondary Actions
+
+Below primary button:
+
+“Did Not Admit”
+“Refer Out”
+
+These should NOT conflict with admission flow
+
+🎯 UX Principles
+No duplicate actions
+No re-entering data
+Everything feels like forward progress
+Designed mobile-first (no horizontal scrolling dependency)
+Admission should take <10 seconds
+🔥 Outcome
+
+User flow should feel like:
+
+Click “Admit Patient”
+Review auto-filled summary
+Fix anything missing (if needed)
+Click “Confirm & Send”
+Done
+
+No confusion. No redundancy. No friction.

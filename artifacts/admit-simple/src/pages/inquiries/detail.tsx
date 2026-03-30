@@ -15,7 +15,7 @@ import ReactMarkdown from "react-markdown";
 import { useState } from "react";
 import { PreAssessmentSection } from "@/components/PreAssessmentForms";
 import { VOBForm } from "@/components/VOBForm";
-import { FacesheetModal } from "@/components/FacesheetModal";
+import { AdmitReviewModal } from "@/components/AdmitReviewModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -433,8 +433,8 @@ export default function InquiryDetail() {
   const [leadSourceEdit, setLeadSourceEdit] = useState({ referralSource: "", searchKeywords: "" });
   const [savingLeadSource, setSavingLeadSource] = useState(false);
 
-  // Facesheet modal
-  const [showFacesheet, setShowFacesheet] = useState(false);
+  // Admit Review modal
+  const [showAdmitReview, setShowAdmitReview] = useState(false);
 
   // Non-Admit modal
   const [showNonAdmit, setShowNonAdmit] = useState(false);
@@ -659,17 +659,8 @@ Keep it warm, concise, and professional. Include a request for the other facilit
     setAiSummary(res.text);
   };
 
-  const handleConvert = async () => {
-    try {
-      await convertToPatient.mutateAsync({
-        id,
-        data: { levelOfCare: inquiry?.levelOfCare || "Detox", admitDate: new Date().toISOString() }
-      });
-      // Stage is now Admitted — open facesheet modal
-      setShowFacesheet(true);
-    } catch {
-      // error toast already handled by the mutation
-    }
+  const handleConvert = () => {
+    setShowAdmitReview(true);
   };
 
   const handlePreAssessmentComplete = async (notes: string) => {
@@ -821,42 +812,47 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             <PipelineStageTracker stages={pipelineStages} currentStatus={inq.status} />
           )}
         </div>
-        <div className="flex flex-wrap gap-3">
-          {nextStage && !isTerminalStage && !isNonViable && !hasReferralOut && (
+        <div className="flex flex-wrap gap-2.5">
+          {/* Primary: Admit Patient — always visible for non-admitted, non-terminal inquiries */}
+          {!isTerminalStage && !isNonViable && resolvedStatus !== "Admitted" && (
             <Button
-              onClick={handleMoveToNextStage}
-              disabled={movingStage || convertToPatient.isPending}
-              className="rounded-xl h-10 bg-primary hover:bg-primary/90 text-primary-foreground border-0 gap-2 font-semibold shadow-sm shadow-primary/20"
+              onClick={() => setShowAdmitReview(true)}
+              className="rounded-xl h-10 bg-emerald-600 hover:bg-emerald-700 text-white border-0 gap-2 font-semibold shadow-sm shadow-emerald-600/20"
             >
-              {movingStage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-              {resolvedStatus === "Scheduled to Admit" ? "Admit Patient" : `→ ${nextStage.name}`}
+              <UserPlus className="w-4 h-4" /> Admit Patient
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={() => setShowFacesheet(true)}
-            className="rounded-xl h-10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-2"
-          >
-            <FileText className="w-4 h-4" /> Facesheet
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowNonAdmit(true)}
-            className="rounded-xl h-10 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 gap-2"
-          >
-            <XCircle className="w-4 h-4" /> Did Not Admit
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowReferOut(true)}
-            className="rounded-xl h-10 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-2"
-          >
-            <SendHorizontal className="w-4 h-4" /> Refer Out
-          </Button>
-          <Button onClick={handleConvert} disabled={convertToPatient.isPending} className="rounded-xl h-10 bg-emerald-600 hover:bg-emerald-700 text-white border-0">
-            {convertToPatient.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
-            Convert to Patient
-          </Button>
+          {/* Stage advance — for stages before the final admit step */}
+          {nextStage && !isTerminalStage && !isNonViable && !hasReferralOut && resolvedStatus !== "Scheduled to Admit" && (
+            <Button
+              variant="outline"
+              onClick={handleMoveToNextStage}
+              disabled={movingStage}
+              className="rounded-xl h-10 border-border text-foreground hover:bg-muted gap-2"
+            >
+              {movingStage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              → {nextStage.name}
+            </Button>
+          )}
+          {/* Secondary actions */}
+          {!isTerminalStage && !isNonViable && (
+            <Button
+              variant="outline"
+              onClick={() => setShowNonAdmit(true)}
+              className="rounded-xl h-10 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 gap-2"
+            >
+              <XCircle className="w-4 h-4" /> Did Not Admit
+            </Button>
+          )}
+          {!hasReferralOut && !isTerminalStage && (
+            <Button
+              variant="outline"
+              onClick={() => setShowReferOut(true)}
+              className="rounded-xl h-10 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-2"
+            >
+              <SendHorizontal className="w-4 h-4" /> Refer Out
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1543,11 +1539,15 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         </DialogContent>
       </Dialog>
 
-      {/* Facesheet Modal */}
-      {showFacesheet && inquiry && (
-        <FacesheetModal
-          inquiry={inquiry}
-          onClose={() => setShowFacesheet(false)}
+      {/* Admit Review Modal */}
+      {showAdmitReview && inquiry && (
+        <AdmitReviewModal
+          inq={inquiry as any}
+          onClose={() => setShowAdmitReview(false)}
+          onAdmitted={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/inquiries"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/inquiries", id] });
+          }}
         />
       )}
     </Layout>
