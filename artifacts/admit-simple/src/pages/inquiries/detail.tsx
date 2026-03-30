@@ -347,24 +347,39 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-0 border-b border-border mb-6 overflow-x-auto">
-        {tabs.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-5 py-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5",
-              activeTab === tab
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-            )}
+      {/* Tabs — select on mobile, underline bar on desktop */}
+      <div className="mb-6">
+        {/* Mobile: styled select */}
+        <div className="md:hidden">
+          <select
+            value={activeTab}
+            onChange={e => setActiveTab(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl bg-muted border border-border text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            {tab === "pre_assessment" && <ClipboardCheck className="w-3.5 h-3.5" />}
-            {tab === "vob" && <ShieldCheck className="w-3.5 h-3.5" />}
-            {tabLabel(tab)}
-          </button>
-        ))}
+            {tabs.map(tab => (
+              <option key={tab} value={tab}>{tabLabel(tab)}</option>
+            ))}
+          </select>
+        </div>
+        {/* Desktop: underline tabs */}
+        <div className="hidden md:flex gap-0 border-b border-border">
+          {tabs.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "px-5 py-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5",
+                activeTab === tab
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {tab === "pre_assessment" && <ClipboardCheck className="w-3.5 h-3.5" />}
+              {tab === "vob" && <ShieldCheck className="w-3.5 h-3.5" />}
+              {tabLabel(tab)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className={cn("grid gap-6", (activeTab === "pre_assessment" || activeTab === "vob") ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
