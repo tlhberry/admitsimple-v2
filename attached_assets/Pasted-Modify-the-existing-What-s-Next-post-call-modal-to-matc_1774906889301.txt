@@ -1,0 +1,183 @@
+Modify the existing “What’s Next?” post-call modal to match real admissions workflow. Do NOT rebuild UI — update actions and logic only.
+
+🎯 CORE CHANGES
+Remove actions that don’t make sense post-call
+Turn buttons into automations
+Track every outcome
+🔴 1. REMOVE
+
+❌ Remove:
+
+“Admit Patient” (not valid at this stage)
+“Schedule Appointment”
+🟢 2. UPDATE: SEND / START VOB
+Button stays:
+
+👉 Send / Start VOB
+
+On click:
+Step 1: Ensure inquiry is saved
+Create or update inquiry with all call data
+Step 2: Send VOB Email
+
+Send email to billing company:
+
+To: configurable billing email
+Subject: “New VOB Request – [Patient Name]”
+Body includes:
+Name
+DOB
+Insurance provider
+Member ID
+Phone
+Referral source
+Notes
+Step 3: Update pipeline
+Move inquiry → Insurance Stage
+Status: “VOB Pending”
+Step 4: Track event
+
+Log:
+
+action = “vob_sent”
+timestamp
+user_id
+🟡 3. UPDATE: REFER OUT (HIGH VALUE)
+Button stays:
+
+👉 Refer Out
+
+On click → MULTI-STEP FLOW
+Step 1: Ask Level of Care
+
+Modal:
+👉 “What level of care are you referring to?”
+
+Options:
+
+Detox
+Residential
+PHP
+IOP
+Step 2: Ask Location
+Input: City search
+Autocomplete allowed
+Step 3: Show Matching Referral Sources
+
+Query referral database:
+
+Filter by:
+
+Level of care
+City (or radius)
+
+Display list:
+
+Facility name
+City
+Contact info
+Step 4: Select Referral Source
+
+User taps one
+
+Step 5: Send Text (MOBILE) or Email (DESKTOP)
+
+If mobile:
+
+Trigger SMS via device (or SMS API)
+
+If desktop:
+
+Send email instead
+Message content:
+
+“Hi, here’s a treatment option we discussed:
+
+[Facility Name]
+[Phone]
+[Location]
+
+They accept your insurance: [if known]
+
+Let me know if you want help getting started.”
+
+Step 6: Track referral
+
+Save:
+
+action = “referred_out”
+referral_source_id
+level_of_care
+location
+timestamp
+Step 7: End flow
+Mark inquiry → “Referred Out”
+Close call session
+🔴 4. UPDATE: DID NOT ADMIT
+Button stays:
+
+👉 Did Not Admit
+
+On click:
+Step 1: Optional reason selector
+
+Dropdown:
+
+Not clinically appropriate
+Insurance issue
+Financial
+Not ready
+Other
+Step 2: Send follow-up message
+
+Same logic as referral:
+
+Mobile → SMS
+Desktop → Email
+Message example:
+
+“Thanks for calling today. If anything changes or you need help in the future, feel free to reach out. We’re here when you’re ready.”
+
+Step 3: Track
+
+Save:
+
+action = “did_not_admit”
+reason
+timestamp
+Step 4: Update pipeline
+Move to “Non-Admit”
+⚫ 5. KEEP
+“Keep reviewing later” (no action)
+📊 6. TRACKING (IMPORTANT)
+
+Create table or logs:
+
+inquiry_id
+action_type (vob_sent, referred_out, did_not_admit)
+user_id
+timestamp
+metadata (JSON)
+📱 7. DEVICE DETECTION
+
+Detect:
+
+Mobile → trigger SMS
+Desktop → send email
+🔥 FINAL EXPERIENCE
+
+After call ends:
+
+Rep taps:
+
+VOB → handled instantly
+Refer Out → guided flow + text sent
+Did Not Admit → clean close + follow-up sent
+🚫 DO NOT
+Add extra steps before action
+Slow down rep
+Require unnecessary input
+💡 RESULT
+
+This becomes:
+👉 a decision + automation engine, not ju

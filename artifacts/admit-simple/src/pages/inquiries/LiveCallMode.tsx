@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { useGetInquiry } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -112,60 +112,392 @@ function useCallTimer() {
   return `${m}:${s}`;
 }
 
-// ── "What's Next?" modal ──────────────────────────────────────────────────────
-function WhatsNextModal({ onClose, onAction }: {
+// ── "What's Next?" post-call automation modal ────────────────────────────────
+const DNA_REASONS = [
+  "Not clinically appropriate",
+  "Insurance issue",
+  "Financial",
+  "Not ready",
+  "Other",
+];
+
+const REFER_LOC_OPTIONS = ["Detox", "Residential", "PHP", "IOP"];
+
+function WhatsNextModal({
+  inquiryId, patientName, dob, phone, email,
+  insuranceProvider, insuranceMemberId, referralSource, notes,
+  onClose,
+}: {
+  inquiryId: number;
+  patientName: string;
+  dob: string;
+  phone: string;
+  email: string;
+  insuranceProvider: string;
+  insuranceMemberId: string;
+  referralSource: string;
+  notes: string;
   onClose: () => void;
-  onAction: (action: string) => void;
 }) {
+  type Step =
+    | "menu"
+    | "vob_success"
+    | "refer_loc" | "refer_search" | "refer_message" | "refer_success"
+    | "dna_reason" | "dna_success";
+
+  const [step, setStep] = useState<Step>("menu");
+  const [loading, setLoading] = useState(false);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [referralSearch, setReferralSearch] = useState("");
+  const [selectedLOC, setSelectedLOC] = useState("");
+  const [selectedReferral, setSelectedReferral] = useState<any>(null);
+  const [dnaReason, setDnaReason] = useState("none");
+
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+  // ── VOB ──────────────────────────────────────────────────────────────────
+  const handleVOB = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/inquiries/${inquiryId}/call-outcome`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "vob_sent" }),
+      });
+      const data = await res.json();
+      const billingEmail = data.billingEmail || "";
+      const subject = encodeURIComponent(`New VOB Request – ${patientName}`);
+      const body = encodeURIComponent(
+        `New VOB Request\n\n` +
+        `Patient: ${patientName}\n` +
+        `DOB: ${dob}\n` +
+        `Insurance: ${insuranceProvider}\n` +
+        `Member ID: ${insuranceMemberId}\n` +
+        `Phone: ${phone}\n` +
+        `Referral Source: ${referralSource}\n\n` +
+        `Notes:\n${notes}`
+      );
+      window.open(`mailto:${billingEmail}?subject=${subject}&body=${body}`, "_blank");
+      setStep("vob_success");
+    } catch {}
+    setLoading(false);
+  };
+
+  // ── Refer Out ─────────────────────────────────────────────────────────────
+  const startRefer = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/referrals", { credentials: "include" });
+      const data = await res.json();
+      setReferrals(data);
+    } catch {}
+    setLoading(false);
+    setStep("refer_loc");
+  };
+
+  const filteredReferrals = referrals.filter(r =>
+    !referralSearch || r.name?.toLowerCase().includes(referralSearch.toLowerCase())
+      || r.city?.toLowerCase().includes(referralSearch.toLowerCase())
+  );
+
+  const sendReferralMsg = (r: any) => {
+    const msg =
+      `Hi! Here's a treatment option we discussed:\n\n` +
+      `${r.name}` +
+      (r.phone ? `\n📞 ${r.phone}` : "") +
+      (r.address ? `\n📍 ${r.address}` : "") +
+      `\n\nLet me know if you'd like help getting started.`;
+    if (isMobile) {
+      window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+    } else {
+      const subject = encodeURIComponent(`Treatment Referral – ${r.name}`);
+      window.open(`mailto:${email || ""}?subject=${subject}&body=${encodeURIComponent(msg)}`, "_blank");
+    }
+  };
+
+  const handleReferSelect = (r: any) => {
+    setSelectedReferral(r);
+    setStep("refer_message");
+  };
+
+  const handleReferSend = async () => {
+    if (!selectedReferral) return;
+    sendReferralMsg(selectedReferral);
+    await fetch(`/api/inquiries/${inquiryId}/call-outcome`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "referred_out", referralSourceName: selectedReferral.name, levelOfCare: selectedLOC }),
+    });
+    setStep("refer_success");
+  };
+
+  // ── Did Not Admit ─────────────────────────────────────────────────────────
+  const handleDNA = async () => {
+    const msg = `Thanks for calling today. If anything changes or you need help in the future, feel free to reach out. We're here when you're ready.`;
+    if (isMobile) {
+      window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+    } else {
+      window.open(`mailto:${email || ""}?body=${encodeURIComponent(msg)}`, "_blank");
+    }
+    await fetch(`/api/inquiries/${inquiryId}/call-outcome`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "did_not_admit", reason: dnaReason === "none" ? "" : dnaReason }),
+    });
+    setStep("dna_success");
+  };
+
+  // ── Shared UI helpers ─────────────────────────────────────────────────────
+  const ModalShell = ({ title, subtitle, back, children }: {
+    title: string; subtitle?: string; back?: () => void; children: React.ReactNode;
+  }) => (
+    <div className="bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl w-full max-w-sm">
+      <div className="p-5 border-b border-border flex items-center gap-3">
+        {back && (
+          <button type="button" onClick={back} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0">
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <div>
+          <h2 className="text-lg font-bold text-foreground">{title}</h2>
+          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  const SuccessView = ({ icon: Icon, color, title, subtitle }: { icon: any; color: string; title: string; subtitle: string }) => (
+    <div className="p-8 flex flex-col items-center text-center gap-4">
+      <div className={cn("w-16 h-16 rounded-full flex items-center justify-center",
+        color === "primary" ? "bg-primary/15 border border-primary/30" : "",
+        color === "emerald" ? "bg-emerald-500/15 border border-emerald-500/30" : "",
+        color === "amber" ? "bg-amber-500/15 border border-amber-500/30" : "",
+        color === "rose" ? "bg-rose-500/15 border border-rose-500/30" : "",
+      )}>
+        <Icon className={cn("w-8 h-8",
+          color === "primary" ? "text-primary" : "",
+          color === "emerald" ? "text-emerald-400" : "",
+          color === "amber" ? "text-amber-400" : "",
+          color === "rose" ? "text-rose-400" : "",
+        )} />
+      </div>
+      <div>
+        <p className="font-bold text-foreground text-base">{title}</p>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => window.location.href = `/inquiries/${inquiryId}`}
+        className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm transition-colors"
+      >
+        View Inquiry
+      </button>
+    </div>
+  );
+
+  // ── Render steps ─────────────────────────────────────────────────────────
   return (
     <div
       className="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl w-full max-w-sm">
-        <div className="p-5 border-b border-border">
-          <h2 className="text-lg font-bold text-foreground">What's Next?</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Call has ended — choose a next step</p>
-        </div>
-        <div className="p-4 space-y-2.5">
-          {[
-            { action: "admit", icon: CheckCircle2, label: "Admit Patient", desc: "Open the admission review", color: "emerald" },
-            { action: "vob", icon: ShieldCheck, label: "Send / Start VOB", desc: "Begin insurance verification", color: "primary" },
-            { action: "schedule", icon: CalendarClock, label: "Schedule Appointment", desc: "Set admission date & time", color: "indigo" },
-            { action: "refer", icon: SendHorizontal, label: "Refer Out", desc: "Send to another facility", color: "amber" },
-            { action: "nonadmit", icon: XCircle, label: "Did Not Admit", desc: "Mark as non-admit", color: "rose" },
-          ].map(({ action, icon: Icon, label, desc, color }) => (
+      {/* ── MENU ────────────────────────────────────────────────────── */}
+      {step === "menu" && (
+        <ModalShell title="What's Next?" subtitle="Call has ended — choose a next step">
+          <div className="p-4 space-y-2.5">
             <button
-              key={action}
               type="button"
-              onClick={() => onAction(action)}
-              className={cn(
-                "w-full flex items-center gap-3 p-3.5 rounded-xl border transition-colors text-sm font-semibold text-left",
-                color === "emerald" && "bg-emerald-500/10 border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/15",
-                color === "primary" && "bg-primary/10 border-primary/20 text-primary hover:bg-primary/15",
-                color === "indigo" && "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/15",
-                color === "amber" && "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/15",
-                color === "rose" && "bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500/15",
-              )}
+              onClick={handleVOB}
+              disabled={loading}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 transition-colors text-sm font-semibold text-left disabled:opacity-60"
             >
-              <Icon className="w-5 h-5 shrink-0" />
+              {loading ? <Loader2 className="w-5 h-5 animate-spin shrink-0" /> : <ShieldCheck className="w-5 h-5 shrink-0" />}
               <div>
-                <div>{label}</div>
-                <div className="text-xs font-normal text-muted-foreground">{desc}</div>
+                <div>Send / Start VOB</div>
+                <div className="text-xs font-normal text-muted-foreground">Email billing + move to Insurance stage</div>
               </div>
             </button>
-          ))}
-        </div>
-        <div className="p-4 pt-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full h-10 text-sm text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
-          >
-            Keep reviewing later
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={startRefer}
+              disabled={loading}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/15 transition-colors text-sm font-semibold text-left disabled:opacity-60"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin shrink-0" /> : <SendHorizontal className="w-5 h-5 shrink-0" />}
+              <div>
+                <div>Refer Out</div>
+                <div className="text-xs font-normal text-muted-foreground">Find a facility + send patient info</div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep("dna_reason")}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500/15 transition-colors text-sm font-semibold text-left"
+            >
+              <XCircle className="w-5 h-5 shrink-0" />
+              <div>
+                <div>Did Not Admit</div>
+                <div className="text-xs font-normal text-muted-foreground">Close + send follow-up message</div>
+              </div>
+            </button>
+          </div>
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full h-10 text-sm text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
+            >
+              Keep reviewing later
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ── VOB SUCCESS ──────────────────────────────────────────────── */}
+      {step === "vob_success" && (
+        <ModalShell title="VOB Sent">
+          <SuccessView icon={ShieldCheck} color="primary" title="VOB email opened" subtitle="Inquiry moved to Insurance Verification. Complete the email in your mail app." />
+        </ModalShell>
+      )}
+
+      {/* ── REFER: Step 1 — Level of Care ────────────────────────────── */}
+      {step === "refer_loc" && (
+        <ModalShell title="Refer Out" subtitle="What level of care are they looking for?" back={() => setStep("menu")}>
+          <div className="p-4 space-y-2">
+            {REFER_LOC_OPTIONS.map(loc => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => { setSelectedLOC(loc); setStep("refer_search"); }}
+                className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-muted/40 hover:bg-muted hover:border-primary/30 transition-colors text-sm font-semibold text-foreground text-left"
+              >
+                {loc}
+                <ChevronDown className="w-4 h-4 text-muted-foreground rotate-[-90deg]" />
+              </button>
+            ))}
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ── REFER: Step 2 — Search facilities ────────────────────────── */}
+      {step === "refer_search" && (
+        <ModalShell title={`Find ${selectedLOC} Facility`} subtitle="Search your referral network" back={() => setStep("refer_loc")}>
+          <div className="p-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={referralSearch}
+                onChange={e => setReferralSearch(e.target.value)}
+                placeholder="Search by name or city…"
+                autoFocus
+                className="w-full h-11 rounded-xl bg-muted border border-border text-foreground text-sm pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {filteredReferrals.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-6">No referral sources found</p>
+              ) : filteredReferrals.slice(0, 20).map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => handleReferSelect(r)}
+                  className="w-full text-left p-3 rounded-xl border border-border bg-muted/40 hover:bg-muted hover:border-primary/30 transition-colors"
+                >
+                  <div className="font-semibold text-sm text-foreground">{r.name}</div>
+                  {(r.address || r.phone) && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {r.address && <span>{r.address}</span>}
+                      {r.address && r.phone && " · "}
+                      {r.phone && <span>{r.phone}</span>}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ── REFER: Step 3 — Confirm & send ───────────────────────────── */}
+      {step === "refer_message" && selectedReferral && (
+        <ModalShell title="Send Referral" subtitle={isMobile ? "Opens your SMS app" : "Opens your email client"} back={() => setStep("refer_search")}>
+          <div className="p-4 space-y-4">
+            <div className="bg-muted/40 border border-border rounded-xl p-4 space-y-1">
+              <p className="font-semibold text-foreground text-sm">{selectedReferral.name}</p>
+              {selectedReferral.phone && <p className="text-xs text-muted-foreground">📞 {selectedReferral.phone}</p>}
+              {selectedReferral.address && <p className="text-xs text-muted-foreground">📍 {selectedReferral.address}</p>}
+            </div>
+            <div className="bg-muted/20 border border-border/50 rounded-xl p-3.5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                "Hi! Here's a treatment option we discussed:<br /><br />
+                <span className="font-semibold text-foreground">{selectedReferral.name}</span>
+                {selectedReferral.phone && <><br />📞 {selectedReferral.phone}</>}
+                <br /><br />Let me know if you'd like help getting started."
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleReferSend}
+              className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <SendHorizontal className="w-4 h-4" />
+              {isMobile ? "Send Text" : "Send Email"}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ── REFER SUCCESS ─────────────────────────────────────────────── */}
+      {step === "refer_success" && (
+        <ModalShell title="Referred Out">
+          <SuccessView icon={SendHorizontal} color="amber" title="Referral sent" subtitle={`Patient referred to ${selectedReferral?.name}. Inquiry marked as Referred Out.`} />
+        </ModalShell>
+      )}
+
+      {/* ── DID NOT ADMIT: Step 1 — Reason ───────────────────────────── */}
+      {step === "dna_reason" && (
+        <ModalShell title="Did Not Admit" subtitle="Optional: select a reason" back={() => setStep("menu")}>
+          <div className="p-4 space-y-3">
+            <LiveSelect value={dnaReason} onChange={setDnaReason}>
+              <option value="none">Select reason (optional)…</option>
+              {DNA_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </LiveSelect>
+            <p className="text-xs text-muted-foreground px-1">
+              A follow-up message will be {isMobile ? "texted" : "emailed"} to the {phone ? "caller" : "inquiry"}.
+            </p>
+            <button
+              type="button"
+              onClick={handleDNA}
+              className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <XCircle className="w-4 h-4" />
+              Close &amp; Send Follow-Up
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch(`/api/inquiries/${inquiryId}/call-outcome`, {
+                  method: "POST", credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "did_not_admit", reason: dnaReason === "none" ? "" : dnaReason }),
+                });
+                window.location.href = `/inquiries/${inquiryId}`;
+              }}
+              className="w-full h-10 text-sm text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
+            >
+              Mark without messaging
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ── DID NOT ADMIT SUCCESS ─────────────────────────────────────── */}
+      {step === "dna_success" && (
+        <ModalShell title="Did Not Admit">
+          <SuccessView icon={XCircle} color="rose" title="Marked as Did Not Admit" subtitle="Follow-up message sent. Inquiry updated." />
+        </ModalShell>
+      )}
     </div>
   );
 }
@@ -437,16 +769,6 @@ export function LiveCallMode({ id }: { id: number }) {
     setShowWhatsNext(true);
   };
 
-  const handleWhatsNextAction = (action: string) => {
-    setShowWhatsNext(false);
-    const base = `/inquiries/${id}`;
-    if (action === "admit") window.location.href = `${base}?intent=admit`;
-    else if (action === "vob") window.location.href = `${base}?tab=vob`;
-    else if (action === "schedule") window.location.href = `${base}?tab=overview&scroll=appointment`;
-    else if (action === "refer") window.location.href = `${base}?intent=refer`;
-    else if (action === "nonadmit") window.location.href = `${base}?intent=nonadmit`;
-    else window.location.href = base;
-  };
 
   // ── Level of care toggle helper ──────────────────────────────────────────
   const toggleLOC = (option: string) => {
@@ -718,8 +1040,16 @@ export function LiveCallMode({ id }: { id: number }) {
 
       {showWhatsNext && (
         <WhatsNextModal
+          inquiryId={id}
+          patientName={[firstName, lastName].filter(Boolean).join(" ") || inq?.firstName || "Patient"}
+          dob={dob}
+          phone={callerPhone || patientPhone || inq?.phone || ""}
+          email={inq?.email || ""}
+          insuranceProvider={insuranceProvider}
+          insuranceMemberId={insuranceMemberId}
+          referralSource={referralSource}
+          notes={notes}
           onClose={() => { setShowWhatsNext(false); window.location.href = `/inquiries/${id}`; }}
-          onAction={handleWhatsNextAction}
         />
       )}
     </div>

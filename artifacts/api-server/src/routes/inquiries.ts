@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { inquiries, users, patients, auditLogs } from "@workspace/db/schema";
+import { inquiries, users, patients, auditLogs, settings } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
@@ -694,6 +694,85 @@ router.post("/inquiries/:id/complete-call", async (req, res) => {
 
     broadcastSSE("call_status", { inquiryId: id, status: "completed" });
     res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/inquiries/:id/call-outcome — post-call automation ────────────
+router.post("/inquiries/:id/call-outcome", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { action, reason, referralSourceName, levelOfCare, location } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (action === "vob_sent") {
+      // Move to Insurance Verification stage
+      await db.update(inquiries).set({
+        status: "Insurance Verification",
+        updatedAt: new Date(),
+      }).where(eq(inquiries.id, id));
+
+      // Get billing email from settings (fall back to facility email)
+      const [billingRow] = await db.select().from(settings).where(eq(settings.key, "billing_email"));
+      const [facilityRow] = await db.select().from(settings).where(eq(settings.key, "facility_email"));
+      const billingEmail = billingRow?.value || facilityRow?.value || "";
+
+      // Log audit
+      await db.insert(auditLogs).values({
+        userId,
+        action: "vob_sent",
+        resourceType: "inquiry",
+        resourceId: id,
+        inquiryId: id,
+        details: "VOB request initiated from post-call flow",
+      });
+
+      res.json({ ok: true, billingEmail });
+
+    } else if (action === "referred_out") {
+      // Mark as referred out
+      await db.update(inquiries).set({
+        referralOutAt: new Date(),
+        referralOutType: "external",
+        referralOutMessage: referralSourceName || "",
+        status: "Did Not Admit",
+        updatedAt: new Date(),
+      }).where(eq(inquiries.id, id));
+
+      await db.insert(auditLogs).values({
+        userId,
+        action: "referred_out",
+        resourceType: "inquiry",
+        resourceId: id,
+        inquiryId: id,
+        details: JSON.stringify({ referralSourceName, levelOfCare, location }),
+      });
+
+      res.json({ ok: true });
+
+    } else if (action === "did_not_admit") {
+      await db.update(inquiries).set({
+        status: "Did Not Admit",
+        nonAdmitReason: reason || null,
+        updatedAt: new Date(),
+      }).where(eq(inquiries.id, id));
+
+      await db.insert(auditLogs).values({
+        userId,
+        action: "did_not_admit",
+        resourceType: "inquiry",
+        resourceId: id,
+        inquiryId: id,
+        details: JSON.stringify({ reason }),
+      });
+
+      res.json({ ok: true });
+
+    } else {
+      res.status(400).json({ error: "Unknown action" });
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
