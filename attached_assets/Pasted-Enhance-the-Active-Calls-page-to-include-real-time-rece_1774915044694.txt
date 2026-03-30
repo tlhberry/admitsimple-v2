@@ -1,0 +1,138 @@
+Enhance the Active Calls page to include real-time + recent call intelligence from CallTrackingMetrics.
+
+Do NOT remove live calls — expand the page.
+
+🟢 1. KEEP EXISTING
+Keep “Active Calls” section at top
+Keep real-time updates
+🔲 2. ADD: RECENT CALLS (MAIN SECTION)
+
+Add directly below Active Calls:
+
+Title:
+
+👉 “Recent Calls”
+
+Show last 20–30 calls
+
+Each row shows:
+Phone number (or name if known)
+Call status:
+✅ Answered
+❌ Missed
+📞 Completed
+Duration (ex: 2m 14s)
+Time (ex: “5 min ago”)
+Source (Google PPC, etc)
+Example:
++15551234567  
+Missed • 3 min ago  
+Google PPC  
+
++15559876543  
+Answered • 4m 12s  
+Therapist
+🔴 3. ADD: MISSED CALLS (PRIORITY SECTION)
+
+Place ABOVE recent calls:
+
+Title:
+
+👉 “Missed Calls (Needs Follow-Up)”
+
+Only show missed calls from:
+
+Today
+Last X hours (configurable)
+Each row:
+Phone number
+Time
+Source
+
+👉 Add button:
+Call Back
+
+⚡ 4. ADD: QUICK ACTIONS
+
+Each call row should allow:
+
+Tap → open inquiry (or create one)
+Call Back button
+“Mark as handled”
+🧠 5. AUTO-INQUIRY LINKING
+
+When displaying calls:
+
+If phone matches existing inquiry:
+👉 show name instead of number
+If not:
+👉 “New Caller”
+📊 6. ADD: CALL SUMMARY BAR (TOP)
+
+Under title:
+
+Today
+
+21 Calls  
+3 Missed  
+86% Answer Rate
+🔄 7. FILTERS (SIMPLE)
+
+Add small toggle:
+
+[ All ] [ Missed ] [ Answered ]
+📱 8. MOBILE UX RULES
+Full width rows
+Big tap targets
+No tables
+No clutter
+Swipe or tap friendly
+⚙️ 9. DATA FROM CTM
+
+Pull:
+
+call_id
+caller_number
+duration
+status
+timestamp
+tracking_source
+🔥 10. OPTIONAL (HIGH VALUE)
+
+Add:
+
+👉 “Calls → Admits %”
+
+Shows:
+
+How many calls turned into admits
+💡 FINAL PAGE STRUCTURE
+Active Calls (real-time)
+
+Today Summary
+
+Missed Calls (action list)
+
+Recent Calls (full list)
+🚫 WHAT NOT TO DO
+Don’t show empty state only
+Don’t hide recent calls
+Don’t make user click to see data
+💥 RESULT
+
+This becomes:
+👉 a live call dashboard + follow-up machine
+
+REAL TALK
+
+Most centers lose deals here:
+
+Missed calls not followed up
+No visibility into call volume
+No connection between calls → admits
+
+If you build this right:
+👉 you recover lost revenue immediately
+
+If you want next:
+I’ll add AI call scoring (hot vs junk calls) so reps know who to prioritize instantly

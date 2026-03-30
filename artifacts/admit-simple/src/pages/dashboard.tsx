@@ -1,9 +1,9 @@
 import { type ReactNode } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Loader2, Plus, Phone, MessageSquare, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Phone, MessageSquare, ChevronRight, UserPlus, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
@@ -79,7 +79,14 @@ function Section({
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate]     = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [refForm, setRefForm] = useState({ name: "", type: "marketing" });
+  const [actForm, setActForm] = useState({ inquiryId: "", type: "note", subject: "", body: "" });
+  const [refSaving, setRefSaving] = useState(false);
+  const [actSaving, setActSaving] = useState(false);
+  const qc = useQueryClient();
   const { user } = useAuth();
   const role = user?.role ?? "admissions";
 
@@ -123,13 +130,33 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold text-foreground tracking-tight">Command Center</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Live admissions feed</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm shadow-md shadow-primary/20 transition-all active:scale-[0.97]"
-        >
-          <Plus className="w-4 h-4" />
-          New
-        </button>
+        <div className="flex items-center gap-2">
+          {/* + New Inquiry */}
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm shadow-md shadow-primary/20 transition-all active:scale-[0.97]"
+          >
+            <Plus className="w-4 h-4" />
+            New
+          </button>
+          {/* + Referral Source */}
+          <button
+            onClick={() => setShowReferral(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border hover:bg-muted text-foreground rounded-xl font-semibold text-sm transition-all active:scale-[0.97]"
+            title="Add Referral Source"
+          >
+            <UserPlus className="w-4 h-4 text-primary" />
+            <span className="hidden sm:inline">Referral</span>
+          </button>
+          {/* + Activity (compact) */}
+          <button
+            onClick={() => setShowActivity(true)}
+            className="flex items-center gap-1 px-2.5 py-2 bg-card border border-border hover:bg-muted text-muted-foreground rounded-xl text-sm transition-all active:scale-[0.97]"
+            title="Log Activity"
+          >
+            <Zap className="w-4 h-4 text-amber-400" />
+          </button>
+        </div>
       </div>
 
       {/* New Inquiry Sheet */}
@@ -141,6 +168,136 @@ export default function Dashboard() {
           </SheetHeader>
           <div className="p-6">
             <CreateInquiryForm onSuccess={() => setShowCreate(false)} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* New Referral Source Sheet */}
+      <Sheet open={showReferral} onOpenChange={(o) => { setShowReferral(o); if (!o) setRefForm({ name: "", type: "marketing" }); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-0 bg-card border-l border-border">
+          <SheetHeader className="p-6 bg-muted border-b border-border sticky top-0 z-10">
+            <SheetTitle className="text-xl text-foreground">Add Referral Source</SheetTitle>
+            <SheetDescription className="text-muted-foreground">Create a new referral source for tracking leads.</SheetDescription>
+          </SheetHeader>
+          <div className="p-6 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Name <span className="text-red-400">*</span></label>
+              <input
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="e.g. Google PPC, Desert Hope..."
+                value={refForm.name}
+                onChange={(e) => setRefForm(f => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
+              <select
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                value={refForm.type}
+                onChange={(e) => setRefForm(f => ({ ...f, type: e.target.value }))}
+              >
+                <option value="marketing">Marketing</option>
+                <option value="physician">Physician</option>
+                <option value="hospital">Hospital</option>
+                <option value="treatment_center">Treatment Center</option>
+                <option value="alumni">Alumni</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <button
+              disabled={!refForm.name.trim() || refSaving}
+              onClick={async () => {
+                setRefSaving(true);
+                try {
+                  await fetch("/api/referrals", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(refForm) });
+                  qc.invalidateQueries({ queryKey: ["/api/referrals"] });
+                  setShowReferral(false);
+                  setRefForm({ name: "", type: "marketing" });
+                } finally { setRefSaving(false); }
+              }}
+              className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm disabled:opacity-50 transition-all"
+            >
+              {refSaving ? "Saving…" : "Save Referral Source"}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Log Activity Sheet */}
+      <Sheet open={showActivity} onOpenChange={(o) => { setShowActivity(o); if (!o) setActForm({ inquiryId: "", type: "note", subject: "", body: "" }); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-0 bg-card border-l border-border">
+          <SheetHeader className="p-6 bg-muted border-b border-border sticky top-0 z-10">
+            <SheetTitle className="text-xl text-foreground">Log Activity</SheetTitle>
+            <SheetDescription className="text-muted-foreground">Record a call, note, or touchpoint.</SheetDescription>
+          </SheetHeader>
+          <div className="p-6 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Link to Inquiry (optional)</label>
+              <select
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                value={actForm.inquiryId}
+                onChange={(e) => setActForm(f => ({ ...f, inquiryId: e.target.value }))}
+              >
+                <option value="">— None —</option>
+                {recentInqs.map((r: any) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
+              <select
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                value={actForm.type}
+                onChange={(e) => setActForm(f => ({ ...f, type: e.target.value }))}
+              >
+                <option value="note">Note</option>
+                <option value="call">Call</option>
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+                <option value="meeting">Meeting</option>
+                <option value="task">Task</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Subject</label>
+              <input
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Brief summary…"
+                value={actForm.subject}
+                onChange={(e) => setActForm(f => ({ ...f, subject: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Notes</label>
+              <textarea
+                rows={4}
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                placeholder="Details, outcome, next steps…"
+                value={actForm.body}
+                onChange={(e) => setActForm(f => ({ ...f, body: e.target.value }))}
+              />
+            </div>
+            <button
+              disabled={!actForm.subject.trim() || actSaving}
+              onClick={async () => {
+                setActSaving(true);
+                try {
+                  await fetch("/api/activities", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+                    inquiryId: actForm.inquiryId || null,
+                    type: actForm.type,
+                    subject: actForm.subject,
+                    body: actForm.body,
+                  }) });
+                  qc.invalidateQueries({ queryKey: ["/api/activities"] });
+                  setShowActivity(false);
+                  setActForm({ inquiryId: "", type: "note", subject: "", body: "" });
+                } finally { setActSaving(false); }
+              }}
+              className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm disabled:opacity-50 transition-all"
+            >
+              {actSaving ? "Saving…" : "Save Activity"}
+            </button>
           </div>
         </SheetContent>
       </Sheet>
