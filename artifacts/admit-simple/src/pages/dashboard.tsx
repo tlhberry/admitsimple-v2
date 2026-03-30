@@ -61,7 +61,7 @@ export default function Dashboard() {
       {/* KPI Cards — clickable */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
         <KpiCard title="Today's Inquiries" value={data.kpi.todaysInquiries} icon={Activity}      href="/inquiries" accent="cyan"    />
-        <KpiCard title="Week's Admissions"  value={data.kpi.weeksAdmissions} icon={ClipboardCheck} href="/pipeline"  accent="emerald" />
+        <KpiCard title="Week's Admissions"  value={data.kpi.weeksAdmissions} icon={ClipboardCheck} href="/inquiries?tab=admitted"  accent="emerald" />
         <KpiCard title="Current Census"     value={data.kpi.census}           icon={Users}         href="/patients"  accent="purple"  />
         <KpiCard title="Conversion Rate"    value={`${data.kpi.conversionRate}%`} icon={TrendingUp} href="/analytics" accent="amber"   />
       </div>

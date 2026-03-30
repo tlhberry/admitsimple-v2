@@ -65,7 +65,13 @@ function groupByDay(items: any[]) {
 // ── Component ─────────────────────────────────────────────────────
 export default function InquiriesList() {
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<TabKey>("active");
+  const urlTab = typeof window !== "undefined"
+    ? (new URLSearchParams(window.location.search).get("tab") as TabKey | null)
+    : null;
+  const validTabs: TabKey[] = ["active","new","needs_action","admitted","discharged","did_not_admit","all"];
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    urlTab && validTabs.includes(urlTab) ? urlTab : "active"
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [, navigate] = useLocation();
 
