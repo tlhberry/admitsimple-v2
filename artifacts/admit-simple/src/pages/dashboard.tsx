@@ -1,17 +1,21 @@
 import { useGetDashboardAnalytics } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight } from "lucide-react";
+import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight, Plus } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn, getStatusColor, formatDate, groupByDay } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { AdmissionsTaskBoard } from "@/components/AdmissionsTaskBoard";
+import { useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { CreateInquiryForm } from "@/components/CreateInquiryForm";
 
 const COLORS = ['#5BC8DC', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
 
 export default function Dashboard() {
   const { data, isLoading } = useGetDashboardAnalytics();
   const [, navigate] = useLocation();
+  const [showCreate, setShowCreate] = useState(false);
 
   if (isLoading) {
     return (
@@ -32,12 +36,25 @@ export default function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1 text-sm">Overview of admissions performance and pipeline.</p>
         </div>
-        <Link href="/inquiries?new=1">
-          <button className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium shadow-md shadow-primary/20 transition-all hover:-translate-y-0.5 flex items-center gap-2 text-sm">
-            <ClipboardCheck className="w-4 h-4" />
-            New Inquiry
-          </button>
-        </Link>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium shadow-md shadow-primary/20 transition-all hover:-translate-y-0.5 flex items-center gap-2 text-sm"
+        >
+          <Plus className="w-4 h-4" />
+          New Inquiry
+        </button>
+
+        <Sheet open={showCreate} onOpenChange={setShowCreate}>
+          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0 bg-card border-l border-border">
+            <SheetHeader className="p-6 bg-muted border-b border-border sticky top-0 z-10">
+              <SheetTitle className="text-xl text-foreground">Create New Inquiry</SheetTitle>
+              <SheetDescription className="text-muted-foreground">Enter details manually or use AI to parse a document.</SheetDescription>
+            </SheetHeader>
+            <div className="p-6">
+              <CreateInquiryForm onSuccess={() => setShowCreate(false)} />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* KPI Cards — clickable */}
