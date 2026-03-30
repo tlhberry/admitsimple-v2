@@ -1,7 +1,7 @@
 import { useGetDashboardAnalytics } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight, Plus } from "lucide-react";
+import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight, Plus, Phone, MessageSquare } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn, getStatusColor, formatDate, groupByDay } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
@@ -135,9 +135,28 @@ export default function Dashboard() {
                     <span className="text-[11px] text-muted-foreground">{inq.levelOfCare || "—"}</span>
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-xs text-muted-foreground">{formatDate(inq.createdAt)}</div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 ml-auto" />
+                <div className="shrink-0 flex items-center gap-1.5 ml-auto">
+                  {(inq as any).phone && (
+                    <>
+                      <a
+                        href={`tel:${(inq as any).phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        title="Call"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href={`sms:${(inq as any).phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                        title="Text"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </a>
+                    </>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </div>
               </button>
             )),
@@ -177,8 +196,30 @@ export default function Dashboard() {
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">{inq.levelOfCare || '—'}</td>
                     <td className="px-6 py-4 text-muted-foreground">{formatDate(inq.createdAt)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="text-primary hover:text-primary/80 font-medium text-sm">View</span>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {(inq as any).phone && (
+                          <>
+                            <a
+                              href={`tel:${(inq as any).phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title={`Call ${(inq as any).phone}`}
+                              className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`sms:${(inq as any).phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title={`Text ${(inq as any).phone}`}
+                              className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </a>
+                          </>
+                        )}
+                        <span className="text-primary hover:text-primary/80 font-medium text-sm ml-1">View</span>
+                      </div>
                     </td>
                   </tr>
                 )),
