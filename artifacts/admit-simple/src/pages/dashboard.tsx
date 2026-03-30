@@ -1,7 +1,7 @@
 import { useGetDashboardAnalytics } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight, Plus, Phone, MessageSquare } from "lucide-react";
+import { Loader2, Users, ClipboardCheck, Activity, TrendingUp, Sparkles, ClipboardList, ChevronRight, Plus, Phone, MessageSquare, Settings } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn, getStatusColor, formatDate, groupByDay } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
@@ -9,6 +9,7 @@ import { AdmissionsTaskBoard } from "@/components/AdmissionsTaskBoard";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
+import { useAuth } from "@/hooks/use-auth";
 
 const COLORS = ['#5BC8DC', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
 
@@ -16,6 +17,8 @@ export default function Dashboard() {
   const { data, isLoading } = useGetDashboardAnalytics();
   const [, navigate] = useLocation();
   const [showCreate, setShowCreate] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   if (isLoading) {
     return (
@@ -228,6 +231,26 @@ export default function Dashboard() {
           </table>
         </div>
       </Card>
+
+      {/* Mobile-only Settings shortcut — admin only */}
+      {isAdmin && (
+        <div className="md:hidden mt-4">
+          <Link href="/settings">
+            <div className="flex items-center justify-between px-4 py-3.5 bg-card border border-border rounded-2xl hover:border-primary/30 transition-colors active:scale-[0.99] cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                  <Settings className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Settings</p>
+                  <p className="text-xs text-muted-foreground">Facility, users &amp; system config</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </Link>
+        </div>
+      )}
     </Layout>
   );
 }

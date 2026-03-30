@@ -23,6 +23,8 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isBdRole = user?.role === "bd";
+  const hasAdmissions = user?.role === "admissions" || isAdmin;
 
   const isActive = (href: string) =>
     href === "/" ? location === "/" : location.startsWith(href);
@@ -72,11 +74,13 @@ export function Sidebar() {
   ];
 
   const mobileItems = [
-    { icon: Home,          label: "Home",     href: "/" },
-    { icon: ClipboardList, label: "Inquiries",href: "/inquiries" },
-    { icon: GitBranch,     label: "Pipeline", href: "/pipeline" },
-    { icon: Building2,     label: "BD",       href: "/referral-accounts" },
-    ...(isAdmin ? [{ icon: Settings, label: "Settings", href: "/settings" }] : []),
+    { icon: Home,          label: "Home",      href: "/" },
+    { icon: ClipboardList, label: "Inquiries", href: "/inquiries" },
+    { icon: GitBranch,     label: "Pipeline",  href: "/pipeline" },
+    isBdRole
+      ? { icon: Building2, label: "BD",    href: "/referral-accounts", badge: undefined, badgeColor: undefined }
+      : { icon: Phone,     label: "Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const },
+    { icon: BarChart2, label: "Reports", href: "/reports", badge: undefined, badgeColor: undefined },
   ];
 
   const userInitials = user?.initials || user?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "U";
@@ -151,10 +155,21 @@ export function Sidebar() {
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border flex justify-around p-2 pb-safe z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
         {mobileItems.map(item => {
           const active = isActive(item.href);
+          const anyItem = item as any;
           return (
             <Link key={item.href} href={item.href} className="flex-1">
               <div className="flex flex-col items-center gap-1 p-2 cursor-pointer">
-                <item.icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "text-sidebar-foreground")} />
+                <div className="relative">
+                  <item.icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "text-sidebar-foreground")} />
+                  {anyItem.badge && (
+                    <span className={cn(
+                      "absolute -top-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1",
+                      anyItem.badgeColor === "rose" ? "bg-rose-500 text-white" : "bg-primary text-white"
+                    )}>
+                      {anyItem.badge}
+                    </span>
+                  )}
+                </div>
                 <span className={cn("text-[10px] font-medium transition-colors", active ? "text-primary" : "text-sidebar-foreground")}>
                   {item.label}
                 </span>
