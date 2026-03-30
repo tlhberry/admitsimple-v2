@@ -1,0 +1,145 @@
+We are upgrading the AI Report Builder to support SAVED REPORTS that persist on the Reports page.
+
+DO NOT break existing reporting or AI functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+Allow users to:
+1. Generate a report using AI ONE TIME
+2. Save that report to their dashboard
+3. Have it auto-refresh with live data (no AI needed after creation)
+4. Delete or replace reports anytime
+
+-----------------------------------
+CORE CONCEPT
+-----------------------------------
+
+AI is ONLY used to:
+→ Create the report definition (query + structure)
+
+After that:
+→ The report runs like a normal pre-built report
+
+-----------------------------------
+DATABASE
+-----------------------------------
+
+Create new table: saved_reports
+
+Fields:
+- id
+- name (string)
+- user_id
+- query_definition (JSON or SQL)
+- columns (JSON)
+- visualization_type (table | bar | line | etc)
+- filters (JSON)
+- created_at
+- updated_at
+
+-----------------------------------
+AI REPORT CREATION FLOW
+-----------------------------------
+
+When user uses "Ask AI":
+
+1. AI generates:
+- SQL query OR structured query definition
+- column labels
+- optional chart type
+
+2. Show preview (table/chart)
+
+3. Add button:
+→ "Save Report"
+
+-----------------------------------
+SAVE REPORT
+-----------------------------------
+
+When clicked:
+- Prompt user for name:
+  "Admissions by Rep (Last 30 Days)"
+
+- Store:
+  - query_definition
+  - columns
+  - filters
+  - user_id
+
+-----------------------------------
+DISPLAY SAVED REPORTS
+-----------------------------------
+
+On Reports page:
+
+Create new section:
+"Saved Reports"
+
+- Display each saved report as a card
+- Each card auto-loads data (no AI call)
+- Runs query on page load
+
+-----------------------------------
+AUTO-REFRESH
+-----------------------------------
+
+Saved reports must:
+- Always reflect current data
+- Respect global filters (date range, etc)
+
+-----------------------------------
+DELETE REPORT
+-----------------------------------
+
+Each saved report card has:
+- "Delete" button
+
+When clicked:
+- Remove from saved_reports table
+- Remove from UI
+
+-----------------------------------
+REPLACE / ADD NEW REPORT
+-----------------------------------
+
+User can:
+- Add unlimited saved reports (or limit to 6–8 for UI clarity)
+
+Optional:
+- "Add Report" button opens AI builder
+
+-----------------------------------
+UI REQUIREMENTS
+-----------------------------------
+
+- Saved reports appear in grid layout
+- Match existing card style
+- No empty states once reports exist
+- Clean spacing
+
+-----------------------------------
+IMPORTANT RULES
+-----------------------------------
+
+- DO NOT call AI when loading saved reports
+- ONLY use stored query_definition
+- Validate query is safe (SELECT only)
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+User flow:
+
+1. Ask AI → generate report
+2. Click "Save"
+3. Report lives on dashboard permanently
+4. Auto-updates with live data
+5. User can delete anytime
+
+AI becomes a one-time builder, not something they depend on daily.
+
+-----------------------------------
+END

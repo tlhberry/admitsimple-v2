@@ -1,0 +1,154 @@
+We are updating the Bed Board feature to operate in “Internal Tracking Mode” (not EMR synced), while preparing for future EMR integration.
+
+DO NOT remove the Bed Board feature.
+
+-----------------------------------
+GOAL
+-----------------------------------
+1. Keep Bed Board active and useful for admissions
+2. Clearly communicate it is NOT EMR-synced
+3. Allow manual control of bed status
+4. Prepare system for future EMR integration
+
+-----------------------------------
+MODE SYSTEM
+-----------------------------------
+
+Add Bed Board Mode setting:
+
+- "Internal Tracking" (default)
+- "EMR Synced" (future, not implemented yet)
+
+Store in settings table:
+bed_board_mode
+
+-----------------------------------
+UI UPDATE (BED BOARD PAGE)
+-----------------------------------
+
+At the top of the Bed Board page, add a banner:
+
+Title:
+"Admissions Bed Board"
+
+Subtext:
+"This board is managed by the admissions team and is not synced with the EMR."
+
+-----------------------------------
+TRUST ELEMENTS
+-----------------------------------
+
+Add:
+- "Last Updated: [timestamp]"
+- Update this whenever:
+  - a bed is assigned
+  - a patient is discharged
+  - a status is changed
+
+-----------------------------------
+BED CONTROL (MANUAL)
+-----------------------------------
+
+Allow admissions users to:
+
+- Assign a patient to a bed
+- Mark bed as:
+  - available
+  - occupied
+  - reserved
+
+-----------------------------------
+PATIENT STAY TRACKING
+-----------------------------------
+
+Create table: patient_stays
+
+Fields:
+- id
+- inquiry_id
+- patient_name
+- bed_id
+- admit_date
+- expected_discharge_date
+- actual_discharge_date
+- status (active, discharged)
+
+-----------------------------------
+ADMIT LOGIC
+-----------------------------------
+
+When inquiry moves to "Admitted":
+
+- Create patient_stay record
+- Assign bed
+- Set bed status = occupied
+- Update last_updated timestamp
+
+-----------------------------------
+DISCHARGE LOGIC
+-----------------------------------
+
+Add button:
+"Discharge Patient"
+
+When clicked:
+- Set actual_discharge_date
+- status = discharged
+- Free up bed (status = available)
+- Update last_updated timestamp
+
+-----------------------------------
+RESERVED BEDS
+-----------------------------------
+
+Allow:
+- Future admits to reserve a bed
+- Status = reserved
+- Show scheduled admit date
+
+-----------------------------------
+ADMIN SETTINGS
+-----------------------------------
+
+Add toggle:
+
+"Enable Bed Board" ON / OFF
+
+Add dropdown:
+Bed Board Mode:
+- Internal Tracking
+- EMR Synced (disabled for now)
+
+-----------------------------------
+FUTURE PREP (IMPORTANT)
+-----------------------------------
+
+Structure system so that:
+
+- patient_stays can later sync with EMR
+- bed status can be overridden by external system
+- keep all logic modular
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not claim data is EMR accurate
+- Do not remove manual control
+- Do not block admissions users from editing beds
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+Admissions team can:
+- Track beds in real time
+- Assign patients to beds
+- Discharge patients
+- Trust the board as an operational tool
+
+While clearly understanding:
+→ It is not EMR synced (yet)
+
+-----------------------------------
+END

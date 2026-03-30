@@ -318,6 +318,18 @@ export const dailyTaskCompletions = pgTable("daily_task_completions", {
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
+// ─── Saved Reports ────────────────────────────────────────────────────────────
+export const savedReports = pgTable("saved_reports", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  userId: integer("user_id").references(() => users.id),
+  sqlQuery: text("sql_query").notNull(),
+  columns: jsonb("columns"),
+  visualizationType: varchar("visualization_type", { length: 50 }).default("table"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
