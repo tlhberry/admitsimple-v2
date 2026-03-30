@@ -220,6 +220,24 @@ function WhatsNextModal({
     setStep("refer_message");
   };
 
+  const handleCreateReferral = async () => {
+    const name = referralSearch.trim();
+    if (!name) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/referrals", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, type: "facility" }),
+      });
+      const created = await res.json();
+      setReferrals(prev => [...prev, created]);
+      handleReferSelect(created);
+    } catch {}
+    setLoading(false);
+  };
+
   const handleReferSend = async () => {
     if (!selectedReferral) return;
     sendReferralMsg(selectedReferral);
@@ -394,10 +412,11 @@ function WhatsNextModal({
                 className="w-full h-11 rounded-xl bg-muted border border-border text-foreground text-sm pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {filteredReferrals.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-6">No referral sources found</p>
-              ) : filteredReferrals.slice(0, 20).map(r => (
+            <div className="space-y-1.5 max-h-56 overflow-y-auto">
+              {filteredReferrals.length === 0 && !referralSearch.trim() && (
+                <p className="text-center text-muted-foreground text-sm py-6">Type to search your referral network</p>
+              )}
+              {filteredReferrals.slice(0, 20).map(r => (
                 <button
                   key={r.id}
                   type="button"
@@ -415,6 +434,26 @@ function WhatsNextModal({
                 </button>
               ))}
             </div>
+            {referralSearch.trim().length >= 2 && (
+              <button
+                type="button"
+                onClick={handleCreateReferral}
+                disabled={loading}
+                className="w-full flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/60 transition-colors text-left"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                    <span className="text-primary font-bold text-sm leading-none">+</span>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm font-semibold text-primary">Add &ldquo;{referralSearch.trim()}&rdquo;</span>
+                  <span className="text-xs text-muted-foreground block">Create new referral account</span>
+                </div>
+              </button>
+            )}
           </div>
         </ModalShell>
       )}
