@@ -8,6 +8,7 @@ export async function logAudit(
   action: string,
   resourceType: string,
   resourceId?: number,
+  opts?: { inquiryId?: number; details?: Record<string, any> },
 ) {
   try {
     const sess = req.session as any;
@@ -18,6 +19,8 @@ export async function logAudit(
       action,
       resourceType,
       resourceId: resourceId ?? null,
+      inquiryId: opts?.inquiryId ?? null,
+      details: opts?.details ? JSON.stringify(opts.details) : null,
       ipAddress: req.ip || null,
     });
   } catch {

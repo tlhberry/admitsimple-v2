@@ -354,6 +354,8 @@ export const auditLogs = pgTable("audit_logs", {
   action: varchar("action", { length: 100 }).notNull(),
   resourceType: varchar("resource_type", { length: 50 }),
   resourceId: integer("resource_id"),
+  inquiryId: integer("inquiry_id").references(() => inquiries.id),
+  details: text("details"),
   ipAddress: varchar("ip_address", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 });

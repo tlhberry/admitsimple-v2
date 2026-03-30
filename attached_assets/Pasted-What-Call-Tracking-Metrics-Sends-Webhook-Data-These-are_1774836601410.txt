@@ -1,0 +1,36 @@
+What Call Tracking Metrics Sends (Webhook Data)
+These are the raw fields CTM pushes to your webhook when a call comes in:
+CTM FieldWhat It Iscaller_nameName of the person who calledcaller_numberCaller's phone numbertracking_numberYour CTM tracking number they called (e.g. (800) 555-1234)call_idUnique CTM call IDdurationCall duration in secondscall_start_timeTimestamp of when the call happenedrecording_urlURL to the call recording audio filesourceTraffic source CTM detected (e.g. google_ads, facebook, organic)locationCaller's city/state based on their number
+
+What Gets Stored in the Client Profile (Database Fields)
+Your app maps that CTM webhook payload and saves it across two categories:
+CTM-Specific Fields (raw CTM data, stored as-is):
+
+ctmCallId — the CTM call ID
+ctmTrackingNumber — which tracking number they called
+ctmSource — the ad source CTM detected (e.g. google_ads)
+callDurationSeconds — duration in seconds (stored as 180)
+callRecordingUrl — link to recording (clickable "Listen to Recording" in the profile)
+callDateTime — exact timestamp of the call
+
+Profile Fields populated from CTM data:
+
+callerName — mapped from caller_name
+phoneNumber — mapped from caller_number
+referralSource — set to "google" (derived from CTM source)
+referralDetails — set to "google_ads" (the raw CTM source value)
+onlineSource — set to "google_ppc" (your internal mapping of CTM source)
+referralOrigin — set to "online" automatically since it came from CTM
+initialNotes — auto-generated summary block containing: Call ID, Tracking Number, Call Duration, Call Time, and Location
+
+AI/Transcription Fields (populated later):
+
+transcription — call transcription (if enabled)
+aiExtractedData — AI-parsed data from the call
+callSummary — AI-generated summary of the call
+
+
+What Admissions Staff Fills In Manually After the Call
+Everything else in the profile is entered by your team, including: client name (if different from caller), email, date of birth, treatment type (SUD/mental health/eating disorder), presenting problems, insurance info, VOB details, pre-assessment, scheduling, and admission data.
+
+Bottom line: CTM auto-creates the inquiry record with the caller's name, phone, call time, duration, recording link, and ad source. Your staff then works the lead from there through the pipeline.

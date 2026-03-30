@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { inquiries, users, patients } from "@workspace/db/schema";
+import { inquiries, users, patients, auditLogs } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
@@ -155,7 +155,7 @@ router.post("/inquiries", async (req, res) => {
     const inquiryNum = `INQ-${row.id.toString().padStart(6, "0")}`;
     await db.update(inquiries).set({ inquiryNumber: inquiryNum }).where(eq(inquiries.id, row.id));
 
-    await logAudit(req, "Created Inquiry", "inquiry", row.id);
+    await logAudit(req, "Created Inquiry", "inquiry", row.id, { inquiryId: row.id });
 
     const full = await db.select(fullInquirySelect)
       .from(inquiries)
@@ -191,6 +191,10 @@ router.put("/inquiries/:id", async (req, res) => {
     if (isBdRep(req) && data.status !== undefined) {
       res.status(403).json({ error: "BD reps cannot change inquiry pipeline status" }); return;
     }
+
+    // Fetch current state before updating so we can diff changes
+    const [before] = await db.select().from(inquiries).where(eq(inquiries.id, id));
+
     const update: any = { updatedAt: new Date() };
     const fields = [
       "firstName","lastName","phone","email","dob","insuranceProvider","insuranceMemberId",
@@ -203,7 +207,41 @@ router.put("/inquiries/:id", async (req, res) => {
     if (data.preAssessmentDate !== undefined) update.preAssessmentDate = data.preAssessmentDate ? new Date(data.preAssessmentDate) : null;
     if (data.appointmentDate !== undefined) update.appointmentDate = data.appointmentDate ? new Date(data.appointmentDate) : null;
     await db.update(inquiries).set(update).where(eq(inquiries.id, id));
-    await logAudit(req, "Updated Inquiry", "inquiry", id);
+
+    // Build human-readable labels for changed fields
+    const FIELD_LABELS: Record<string, string> = {
+      firstName: "First Name", lastName: "Last Name", phone: "Phone", email: "Email",
+      dob: "Date of Birth", insuranceProvider: "Insurance Provider", insuranceMemberId: "Member ID",
+      levelOfCare: "Level of Care", status: "Stage", priority: "Priority", assignedTo: "Assigned To",
+      referralSource: "Referral Source", notes: "Notes", primaryDiagnosis: "Primary Diagnosis",
+      substanceHistory: "Substance History", medicalHistory: "Medical History",
+      mentalHealthHistory: "Mental Health History", preAssessmentCompleted: "Pre-Assessment",
+      appointmentDate: "Appointment", referralDestination: "Referral Destination",
+    };
+    const changedFields: string[] = [];
+    for (const [key, label] of Object.entries(FIELD_LABELS)) {
+      if (key === "assignedTo") {
+        const newVal = data.assignedTo !== undefined ? (data.assignedTo ? parseInt(data.assignedTo) : null) : undefined;
+        if (newVal !== undefined && newVal !== (before as any)?.[key]) changedFields.push(label);
+      } else if (data[key] !== undefined && data[key] !== (before as any)?.[key]) {
+        changedFields.push(label);
+      }
+    }
+    if (changedFields.length > 0) {
+      const action = changedFields.length === 1
+        ? `Updated ${changedFields[0]}`
+        : `Updated ${changedFields.slice(0, 2).join(", ")}${changedFields.length > 2 ? ` +${changedFields.length - 2} more` : ""}`;
+      const details: Record<string, any> = {};
+      changedFields.forEach(label => {
+        const key = Object.keys(FIELD_LABELS).find(k => FIELD_LABELS[k] === label)!;
+        const oldVal = (before as any)?.[key];
+        const newVal = key === "assignedTo" ? (data.assignedTo ? parseInt(data.assignedTo) : null) : data[key];
+        details[label] = { from: oldVal ?? null, to: newVal ?? null };
+      });
+      await logAudit(req, action.slice(0, 100), "inquiry", id, { inquiryId: id, details });
+    } else {
+      await logAudit(req, "Viewed/Saved Inquiry", "inquiry", id, { inquiryId: id });
+    }
 
     const rows = await db.select(fullInquirySelect)
       .from(inquiries)
@@ -477,7 +515,7 @@ router.put("/inquiries/:id/non-admit", async (req, res) => {
       updatedAt: new Date(),
     }).where(eq(inquiries.id, parseInt(req.params.id))).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
-    await logAudit(req, "did_not_admit", "inquiry", row.id);
+    await logAudit(req, "Did Not Admit", "inquiry", row.id, { inquiryId: row.id, details: { reason, notes } });
     res.json(row);
   } catch (err) {
     req.log.error(err);
@@ -498,8 +536,32 @@ router.post("/inquiries/:id/refer-out", async (req, res) => {
       updatedAt: new Date(),
     }).where(eq(inquiries.id, parseInt(req.params.id))).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
-    await logAudit(req, `refer_out:${type}`, "inquiry", row.id);
+    await logAudit(req, `Referred Out: ${type}`, "inquiry", row.id, { inquiryId: row.id, details: { type } });
     res.json(row);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Audit Log for a specific inquiry ─────────────────────────────────────────
+router.get("/inquiries/:id/audit-log", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const rows = await db
+      .select({
+        id: auditLogs.id,
+        action: auditLogs.action,
+        details: auditLogs.details,
+        createdAt: auditLogs.createdAt,
+        userName: users.name,
+        userId: auditLogs.userId,
+      })
+      .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.userId, users.id))
+      .where(eq(auditLogs.inquiryId, id))
+      .orderBy(desc(auditLogs.createdAt));
+    res.json(rows);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

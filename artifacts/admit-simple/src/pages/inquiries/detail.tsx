@@ -44,6 +44,138 @@ const NON_ADMIT_REASONS = [
   "Other",
 ];
 
+// ─── Audit log helpers (must be defined before InquiryDetail) ─────────────────
+
+function getInitials(name: string): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function timeAgo(date: string | null | undefined): string {
+  if (!date) return "";
+  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+  if (diff < 1) return "just now";
+  if (diff < 60) return `${diff}m ago`;
+  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+  if (diff < 10080) return `${Math.floor(diff / 1440)}d ago`;
+  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function auditDotColor(action: string) {
+  if (action.startsWith("Created")) return "bg-emerald-400";
+  if (action.includes("Stage") || action.startsWith("Updated Stage")) return "bg-primary";
+  if (action.startsWith("Did Not Admit")) return "bg-rose-400";
+  if (action.startsWith("Referred Out")) return "bg-amber-400";
+  if (action.startsWith("Converted")) return "bg-violet-400";
+  return "bg-muted-foreground/50";
+}
+
+function AuditLogCard({ inquiryId, parsedAt, vobData, onTabChange }: {
+  inquiryId: number;
+  parsedAt: any;
+  vobData: any;
+  onTabChange: (tab: string) => void;
+}) {
+  const { data: log = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/inquiries", inquiryId, "audit-log"],
+    queryFn: () => fetch(`/api/inquiries/${inquiryId}/audit-log`, { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 15000,
+  });
+
+  return (
+    <Card className="rounded-2xl border-border">
+      <CardHeader className="py-4 border-b border-border">
+        <CardTitle className="text-sm text-foreground">Change History</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 space-y-4">
+        <button
+          onClick={() => onTabChange("clinical_ai")}
+          className="w-full flex items-center gap-2 p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-400 hover:bg-indigo-500/15 transition-colors"
+        >
+          <ClipboardCheck className="w-3.5 h-3.5" />
+          Pre-Screen Forms &amp; Clinical AI
+        </button>
+        <button
+          onClick={() => onTabChange("vob")}
+          className="w-full flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/15 transition-colors"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          {vobData ? "View/Edit VOB" : "Start Insurance Verification"}
+        </button>
+
+        <div className="border-t border-border pt-4">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity Log</p>
+          {isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+          ) : log.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">No changes recorded yet.</p>
+          ) : (
+            <div className="relative">
+              <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border/60" />
+              <div className="space-y-3">
+                {log.map((entry: any) => {
+                  let details: Record<string, any> | null = null;
+                  try { details = entry.details ? JSON.parse(entry.details) : null; } catch {}
+                  return (
+                    <div key={entry.id} className="flex gap-3 pl-1">
+                      <div className="flex-shrink-0 w-3.5 flex items-start justify-center mt-1.5">
+                        <div className={`w-2 h-2 rounded-full ${auditDotColor(entry.action)}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-medium text-foreground leading-tight">{entry.action}</p>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {entry.userName && (
+                              <div
+                                className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-bold border border-primary/20"
+                                title={entry.userName}
+                              >
+                                {getInitials(entry.userName)}
+                              </div>
+                            )}
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">{timeAgo(entry.createdAt)}</span>
+                          </div>
+                        </div>
+                        {details && Object.keys(details).length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {Object.entries(details)
+                              .filter(([k]) => !["reason", "notes", "type"].includes(k))
+                              .slice(0, 3)
+                              .map(([field, val]: any) => (
+                                <p key={field} className="text-[10px] text-muted-foreground leading-tight">
+                                  <span className="font-medium">{field}:</span>{" "}
+                                  {val?.from != null && (
+                                    <><span className="line-through opacity-50">{String(val.from).slice(0, 20)}</span>{" → "}</>
+                                  )}
+                                  <span className="text-foreground/70">
+                                    {val?.to != null ? String(val.to).slice(0, 20) : val != null ? String(val).slice(0, 30) : "—"}
+                                  </span>
+                                </p>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {parsedAt && (
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-xs text-primary bg-primary/10 p-2 rounded-lg">
+              <Sparkles className="w-3.5 h-3.5" /> AI Parsed Intake
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 export default function InquiryDetail() {
   const params = useParams<{ id: string }>();
   const id = parseInt(params?.id || "0");
@@ -883,44 +1015,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         {/* Right sidebar — hide on full-width tabs */}
         {activeTab !== "clinical_ai" && activeTab !== "vob" && (
           <div className="space-y-5">
-            <Card className="rounded-2xl border-border">
-              <CardHeader className="py-4 border-b border-border">
-                <CardTitle className="text-sm text-foreground">Status Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 text-sm space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Created</span>
-                  <span className="font-medium text-foreground">{formatDate(inq.createdAt)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Last Updated</span>
-                  <span className="font-medium text-foreground">{formatDate(inq.updatedAt)}</span>
-                </div>
-                {inq.parsedAt && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-xs text-primary bg-primary/10 p-2 rounded-lg">
-                    <Sparkles className="w-4 h-4" /> AI Parsed Intake
-                  </div>
-                )}
-                <div className="mt-3 pt-3 border-t border-border">
-                  <button
-                    onClick={() => setActiveTab("clinical_ai")}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-400 hover:bg-indigo-500/15 transition-colors"
-                  >
-                    <ClipboardCheck className="w-3.5 h-3.5" />
-                    Pre-Screen Forms &amp; Clinical AI
-                  </button>
-                </div>
-                <div className="mt-3 pt-3 border-t border-border">
-                  <button
-                    onClick={() => setActiveTab("vob")}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/15 transition-colors"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    {inq.vobData ? "View/Edit VOB" : "Start Insurance Verification"}
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <AuditLogCard inquiryId={id} parsedAt={inq.parsedAt} vobData={inq.vobData} onTabChange={setActiveTab} />
 
             {/* VOB Summary Card (in sidebar if VOB has been started) */}
             {inq.vobData && (
@@ -1101,3 +1196,4 @@ function TextBlock({ label, text }: { label: string; text: any }) {
     </div>
   );
 }
+
