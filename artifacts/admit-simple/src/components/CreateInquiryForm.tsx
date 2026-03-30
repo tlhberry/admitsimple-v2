@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UploadCloud, Sparkles, Loader2, CheckCircle2, Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { UploadCloud, Sparkles, Loader2, CheckCircle2, Search, History } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateInquiryBody } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -28,21 +29,37 @@ const formSchema = z.object({
   status: z.string().default("New"),
   priority: z.string().default("Medium"),
   primaryDiagnosis: z.string().optional(),
-  substanceHistory: z.string().optional(),
   medicalHistory: z.string().optional(),
   notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+function buildTreatmentText(facility: string, year: string, types: string[]): string {
+  const typeStr = types.length > 0 ? ` — ${types.join("/")}` : "";
+  const parts = [facility && `Facility: ${facility}`, year && `Year: ${year}`].filter(Boolean).join(", ");
+  return parts ? `${parts}${typeStr}` : types.length > 0 ? types.join("/") : "Yes";
+}
+
 export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   const { createInquiry } = useInquiriesMutations();
   const { parseIntake } = useAIFeatures();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [aiFields, setAiFields] = useState<Set<string>>(new Set());
   const [isParsing, setIsParsing] = useState(false);
   const [parseSuccess, setParseSuccess] = useState(false);
+
+  // Treatment history (managed outside react-hook-form)
+  const [hadPreviousTreatment, setHadPreviousTreatment] = useState(false);
+  const [prevFacilityName, setPrevFacilityName] = useState("");
+  const [prevTreatmentYear, setPrevTreatmentYear] = useState("");
+  const [prevTreatmentTypes, setPrevTreatmentTypes] = useState<string[]>([]);
+
+  const toggleType = (type: string) =>
+    setPrevTreatmentTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
 
   const { data: referralSources = [] } = useQuery<any[]>({
     queryKey: ["/api/referrals"],
@@ -52,7 +69,7 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { status: "New", priority: "Medium" }
+    defaultValues: { status: "New", priority: "Medium" },
   });
 
   const watchedReferralSource = form.watch("referralSource");
@@ -60,20 +77,16 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsParsing(true);
     try {
       const data = await parseIntake.mutateAsync({ data: { document: file } });
-      
       const newAiFields = new Set<string>();
-      
       Object.entries(data).forEach(([key, value]) => {
-        if (value && key !== 'fieldsExtracted') {
+        if (value && key !== "fieldsExtracted") {
           form.setValue(key as any, value);
           newAiFields.add(key);
         }
       });
-      
       setAiFields(newAiFields);
       setParseSuccess(true);
       setTimeout(() => setParseSuccess(false), 5000);
@@ -81,12 +94,63 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
       console.error(err);
     } finally {
       setIsParsing(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const onSubmit = async (data: FormValues) => {
-    await createInquiry.mutateAsync({ data: data as CreateInquiryBody });
+    const created = await createInquiry.mutateAsync({ data: data as CreateInquiryBody });
+    const inquiryId = (created as any)?.id;
+
+    if (inquiryId) {
+      const treatmentText = hadPreviousTreatment
+        ? buildTreatmentText(prevFacilityName, prevTreatmentYear, prevTreatmentTypes)
+        : "";
+
+      // ── Seed Pre-Cert form ───────────────────────────────────────────────
+      const preCertSeed: Record<string, any> = {};
+      if (data.primaryDiagnosis) preCertSeed.presentingProblem = data.primaryDiagnosis;
+      if (treatmentText) preCertSeed.treatmentHistory = treatmentText;
+
+      if (Object.keys(preCertSeed).length > 0) {
+        fetch(`/api/inquiries/${inquiryId}/pre-cert-form`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ formData: preCertSeed, isComplete: "no" }),
+        }).catch(() => {});
+      }
+
+      // ── Seed Pre-Screening form ──────────────────────────────────────────
+      const prescreenSeed: Record<string, any> = {};
+      if (data.referralSource) prescreenSeed.referralSource = data.referralSource;
+      if (data.levelOfCare) prescreenSeed.levelOfCareInterest = data.levelOfCare;
+      if (data.insuranceProvider) prescreenSeed.hasInsurance = "Yes";
+      if (treatmentText) prescreenSeed.previousTreatment = treatmentText;
+
+      if (Object.keys(prescreenSeed).length > 0) {
+        fetch(`/api/inquiries/${inquiryId}/pre-screening`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ formData: prescreenSeed, isComplete: "no" }),
+        }).catch(() => {});
+      }
+
+      // ── Seed Nursing Assessment form ─────────────────────────────────────
+      const nursingSeed: Record<string, any> = {};
+      if (data.medicalHistory) nursingSeed.additionalNursingNotes = data.medicalHistory;
+
+      if (Object.keys(nursingSeed).length > 0) {
+        fetch(`/api/inquiries/${inquiryId}/nursing-assessment`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ formData: nursingSeed, isComplete: "no" }),
+        }).catch(() => {});
+      }
+    }
+
     onSuccess();
   };
 
@@ -96,8 +160,8 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
     <div className="space-y-8 pb-12">
       {/* AI Document Upload Zone */}
       <div className="bg-primary/5 border-2 border-dashed border-primary/25 rounded-2xl p-6 text-center relative hover:bg-primary/10 transition-colors">
-        <input 
-          type="file" 
+        <input
+          type="file"
           ref={fileInputRef}
           onChange={handleFileUpload}
           accept="image/*,.pdf"
@@ -129,17 +193,21 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Demographics */}
         <div className="grid grid-cols-2 gap-4">
-          <Field label="First Name" name="firstName" form={form} isAi={isAi('firstName')} required />
-          <Field label="Last Name" name="lastName" form={form} isAi={isAi('lastName')} required />
-          <Field label="Phone" name="phone" form={form} isAi={isAi('phone')} />
-          <Field label="Email" name="email" form={form} isAi={isAi('email')} />
-          <Field label="Date of Birth" name="dob" form={form} isAi={isAi('dob')} placeholder="MM/DD/YYYY" />
-          
+          <Field label="First Name" name="firstName" form={form} isAi={isAi("firstName")} required />
+          <Field label="Last Name" name="lastName" form={form} isAi={isAi("lastName")} required />
+          <Field label="Phone" name="phone" form={form} isAi={isAi("phone")} />
+          <Field label="Email" name="email" form={form} isAi={isAi("email")} />
+          <Field label="Date of Birth" name="dob" form={form} isAi={isAi("dob")} placeholder="MM/DD/YYYY" />
+
           <div className="space-y-1.5">
             <Label className="text-foreground font-medium">Level of Care</Label>
-            <Select onValueChange={(v) => form.setValue("levelOfCare", v)} defaultValue={form.getValues("levelOfCare")}>
-              <SelectTrigger className={cn("h-11 rounded-xl bg-muted border-border text-foreground", isAi('levelOfCare') && "border-primary ring-2 ring-primary/20")}>
+            <Select
+              onValueChange={v => form.setValue("levelOfCare", v)}
+              defaultValue={form.getValues("levelOfCare")}
+            >
+              <SelectTrigger className={cn("h-11 rounded-xl bg-muted border-border text-foreground", isAi("levelOfCare") && "border-primary ring-2 ring-primary/20")}>
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border text-foreground">
@@ -154,7 +222,10 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 
           <div className="space-y-1.5">
             <Label className="text-foreground font-medium">Referral Source</Label>
-            <Select onValueChange={(v) => form.setValue("referralSource", v === "none" ? "" : v)} defaultValue={form.getValues("referralSource")}>
+            <Select
+              onValueChange={v => form.setValue("referralSource", v === "none" ? "" : v)}
+              defaultValue={form.getValues("referralSource")}
+            >
               <SelectTrigger className="h-11 rounded-xl bg-muted border-border text-foreground">
                 <SelectValue placeholder="Select source" />
               </SelectTrigger>
@@ -182,24 +253,100 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
           )}
         </div>
 
+        {/* Insurance */}
         <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-4">
-          <h4 className="font-semibold text-foreground flex items-center gap-2">
-            Insurance Information
-          </h4>
+          <h4 className="font-semibold text-foreground">Insurance Information</h4>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Provider" name="insuranceProvider" form={form} isAi={isAi('insuranceProvider')} />
-            <Field label="Member ID" name="insuranceMemberId" form={form} isAi={isAi('insuranceMemberId')} />
+            <Field label="Provider" name="insuranceProvider" form={form} isAi={isAi("insuranceProvider")} />
+            <Field label="Member ID" name="insuranceMemberId" form={form} isAi={isAi("insuranceMemberId")} />
           </div>
         </div>
 
+        {/* Clinical */}
         <div className="space-y-4">
-          <TextAreaField label="Primary Diagnosis" name="primaryDiagnosis" form={form} isAi={isAi('primaryDiagnosis')} />
-          <TextAreaField label="Substance Use History" name="substanceHistory" form={form} isAi={isAi('substanceHistory')} />
+          <TextAreaField
+            label="Presenting Problem"
+            name="primaryDiagnosis"
+            form={form}
+            isAi={isAi("primaryDiagnosis")}
+            placeholder="Describe the client's presenting concern, chief complaint, or reason for seeking treatment..."
+          />
+
+          {/* Previous Treatment */}
+          <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-4">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="hadPreviousTreatment"
+                checked={hadPreviousTreatment}
+                onCheckedChange={v => setHadPreviousTreatment(!!v)}
+                className="border-border"
+              />
+              <label
+                htmlFor="hadPreviousTreatment"
+                className="flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer select-none"
+              >
+                <History className="w-4 h-4 text-primary" />
+                Client has been to treatment before
+              </label>
+            </div>
+
+            {hadPreviousTreatment && (
+              <div className="space-y-4 pt-1">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-foreground font-medium">Name of Facility</Label>
+                    <Input
+                      value={prevFacilityName}
+                      onChange={e => setPrevFacilityName(e.target.value)}
+                      placeholder="e.g. Sunrise Recovery Center"
+                      className="h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-foreground font-medium">Year of Treatment</Label>
+                    <Input
+                      value={prevTreatmentYear}
+                      onChange={e => setPrevTreatmentYear(e.target.value)}
+                      placeholder="e.g. 2021"
+                      className="h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-foreground font-medium mb-2 block">Type of Treatment</Label>
+                  <div className="flex items-center gap-6">
+                    {["SUD", "MH"].map(type => (
+                      <label key={type} className="flex items-center gap-2 cursor-pointer select-none">
+                        <Checkbox
+                          checked={prevTreatmentTypes.includes(type)}
+                          onCheckedChange={() => toggleType(type)}
+                          className="border-border"
+                        />
+                        <span className="text-sm font-medium text-foreground">
+                          {type === "SUD" ? "Substance Use Disorder (SUD)" : "Mental Health (MH)"}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This will auto-populate the Treatment History section in Pre-Assessment forms.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Actions */}
         <div className="pt-4 flex justify-end gap-3 border-t border-border">
-          <Button type="button" variant="outline" onClick={onSuccess} className="rounded-xl h-11 px-6">Cancel</Button>
-          <Button type="submit" disabled={createInquiry.isPending} className="rounded-xl h-11 px-8 font-semibold shadow-lg shadow-primary/20">
+          <Button type="button" variant="outline" onClick={onSuccess} className="rounded-xl h-11 px-6">
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={createInquiry.isPending}
+            className="rounded-xl h-11 px-8 font-semibold shadow-lg shadow-primary/20"
+          >
             {createInquiry.isPending ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             Create Inquiry
           </Button>
@@ -215,32 +362,43 @@ function Field({ label, name, form, isAi, required, placeholder }: any) {
       <Label className="text-foreground font-medium">
         {label} {required && <span className="text-red-400">*</span>}
       </Label>
-      <Input 
-        {...form.register(name)} 
+      <Input
+        {...form.register(name)}
         placeholder={placeholder}
         className={cn(
           "h-11 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground transition-all",
           isAi && "border-primary ring-2 ring-primary/20"
         )}
       />
-      {isAi && <span className="absolute right-3 top-[34px] text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded uppercase">AI</span>}
-      {form.formState.errors[name] && <p className="text-xs text-red-400">{form.formState.errors[name].message}</p>}
+      {isAi && (
+        <span className="absolute right-3 top-[34px] text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded uppercase">
+          AI
+        </span>
+      )}
+      {form.formState.errors[name] && (
+        <p className="text-xs text-red-400">{form.formState.errors[name].message}</p>
+      )}
     </div>
   );
 }
 
-function TextAreaField({ label, name, form, isAi }: any) {
+function TextAreaField({ label, name, form, isAi, placeholder }: any) {
   return (
     <div className="space-y-1.5 relative">
       <Label className="text-foreground font-medium">{label}</Label>
-      <Textarea 
-        {...form.register(name)} 
+      <Textarea
+        {...form.register(name)}
+        placeholder={placeholder}
         className={cn(
-          "min-h-[100px] rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground transition-all resize-none",
+          "min-h-[90px] rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground transition-all resize-none",
           isAi && "border-primary ring-2 ring-primary/20"
         )}
       />
-      {isAi && <span className="absolute right-3 top-8 text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded uppercase">AI</span>}
+      {isAi && (
+        <span className="absolute right-3 top-8 text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded uppercase">
+          AI
+        </span>
+      )}
     </div>
   );
 }

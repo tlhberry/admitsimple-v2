@@ -82,6 +82,7 @@ const selectTriggerCls = "mt-1.5 rounded-lg bg-muted border-border text-foregrou
 // FORM 1: RB Pre-Cert / Clinical Pre-Assessment
 // ════════════════════════════════════════════════════════════════════════════════
 const DEFAULT_PRECERT = {
+  presentingProblem: "",
   primarySubstance: "", lastUsed: "", firstUsed: "", frequency: "",
   amount: "", route: "", method: "", treatmentHistory: "",
   severityOfIllness: "", withdrawalSymptoms: [] as string[], withdrawalNotes: "",
@@ -154,6 +155,12 @@ function Form1PreCert({ inquiryId, onComplete }: { inquiryId: number; onComplete
 
   return (
     <div className="space-y-7">
+      <SectionHeader title="Presenting Problem" />
+      <div>
+        <FL>Presenting Problem / Chief Complaint</FL>
+        <Textarea value={data.presentingProblem} onChange={set("presentingProblem")} placeholder="Auto-populated from intake form. Describe the client's presenting concern or reason for seeking treatment..." className={textareaCls} />
+      </div>
+
       <SectionHeader title="Substance Use History" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
