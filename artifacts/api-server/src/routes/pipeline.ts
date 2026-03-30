@@ -36,6 +36,7 @@ router.get("/pipeline/inquiries", async (req, res) => {
         id: inquiries.id,
         firstName: inquiries.firstName,
         lastName: inquiries.lastName,
+        phone: inquiries.phone,
         status: inquiries.status,
         priority: inquiries.priority,
         assignedTo: inquiries.assignedTo,
