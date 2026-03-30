@@ -75,6 +75,8 @@ export const inquiries = pgTable("inquiries", {
   reminderSentAt: jsonb("reminder_sent_at"),
   // Did Not Admit tracking
   referralDestination: varchar("referral_destination", { length: 255 }),
+  // Unique inquiry number (INQ-000001)
+  inquiryNumber: varchar("inquiry_number", { length: 20 }),
 });
 
 export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true, createdAt: true, updatedAt: true });

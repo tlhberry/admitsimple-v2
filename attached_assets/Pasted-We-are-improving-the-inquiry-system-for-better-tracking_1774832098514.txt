@@ -1,0 +1,141 @@
+We are improving the inquiry system for better tracking and usability.
+
+DO NOT break existing inquiry or pipeline functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+1. Assign a unique, easy-to-use Inquiry Number
+2. Improve the Inquiries page to show only active, relevant leads
+3. Make searching and workflow faster for admissions reps
+
+-----------------------------------
+INQUIRY ID SYSTEM
+-----------------------------------
+
+Every time a new inquiry is created:
+
+- Generate a unique, sequential Inquiry Number
+- Format:
+  INQ-000001, INQ-000002, etc.
+
+Requirements:
+- Must be unique
+- Must be searchable
+- Display prominently on:
+  - Inquiry list
+  - Inquiry detail page
+
+-----------------------------------
+SEARCH IMPROVEMENTS
+-----------------------------------
+
+Allow search by:
+- Inquiry Number (INQ-000123)
+- Patient name
+- Phone number
+
+Search should be fast and global across inquiries
+
+-----------------------------------
+INQUIRIES PAGE (MAJOR CHANGE)
+-----------------------------------
+
+Default view should ONLY show:
+
+- Active inquiries
+- Recent leads (ex: last 30 days OR not yet admitted/discharged)
+
+-----------------------------------
+EXCLUDE FROM DEFAULT VIEW:
+-----------------------------------
+
+- Old leads
+- Discharged clients
+- Did Not Admit (older than X days)
+
+-----------------------------------
+FILTERS / TABS
+-----------------------------------
+
+Add tabs or filters at top:
+
+1. Active (DEFAULT)
+   - New + in-progress inquiries
+
+2. New
+   - Created in last 24–48 hours
+
+3. Needs Action
+   - No activity in last 24 hours
+   - Missing VOB or pre-screen
+
+4. Admitted
+   - Recently admitted clients
+
+5. Discharged
+   - Completed clients
+
+6. Did Not Admit
+   - Lost / referred out leads
+
+7. All (optional)
+   - Full database view
+
+-----------------------------------
+SORTING
+-----------------------------------
+
+Default sort:
+- Most recent activity first
+
+-----------------------------------
+VISUAL PRIORITY
+-----------------------------------
+
+Highlight:
+- New inquiries
+- No recent activity
+- High-priority tasks
+
+-----------------------------------
+BACKEND LOGIC
+-----------------------------------
+
+- Add inquiry_number field to inquiries table
+- Auto-generate on creation
+- Index for fast search
+
+-----------------------------------
+UI REQUIREMENTS
+-----------------------------------
+
+- Clean, fast-loading list
+- Show:
+  - Inquiry Number
+  - Patient Name
+  - Status
+  - Last Activity
+- Make Inquiry Number clickable/searchable
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not remove access to old data
+- Do not clutter default view with inactive leads
+- Do not slow down search
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+Admissions reps open "Inquiries" and instantly see:
+- What’s new
+- What’s active
+- What needs attention
+
+With ability to quickly search any inquiry by ID.
+
+-----------------------------------
+END

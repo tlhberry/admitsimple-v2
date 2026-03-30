@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { inquiries, users, patients } from "@workspace/db/schema";
-import { eq, ilike, or, and, gte, lte, desc } from "drizzle-orm";
+import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
 import { logAudit } from "../lib/logAudit";
@@ -56,21 +56,51 @@ const fullInquirySelect = {
   appointmentDate: inquiries.appointmentDate,
   calendarEventId: inquiries.calendarEventId,
   referralDestination: inquiries.referralDestination,
+  inquiryNumber: inquiries.inquiryNumber,
 };
+
+// Constants for tab filtering
+const INACTIVE_STATUSES = ["Admitted", "Discharged", "Did Not Admit", "Non-Viable"];
+const ACTIVE_STATUSES_EXCLUSION = INACTIVE_STATUSES;
 
 router.get("/inquiries", async (req, res) => {
   try {
-    const { search, status, assignedTo, levelOfCare, priority, startDate, endDate } = req.query;
+    const { search, status, assignedTo, levelOfCare, priority, startDate, endDate, tab } = req.query;
     const filters: any[] = [];
+
+    // Tab-based filtering (overrides status filter when present)
+    if (tab && typeof tab === "string") {
+      const now = new Date();
+      const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const h48 = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+      if (tab === "active") {
+        filters.push(notInArray(inquiries.status, ACTIVE_STATUSES_EXCLUSION));
+      } else if (tab === "new") {
+        filters.push(gte(inquiries.createdAt, h48));
+      } else if (tab === "needs_action") {
+        filters.push(notInArray(inquiries.status, ACTIVE_STATUSES_EXCLUSION));
+        filters.push(lt(inquiries.updatedAt, h24));
+      } else if (tab === "admitted") {
+        filters.push(eq(inquiries.status, "Admitted"));
+      } else if (tab === "discharged") {
+        filters.push(eq(inquiries.status, "Discharged"));
+      } else if (tab === "did_not_admit") {
+        filters.push(inArray(inquiries.status, ["Did Not Admit", "Non-Viable"]));
+      }
+      // "all" = no extra filter
+    } else if (status && typeof status === "string") {
+      filters.push(eq(inquiries.status, status));
+    }
+
     if (search && typeof search === "string") {
       filters.push(or(
         ilike(inquiries.firstName, `%${search}%`),
         ilike(inquiries.lastName, `%${search}%`),
         ilike(inquiries.phone, `%${search}%`),
-        ilike(inquiries.email, `%${search}%`)
+        ilike(inquiries.email, `%${search}%`),
+        ilike(inquiries.inquiryNumber, `%${search}%`)
       ));
     }
-    if (status && typeof status === "string") filters.push(eq(inquiries.status, status));
     if (assignedTo) filters.push(eq(inquiries.assignedTo, parseInt(assignedTo as string)));
     if (levelOfCare && typeof levelOfCare === "string") filters.push(eq(inquiries.levelOfCare, levelOfCare));
     if (priority && typeof priority === "string") filters.push(eq(inquiries.priority, priority));
@@ -120,6 +150,10 @@ router.post("/inquiries", async (req, res) => {
       priority: data.priority || "medium",
       notes: data.notes,
     }).returning();
+
+    // Generate unique inquiry number after insert (uses the serial ID)
+    const inquiryNum = `INQ-${row.id.toString().padStart(6, "0")}`;
+    await db.update(inquiries).set({ inquiryNumber: inquiryNum }).where(eq(inquiries.id, row.id));
 
     await logAudit(req, "Created Inquiry", "inquiry", row.id);
 

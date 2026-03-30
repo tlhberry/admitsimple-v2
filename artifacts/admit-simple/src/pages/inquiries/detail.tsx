@@ -286,6 +286,9 @@ Keep it warm, concise, and professional. Include a request for the other facilit
         <div className="pl-2">
           <div className="flex flex-wrap items-center gap-3 mb-3">
             <h1 className="text-2xl font-bold text-foreground">{inq.firstName} {inq.lastName}</h1>
+            {inq.inquiryNumber && (
+              <span className="font-mono text-xs font-semibold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg">{inq.inquiryNumber}</span>
+            )}
             <span className={cn("px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border", getStatusColor(inq.status))}>
               {inq.status}
             </span>
