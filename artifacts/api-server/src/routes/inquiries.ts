@@ -470,7 +470,8 @@ router.put("/inquiries/:id/non-admit", async (req, res) => {
     const { reason, notes } = req.body;
     if (!reason) { res.status(400).json({ error: "reason is required" }); return; }
     const [row] = await db.update(inquiries).set({
-      status: "Non-Viable",
+      status: "Did Not Admit",
+      stageId: 36,
       nonAdmitReason: reason,
       nonAdmitNotes: notes || null,
       updatedAt: new Date(),
