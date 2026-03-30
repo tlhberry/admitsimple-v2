@@ -1,0 +1,135 @@
+We are updating the existing "Convert to Patient" button.
+
+DO NOT create a new button.
+We are REPLACING its functionality.
+
+-----------------------------------
+GOAL
+-----------------------------------
+When a user clicks "Convert to Patient", it should:
+
+1. Automatically move the inquiry to "Admitted"
+2. Generate an Admission Facesheet (email)
+3. Show preview/edit modal
+4. Send email to clinical team
+
+-----------------------------------
+CRITICAL BEHAVIOR
+-----------------------------------
+
+On button click:
+
+- IMMEDIATELY update pipeline stage → "Admitted"
+- This happens BEFORE email is sent
+
+-----------------------------------
+FLOW
+-----------------------------------
+
+Step 1:
+User clicks "Convert to Patient"
+
+Step 2:
+- Update inquiry.stage = "Admitted"
+
+Step 3:
+- Generate Admission Facesheet (structured data)
+
+Step 4:
+- Open modal preview with editable fields
+
+Step 5:
+User clicks:
+→ "Send Admission Email"
+
+-----------------------------------
+EMAIL SUBJECT FORMAT (STRICT)
+-----------------------------------
+
+ADMIT [First Name] [Last Initial] - [Level of Care] - [Admit Date] - ETA [Time]
+
+Example:
+ADMIT John S - Detox - Mar 21, 2026 - ETA 3:00 PM
+
+-----------------------------------
+EMAIL RECIPIENT
+-----------------------------------
+
+- Pulled from Admin Settings:
+  admission_email_recipient
+
+- ONLY admin can edit this
+
+-----------------------------------
+EMAIL CONTENT (FACESHEET)
+-----------------------------------
+
+Must be clean, structured, and easy to copy into EMR.
+
+SECTION 1: DEMOGRAPHICS
+- Full Name
+- DOB
+- Phone
+- Email
+
+SECTION 2: ADMISSION DETAILS
+- Level of Care (Detox / Res / PHP / IOP)
+- Admit Date
+- ETA
+- Bed (if assigned)
+
+SECTION 3: INSURANCE
+- Provider
+- Member ID
+- Group #
+- Verified (yes/no)
+- Estimated Cost
+
+SECTION 4: CLINICAL SUMMARY
+- Substance Use History
+- Mental Health Notes
+- Medications
+- Risk Flags
+
+SECTION 5: NOTES
+- Admissions summary
+
+-----------------------------------
+UI REQUIREMENTS
+-----------------------------------
+
+- Modal opens after stage is updated
+- Fields editable before sending
+- Buttons:
+  - "Send Admission Email"
+  - "Cancel"
+
+-----------------------------------
+DATA HANDLING
+-----------------------------------
+
+- Do NOT delete inquiry
+- Keep inquiry tied to admission
+- Optionally create patient_stay record
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do not delay stage change until after email
+- Do not auto-send email without preview
+- Do not allow non-admin to change recipient
+
+-----------------------------------
+END GOAL
+-----------------------------------
+
+One click:
+→ Client moves to Admitted
+→ Facesheet is generated
+→ Email is sent
+
+Fast, clean, real-world workflow.
+
+-----------------------------------
+END

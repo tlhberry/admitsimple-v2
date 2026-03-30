@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check,
-  RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff,
+  RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff, UserPlus, Mail,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -86,7 +86,10 @@ export default function Settings() {
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "ai",            label: "AI Settings",   icon: Brain },
     { id: "integrations",  label: "Integrations",  icon: Phone },
-    ...(isAdmin ? [{ id: "users", label: "Users", icon: Users }] : []),
+    ...(isAdmin ? [
+      { id: "admissions", label: "Admissions",   icon: UserPlus },
+      { id: "users",      label: "Users",        icon: Users },
+    ] : []),
   ];
 
   if (isLoading) return <Layout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
@@ -261,6 +264,39 @@ export default function Settings() {
                     {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Save Integration
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "admissions" && isAdmin && (
+            <Card className="rounded-2xl border-border">
+              <CardHeader className="border-b border-border pb-4">
+                <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                  <Mail className="w-4 h-4 text-primary" /> Admission Email Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-5">
+                <div>
+                  <Label className={labelCls}>Admission Email Recipient</Label>
+                  <p className="text-xs text-muted-foreground mb-1.5">The email address the Admission Facesheet is sent to when a patient is admitted. Only admins can change this.</p>
+                  <Input
+                    type="email"
+                    value={values["admission_email_recipient"] || ""}
+                    onChange={e => set("admission_email_recipient", e.target.value)}
+                    placeholder="admissions@facility.com"
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <Label className={labelCls}>CC Recipients (comma separated)</Label>
+                  <p className="text-xs text-muted-foreground mb-1.5">Optional — additional recipients for every admission facesheet.</p>
+                  <Input
+                    value={values["admission_email_cc"] || ""}
+                    onChange={e => set("admission_email_cc", e.target.value)}
+                    placeholder="nursing@facility.com, clinical@facility.com"
+                    className={fieldCls}
+                  />
                 </div>
               </CardContent>
             </Card>

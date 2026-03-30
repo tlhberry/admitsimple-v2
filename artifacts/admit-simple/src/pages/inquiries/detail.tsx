@@ -15,6 +15,7 @@ import ReactMarkdown from "react-markdown";
 import { useState } from "react";
 import { PreAssessmentSection } from "@/components/PreAssessmentForms";
 import { VOBForm } from "@/components/VOBForm";
+import { FacesheetModal } from "@/components/FacesheetModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,9 @@ export default function InquiryDetail() {
   const [editingLeadSource, setEditingLeadSource] = useState(false);
   const [leadSourceEdit, setLeadSourceEdit] = useState({ referralSource: "", searchKeywords: "" });
   const [savingLeadSource, setSavingLeadSource] = useState(false);
+
+  // Facesheet modal
+  const [showFacesheet, setShowFacesheet] = useState(false);
 
   // Non-Admit modal
   const [showNonAdmit, setShowNonAdmit] = useState(false);
@@ -229,11 +233,15 @@ Keep it warm, concise, and professional. Include a request for the other facilit
   };
 
   const handleConvert = async () => {
-    if (confirm("Convert this inquiry into an admitted patient?")) {
+    try {
       await convertToPatient.mutateAsync({
         id,
         data: { levelOfCare: inquiry?.levelOfCare || "Detox", admitDate: new Date().toISOString() }
       });
+      // Stage is now Admitted — open facesheet modal
+      setShowFacesheet(true);
+    } catch {
+      // error toast already handled by the mutation
     }
   };
 
@@ -927,6 +935,14 @@ Keep it warm, concise, and professional. Include a request for the other facilit
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Facesheet Modal */}
+      {showFacesheet && inquiry && (
+        <FacesheetModal
+          inquiry={inquiry}
+          onClose={() => setShowFacesheet(false)}
+        />
+      )}
     </Layout>
   );
 }
