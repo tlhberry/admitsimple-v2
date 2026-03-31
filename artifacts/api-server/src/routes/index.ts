@@ -18,6 +18,7 @@ import auditLogsRouter from "./auditLogs";
 import bedsRouter from "./beds";
 import savedReportsRouter from "./savedReports";
 import eventsRouter from "./events";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(auditLogsRouter);
 router.use(bedsRouter);
 router.use(savedReportsRouter);
 router.use(eventsRouter);
+router.use(adminRouter);
 
 export default router;

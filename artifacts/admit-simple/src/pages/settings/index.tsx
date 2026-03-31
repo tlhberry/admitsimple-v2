@@ -13,6 +13,7 @@ import {
 import {
   Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check,
   RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff, UserPlus, Mail,
+  Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +93,7 @@ export default function Settings() {
     ...(isAdmin ? [
       { id: "admissions", label: "Admissions",   icon: UserPlus },
       { id: "users",      label: "Users",        icon: Users },
+      { id: "import",     label: "Import",       icon: Upload },
     ] : []),
   ];
 
@@ -320,7 +322,9 @@ export default function Settings() {
 
           {activeTab === "users" && isAdmin && <UserManagement currentUserId={user?.id} />}
 
-          {activeTab !== "integrations" && activeTab !== "users" && (
+          {activeTab === "import" && isAdmin && <ReferralImport />}
+
+          {activeTab !== "integrations" && activeTab !== "users" && activeTab !== "import" && (
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                 {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -690,6 +694,297 @@ function ResetPasswordModal({ user, onClose, onReset }: { user: any; onClose: ()
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Referral Source Import ───────────────────────────────────────────────────
+
+const TARGET_FIELDS = [
+  { key: "facility_name", label: "Facility Name" },
+  { key: "contact_name",  label: "Contact Name" },
+  { key: "phone",         label: "Phone" },
+  { key: "email",         label: "Email" },
+  { key: "address",       label: "Address" },
+  { key: "city",          label: "City" },
+  { key: "state",         label: "State" },
+  { key: "level_of_care", label: "Level of Care" },
+  { key: "notes",         label: "Notes" },
+] as const;
+
+type TargetKey = typeof TARGET_FIELDS[number]["key"];
+
+function ReferralImport() {
+  const { toast } = useToast();
+  const [step, setStep] = useState<"upload" | "preview" | "result">("upload");
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [skipDupes, setSkipDupes] = useState(true);
+
+  // Data from parse step
+  const [headers, setHeaders]     = useState<string[]>([]);
+  const [mapping, setMapping]     = useState<Partial<Record<TargetKey, string>>>({});
+  const [preview, setPreview]     = useState<Record<string, string>[]>([]);
+  const [totalRows, setTotalRows] = useState(0);
+  const [allRows, setAllRows]     = useState<Record<string, string>[]>([]);
+
+  // Result
+  const [result, setResult] = useState<{ added: number; skipped: number; failed: number } | null>(null);
+
+  const handleFile = async (file: File) => {
+    if (!file) return;
+    const ext = file.name.toLowerCase();
+    if (!ext.endsWith(".csv") && !ext.endsWith(".xlsx") && !ext.endsWith(".xls")) {
+      toast({ title: "Only CSV, XLSX, and XLS files are supported", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/referral-import", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setHeaders(data.headers);
+      setMapping(data.mapping ?? {});
+      setPreview(data.preview ?? []);
+      setTotalRows(data.totalRows ?? 0);
+      setAllRows(data.allRows ?? data.preview ?? []);
+      setStep("preview");
+    } catch (e: any) {
+      toast({ title: e.message || "Upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleConfirm = async () => {
+    setImporting(true);
+    try {
+      const res = await fetch("/api/admin/referral-import/confirm", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: allRows, mapping, skipDuplicates: skipDupes }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Import failed");
+      }
+      const data = await res.json();
+      setResult(data);
+      setStep("result");
+    } catch (e: any) {
+      toast({ title: e.message || "Import failed", variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const reset = () => {
+    setStep("upload");
+    setHeaders([]);
+    setMapping({});
+    setPreview([]);
+    setTotalRows(0);
+    setAllRows([]);
+    setResult(null);
+  };
+
+  return (
+    <Card className="rounded-2xl border-border">
+      <CardHeader className="border-b border-border pb-4">
+        <CardTitle className="text-base flex items-center gap-2 text-foreground">
+          <FileSpreadsheet className="w-4 h-4 text-primary" /> Referral Source Import
+        </CardTitle>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Upload a CSV or Excel file — AI will auto-map columns. Review before importing.
+        </p>
+      </CardHeader>
+      <CardContent className="p-6">
+
+        {/* ── Step 1: Upload ─────────────────────────────────────────────── */}
+        {step === "upload" && (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            className={cn(
+              "border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center gap-4 transition-all",
+              dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 bg-muted/30",
+            )}
+          >
+            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border", dragging ? "bg-primary/15 border-primary/40" : "bg-muted border-border")}>
+              <Upload className={cn("w-6 h-6", dragging ? "text-primary" : "text-muted-foreground")} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-foreground">Drag & drop your file here</p>
+              <p className="text-xs text-muted-foreground mt-1">Supports CSV, XLSX, XLS — up to 10 MB</p>
+            </div>
+            <label>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+              />
+              <span className={cn(
+                "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all",
+                uploading
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-primary hover:bg-primary/90 text-primary-foreground",
+              )}>
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploading ? "Analyzing…" : "Choose File"}
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* ── Step 2: Preview + Mapping ──────────────────────────────────── */}
+        {step === "preview" && (
+          <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-foreground">Review Import</p>
+                <p className="text-xs text-muted-foreground">{totalRows} rows detected — AI mapped the columns below. Adjust if needed.</p>
+              </div>
+              <button onClick={reset} className="text-xs text-muted-foreground hover:text-foreground underline">Start over</button>
+            </div>
+
+            {/* Field mapping */}
+            <div className="bg-muted/40 rounded-xl p-4 border border-border">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Column Mapping</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {TARGET_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground w-28 shrink-0">{label}</span>
+                    <select
+                      value={mapping[key] ?? ""}
+                      onChange={(e) => setMapping(m => ({ ...m, [key]: e.target.value || undefined }))}
+                      className="flex-1 bg-card border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    >
+                      <option value="">— Skip —</option>
+                      {headers.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Duplicate handling */}
+            <div className="flex items-center gap-3 px-1">
+              <input
+                type="checkbox"
+                id="skip-dupes"
+                checked={skipDupes}
+                onChange={(e) => setSkipDupes(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="skip-dupes" className="text-sm text-foreground">
+                Skip duplicates (by facility name)
+                <span className="text-xs text-muted-foreground ml-1">— uncheck to update existing</span>
+              </label>
+            </div>
+
+            {/* Preview table */}
+            <div className="overflow-x-auto rounded-xl border border-border">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50 border-b border-border">
+                  <tr>
+                    {TARGET_FIELDS.filter(f => mapping[f.key]).map(f => (
+                      <th key={f.key} className="px-3 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
+                        {f.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.slice(0, 10).map((row, i) => (
+                    <tr key={i} className={cn("border-b border-border/50", i % 2 === 0 ? "bg-card" : "bg-muted/20")}>
+                      {TARGET_FIELDS.filter(f => mapping[f.key]).map(f => (
+                        <td key={f.key} className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">
+                          {mapping[f.key] ? row[mapping[f.key]!] ?? "" : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {preview.length > 10 && (
+                <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/30 border-t border-border">
+                  Showing 10 of {totalRows} rows
+                </div>
+              )}
+            </div>
+
+            {/* Confirm */}
+            <div className="flex items-center justify-end gap-3">
+              <button onClick={reset} className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={importing || !mapping.facility_name}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold disabled:opacity-50 transition-all"
+              >
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {importing ? "Importing…" : `Import ${totalRows} Rows`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Result ─────────────────────────────────────────────── */}
+        {step === "result" && result && (
+          <div className="space-y-5">
+            <div className="text-center py-4">
+              <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+              <p className="text-lg font-bold text-foreground">Import Complete</p>
+              <p className="text-sm text-muted-foreground mt-1">Your referral sources have been imported.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-4 px-2">
+                <p className="text-2xl font-bold text-emerald-400">{result.added}</p>
+                <p className="text-xs text-muted-foreground mt-1">Added</p>
+              </div>
+              <div className="text-center bg-amber-500/10 border border-amber-500/20 rounded-xl py-4 px-2">
+                <p className="text-2xl font-bold text-amber-400">{result.skipped}</p>
+                <p className="text-xs text-muted-foreground mt-1">Skipped</p>
+              </div>
+              <div className="text-center bg-red-500/10 border border-red-500/20 rounded-xl py-4 px-2">
+                <p className="text-2xl font-bold text-red-400">{result.failed}</p>
+                <p className="text-xs text-muted-foreground mt-1">Failed</p>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <button
+                onClick={reset}
+                className="px-5 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                Import Another File
+              </button>
+            </div>
+          </div>
+        )}
+
+      </CardContent>
+    </Card>
   );
 }
 
