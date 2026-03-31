@@ -1,13 +1,15 @@
 import { type ReactNode } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Loader2, Plus, Phone, MessageSquare, ChevronRight, UserPlus, Zap } from "lucide-react";
+import { Loader2, Plus, Phone, MessageSquare, ChevronRight, UserPlus, Zap, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CreateInquiryForm } from "@/components/CreateInquiryForm";
 import { useAuth } from "@/hooks/use-auth";
+
+type Timeframe = "week" | "month" | "year" | "custom";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string | null | undefined): string {
@@ -86,15 +88,28 @@ export default function Dashboard() {
   const [actForm, setActForm] = useState({ inquiryId: "", type: "note", subject: "", body: "" });
   const [refSaving, setRefSaving] = useState(false);
   const [actSaving, setActSaving] = useState(false);
+  const [timeframe, setTimeframe] = useState<Timeframe>("week");
+  const [customStart, setCustomStart] = useState<string>("");
+  const [customEnd,   setCustomEnd]   = useState<string>("");
   const qc = useQueryClient();
   const { user } = useAuth();
   const role = user?.role ?? "admissions";
 
+  const perfUrl = useMemo(() => {
+    const params = new URLSearchParams({ timeframe });
+    if (timeframe === "custom" && customStart && customEnd) {
+      params.set("startDate", customStart);
+      params.set("endDate", customEnd);
+    }
+    return `/api/admissions-performance?${params.toString()}`;
+  }, [timeframe, customStart, customEnd]);
+
   const { data: perf, isLoading: perfLoading } = useQuery<any>({
-    queryKey: ["/api/admissions-performance"],
-    queryFn: () => fetch("/api/admissions-performance", { credentials: "include" }).then(r => r.json()),
+    queryKey: ["admissions-performance", timeframe, customStart, customEnd],
+    queryFn: () => fetch(perfUrl, { credentials: "include" }).then(r => r.json()),
     staleTime: 60000,
     refetchInterval: 60000,
+    enabled: timeframe !== "custom" || (!!customStart && !!customEnd),
   });
 
   const { data: cc, isLoading: ccLoading } = useQuery<any>({
@@ -106,8 +121,8 @@ export default function Dashboard() {
 
   const isLoading = perfLoading || ccLoading;
 
-  const week     = perf?.week     ?? { leads: 0, admits: 0, conversion: 0 };
-  const month    = perf?.month    ?? { leads: 0, admits: 0, conversion: 0 };
+  const period   = perf?.period    ?? { leads: 0, admits: 0, conversion: 0 };
+  const periodLabel = perf?.periodLabel ?? (timeframe === "week" ? "This Week" : timeframe === "month" ? "This Month" : timeframe === "year" ? "This Year" : "Custom Range");
   const refs     = (perf?.referralSources ?? []) as any[];
   const perf_    = perf?.topPerformers ?? { admissionsRep: null, bdRep: null, leadRep: null };
   const calls    = perf?.calls    ?? { missedToday: 0, missedWeek: 0, answerRate: 100 };
@@ -400,45 +415,73 @@ export default function Dashboard() {
             )}
           </Section>
 
-          {/* ── 2. This Week + This Month ───────────────────────────────── */}
-          <Section title="This Week">
-            <div className="flex gap-8 mb-4">
-              <div>
-                <div className="text-3xl font-extrabold text-foreground tabular-nums">{week.leads}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Leads</div>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold text-emerald-400 tabular-nums">{week.admits}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Admits</div>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold text-primary tabular-nums">{week.conversion}%</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">CVR</div>
-              </div>
+          {/* ── 2. Period Stats + Timeframe Picker ──────────────────────── */}
+          <Section title={periodLabel}>
+            {/* Timeframe pills */}
+            <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+              {(["week", "month", "year", "custom"] as Timeframe[]).map(tf => (
+                <button
+                  key={tf}
+                  onClick={(e) => { e.stopPropagation(); setTimeframe(tf); }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all",
+                    timeframe === tf
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                  )}
+                >
+                  {tf === "week" ? "Week" : tf === "month" ? "Month" : tf === "year" ? "Year" : "Custom"}
+                </button>
+              ))}
+              {timeframe === "custom" && (
+                <div className="flex items-center gap-1.5 mt-1.5 w-full flex-wrap">
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <input
+                    type="date"
+                    value={customStart}
+                    onChange={e => setCustomStart(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <input
+                    type="date"
+                    value={customEnd}
+                    onChange={e => setCustomEnd(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-6 pt-3 border-t border-border/50">
-              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest shrink-0">This Month</p>
-              <div className="flex gap-6">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-base font-extrabold text-foreground tabular-nums">{month.leads}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Leads</span>
+            {/* Stats */}
+            {perfLoading ? (
+              <div className="flex items-center gap-2 py-1">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Loading…</span>
+              </div>
+            ) : (
+              <div className="flex gap-8">
+                <div>
+                  <div className="text-3xl font-extrabold text-foreground tabular-nums">{period.leads}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Leads</div>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-base font-extrabold text-emerald-400 tabular-nums">{month.admits}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Admits</span>
+                <div>
+                  <div className="text-3xl font-extrabold text-emerald-400 tabular-nums">{period.admits}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Admits</div>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-base font-extrabold text-primary tabular-nums">{month.conversion}%</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">CVR</span>
+                <div>
+                  <div className="text-3xl font-extrabold text-primary tabular-nums">{period.conversion}%</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">CVR</div>
                 </div>
               </div>
-            </div>
+            )}
           </Section>
 
           {/* ── 3. Referral Sources ─────────────────────────────────────── */}
-          <Section title="Referral Sources (This Week)" badge="All" onClick={() => navigate("/referrals")}>
+          <Section title={`Referral Sources (${periodLabel})`} badge="All" onClick={() => navigate("/referrals")}>
             {refs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No activity this week</p>
+              <p className="text-sm text-muted-foreground">No activity for {periodLabel.toLowerCase()}</p>
             ) : (
               <div className="space-y-2.5">
                 {refs.slice(0, 6).map((r: any, i: number) => (
@@ -480,7 +523,7 @@ export default function Dashboard() {
           </Section>
 
           {/* ── 5. Top Performers ───────────────────────────────────────── */}
-          <Section title="Top Performers (This Week)" onClick={() => navigate("/inquiries?tab=admitted")}>
+          <Section title={`Top Performers (${periodLabel})`} onClick={() => navigate("/inquiries?tab=admitted")}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground w-20 shrink-0">Closer</span>
@@ -511,7 +554,7 @@ export default function Dashboard() {
               </span>
               <div>
                 <p className="text-xs text-muted-foreground">avg time to admit</p>
-                <p className="text-[10px] text-muted-foreground/60">based on {speed.sampleSize} admit{speed.sampleSize !== 1 ? "s" : ""} this week</p>
+                <p className="text-[10px] text-muted-foreground/60">based on {speed.sampleSize} admit{speed.sampleSize !== 1 ? "s" : ""} · {periodLabel.toLowerCase()}</p>
               </div>
             </div>
           </Section>

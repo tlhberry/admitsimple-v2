@@ -189,55 +189,90 @@ router.get("/admissions-performance", async (req, res) => {
   try {
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
-    // ── 1. Week Performance ──────────────────────────────────────────────────
-    const [weekLeadsRow] = await db.select({ count: count() }).from(inquiries)
-      .where(gte(inquiries.createdAt, weekStart));
-    const [weekAdmitsRow] = await db.select({ count: count() }).from(inquiries)
-      .where(and(gte(inquiries.createdAt, weekStart), eq(inquiries.status, "admitted")));
-    const weekLeads = Number(weekLeadsRow.count);
-    const weekAdmits = Number(weekAdmitsRow.count);
-    const weekConversion = weekLeads > 0 ? Math.round((weekAdmits / weekLeads) * 100) : 0;
+    // ── Resolve the selected period ───────────────────────────────────────────
+    const tf = (req.query.timeframe as string) || "week";
+    const customStart = req.query.startDate as string | undefined;
+    const customEnd   = req.query.endDate   as string | undefined;
 
-    // ── 1b. Month Performance ─────────────────────────────────────────────────
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const [monthLeadsRow] = await db.select({ count: count() }).from(inquiries)
-      .where(gte(inquiries.createdAt, monthStart));
-    const [monthAdmitsRow] = await db.select({ count: count() }).from(inquiries)
-      .where(and(gte(inquiries.createdAt, monthStart), eq(inquiries.status, "admitted")));
-    const monthLeads = Number(monthLeadsRow.count);
-    const monthAdmits = Number(monthAdmitsRow.count);
-    const monthConversion = monthLeads > 0 ? Math.round((monthAdmits / monthLeads) * 100) : 0;
+    let periodStart: Date;
+    let periodEnd: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    let periodLabel: string;
 
-    // ── 2. Referral Sources ──────────────────────────────────────────────────
+    if (tf === "month") {
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodLabel = "This Month";
+    } else if (tf === "year") {
+      periodStart = new Date(now.getFullYear(), 0, 1);
+      periodLabel = "This Year";
+    } else if (tf === "custom" && customStart && customEnd) {
+      periodStart = new Date(customStart);
+      periodStart.setHours(0, 0, 0, 0);
+      periodEnd = new Date(customEnd);
+      periodEnd.setHours(23, 59, 59, 999);
+      const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      periodLabel = `${fmt(periodStart)} – ${fmt(periodEnd)}`;
+    } else {
+      // default: week (Sunday-based)
+      periodStart = new Date(todayStart);
+      periodStart.setDate(periodStart.getDate() - periodStart.getDay());
+      periodLabel = "This Week";
+    }
+
+    // Always-fixed: today / this-week for calls (calls section stays absolute)
+    const thisWeekStart = new Date(todayStart);
+    thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+
+    // ── 1. Period Performance ─────────────────────────────────────────────────
+    const [periodLeadsRow] = await db.select({ count: count() }).from(inquiries)
+      .where(and(gte(inquiries.createdAt, periodStart), lte(inquiries.createdAt, periodEnd)));
+    const [periodAdmitsRow] = await db.select({ count: count() }).from(inquiries)
+      .where(and(gte(inquiries.createdAt, periodStart), lte(inquiries.createdAt, periodEnd), eq(inquiries.status, "admitted")));
+    const periodLeads = Number(periodLeadsRow.count);
+    const periodAdmits = Number(periodAdmitsRow.count);
+    const periodConversion = periodLeads > 0 ? Math.round((periodAdmits / periodLeads) * 100) : 0;
+
+    // ── 2. Referral Sources (by period) ──────────────────────────────────────
     const refRows = await db.select({
       source: inquiries.referralSource,
       leads: count(),
     }).from(inquiries)
-      .where(and(sql`${inquiries.referralSource} IS NOT NULL`, gte(inquiries.createdAt, weekStart)))
+      .where(and(
+        sql`${inquiries.referralSource} IS NOT NULL`,
+        gte(inquiries.createdAt, periodStart),
+        lte(inquiries.createdAt, periodEnd),
+      ))
       .groupBy(inquiries.referralSource)
       .orderBy(desc(count()))
       .limit(8);
 
     const referralSources2 = await Promise.all(refRows.map(async r => {
       const [admRow] = await db.select({ count: count() }).from(inquiries)
-        .where(and(eq(inquiries.referralSource, r.source!), eq(inquiries.status, "admitted"), gte(inquiries.createdAt, weekStart)));
+        .where(and(
+          eq(inquiries.referralSource, r.source!),
+          eq(inquiries.status, "admitted"),
+          gte(inquiries.createdAt, periodStart),
+          lte(inquiries.createdAt, periodEnd),
+        ));
       const leads = Number(r.leads);
       const admits = Number(admRow.count);
       return { source: r.source || "Unknown", leads, admits, conversion: leads > 0 ? Math.round((admits/leads)*100) : 0 };
     }));
     referralSources2.sort((a,b) => b.admits - a.admits);
 
-    // ── 3. Top Performers ────────────────────────────────────────────────────
+    // ── 3. Top Performers (by period) ────────────────────────────────────────
     const repAdmits = await db.select({
       userId: inquiries.assignedTo,
       name: users.name,
       admits: count(),
     }).from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
-      .where(and(sql`${inquiries.assignedTo} IS NOT NULL`, eq(inquiries.status, "admitted"), gte(inquiries.createdAt, weekStart)))
+      .where(and(
+        sql`${inquiries.assignedTo} IS NOT NULL`,
+        eq(inquiries.status, "admitted"),
+        gte(inquiries.createdAt, periodStart),
+        lte(inquiries.createdAt, periodEnd),
+      ))
       .groupBy(inquiries.assignedTo, users.name)
       .orderBy(desc(count()))
       .limit(1);
@@ -248,24 +283,31 @@ router.get("/admissions-performance", async (req, res) => {
       leads: count(),
     }).from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
-      .where(and(sql`${inquiries.assignedTo} IS NOT NULL`, gte(inquiries.createdAt, weekStart)))
+      .where(and(
+        sql`${inquiries.assignedTo} IS NOT NULL`,
+        gte(inquiries.createdAt, periodStart),
+        lte(inquiries.createdAt, periodEnd),
+      ))
       .groupBy(inquiries.assignedTo, users.name)
       .orderBy(desc(count()))
       .limit(1);
 
-    // Top credit rep (person who gets credit for the admit) from patients table
     const bdReps = await db.select({
       repId: patients.creditUserId,
       name: users.name,
       leads: count(),
     }).from(patients)
       .leftJoin(users, eq(patients.creditUserId, users.id))
-      .where(and(sql`${patients.creditUserId} IS NOT NULL`, gte(patients.admitDate, weekStart)))
+      .where(and(
+        sql`${patients.creditUserId} IS NOT NULL`,
+        gte(patients.admitDate, periodStart),
+        lte(patients.admitDate, periodEnd),
+      ))
       .groupBy(patients.creditUserId, users.name)
       .orderBy(desc(count()))
       .limit(1);
 
-    // ── 4. Call Performance ───────────────────────────────────────────────────
+    // ── 4. Call Performance (fixed: today + this week) ────────────────────────
     const [totalCallsToday] = await db.select({ count: count() }).from(inquiries)
       .where(and(sql`${inquiries.callDateTime} IS NOT NULL`, gte(inquiries.callDateTime, todayStart)));
     const [missedToday] = await db.select({ count: count() }).from(inquiries)
@@ -275,39 +317,40 @@ router.get("/admissions-performance", async (req, res) => {
         sql`(${inquiries.callStatus} = 'missed' OR ${inquiries.callDurationSeconds} < 15)`,
       ));
     const [totalCallsWeek] = await db.select({ count: count() }).from(inquiries)
-      .where(and(sql`${inquiries.callDateTime} IS NOT NULL`, gte(inquiries.callDateTime, weekStart)));
+      .where(and(sql`${inquiries.callDateTime} IS NOT NULL`, gte(inquiries.callDateTime, thisWeekStart)));
     const [missedWeek] = await db.select({ count: count() }).from(inquiries)
       .where(and(
         sql`${inquiries.callDateTime} IS NOT NULL`,
-        gte(inquiries.callDateTime, weekStart),
+        gte(inquiries.callDateTime, thisWeekStart),
         sql`(${inquiries.callStatus} = 'missed' OR ${inquiries.callDurationSeconds} < 15)`,
       ));
     const totalW = Number(totalCallsWeek.count);
     const missedW = Number(missedWeek.count);
     const answerRate = totalW > 0 ? Math.round(((totalW - missedW) / totalW) * 100) : 100;
 
-    // ── 5. Speed to Admit ─────────────────────────────────────────────────────
-    const admittedThisWeek = await db.select({
+    // ── 5. Speed to Admit (by period) ─────────────────────────────────────────
+    const admittedInPeriod = await db.select({
       createdAt: inquiries.createdAt,
       admitDate: patients.admitDate,
     }).from(inquiries)
       .leftJoin(patients, sql`${patients.inquiryId} = ${inquiries.id}`)
       .where(and(
         eq(inquiries.status, "admitted"),
-        gte(inquiries.createdAt, weekStart),
+        gte(inquiries.createdAt, periodStart),
+        lte(inquiries.createdAt, periodEnd),
         sql`${patients.admitDate} IS NOT NULL`,
       ));
 
     let avgHoursToAdmit: number | null = null;
-    if (admittedThisWeek.length > 0) {
-      const totalMs = admittedThisWeek.reduce((sum, r) => {
+    if (admittedInPeriod.length > 0) {
+      const totalMs = admittedInPeriod.reduce((sum, r) => {
         const diff = new Date(r.admitDate!).getTime() - new Date(r.createdAt!).getTime();
         return sum + (diff > 0 ? diff : 0);
       }, 0);
-      avgHoursToAdmit = Math.round((totalMs / admittedThisWeek.length) / 3600000);
+      avgHoursToAdmit = Math.round((totalMs / admittedInPeriod.length) / 3600000);
     }
 
-    // ── 6. Pipeline Snapshot ──────────────────────────────────────────────────
+    // ── 6. Pipeline Snapshot (always current, period-independent) ─────────────
     const [activeCount] = await db.select({ count: count() }).from(inquiries)
       .where(sql`${inquiries.status} NOT IN ('admitted','discharged','did_not_admit','referred_out')`);
     const [vobPending] = await db.select({ count: count() }).from(inquiries)
@@ -323,8 +366,13 @@ router.get("/admissions-performance", async (req, res) => {
       ));
 
     res.json({
-      week:  { leads: weekLeads,  admits: weekAdmits,  conversion: weekConversion },
-      month: { leads: monthLeads, admits: monthAdmits, conversion: monthConversion },
+      // Period-aware stats
+      period: { leads: periodLeads, admits: periodAdmits, conversion: periodConversion },
+      periodLabel,
+      timeframe: tf,
+      // Legacy keys kept for backward compat
+      week:  { leads: periodLeads, admits: periodAdmits, conversion: periodConversion },
+      month: { leads: periodLeads, admits: periodAdmits, conversion: periodConversion },
       referralSources: referralSources2,
       topPerformers: {
         admissionsRep: repAdmits[0] ? { name: repAdmits[0].name, admits: Number(repAdmits[0].admits) } : null,
@@ -338,7 +386,7 @@ router.get("/admissions-performance", async (req, res) => {
         totalWeek: totalW,
         answerRate,
       },
-      speed: { avgHoursToAdmit, sampleSize: admittedThisWeek.length },
+      speed: { avgHoursToAdmit, sampleSize: admittedInPeriod.length },
       pipeline: {
         active: Number(activeCount.count),
         vobPending: Number(vobPending.count),
