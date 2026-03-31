@@ -620,6 +620,70 @@ router.get("/calls/active", async (req, res) => {
   }
 });
 
+// ── GET /api/calls/log — today summary + missed + recent 30 calls ────────────
+router.get("/calls/log", async (req, res) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    // All calls today (have a callDateTime today)
+    const todayCalls = await db.select({
+      id: inquiries.id,
+      firstName: inquiries.firstName,
+      lastName: inquiries.lastName,
+      phone: inquiries.phone,
+      callStatus: inquiries.callStatus,
+      callDurationSeconds: inquiries.callDurationSeconds,
+      callDateTime: inquiries.callDateTime,
+      ctmSource: inquiries.ctmSource,
+    }).from(inquiries)
+      .where(and(
+        sql`${inquiries.callDateTime} IS NOT NULL`,
+        gte(inquiries.callDateTime, todayStart),
+      ))
+      .orderBy(desc(inquiries.callDateTime));
+
+    const total     = todayCalls.length;
+    const missed    = todayCalls.filter(c => c.callStatus === "missed").length;
+    const answered  = todayCalls.filter(c => c.callStatus === "completed" || c.callStatus === "active").length;
+    const answerRate = total > 0 ? Math.round((answered / total) * 100) : 100;
+
+    // Recent calls — last 30 with any callDateTime, for the full log
+    const recentRows = await db.select({
+      id: inquiries.id,
+      firstName: inquiries.firstName,
+      lastName: inquiries.lastName,
+      phone: inquiries.phone,
+      callStatus: inquiries.callStatus,
+      callDurationSeconds: inquiries.callDurationSeconds,
+      callDateTime: inquiries.callDateTime,
+      ctmSource: inquiries.ctmSource,
+    }).from(inquiries)
+      .where(sql`${inquiries.callDateTime} IS NOT NULL`)
+      .orderBy(desc(inquiries.callDateTime))
+      .limit(30);
+
+    const format = (r: typeof recentRows[number]) => ({
+      id: r.id,
+      name: `${r.firstName} ${r.lastName}`.trim(),
+      phone: r.phone,
+      status: r.callStatus,
+      duration: r.callDurationSeconds,
+      callDateTime: r.callDateTime,
+      source: r.ctmSource,
+    });
+
+    res.json({
+      summary: { total, missed, answered, answerRate },
+      missedToday: todayCalls.filter(c => c.callStatus === "missed").map(format),
+      recentCalls: recentRows.map(format),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── POST /api/inquiries/:id/claim — atomically claim an inquiry for this rep ─
 router.post("/inquiries/:id/claim", async (req, res) => {
   try {
