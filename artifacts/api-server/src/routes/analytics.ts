@@ -350,6 +350,39 @@ router.get("/admissions-performance", async (req, res) => {
       avgHoursToAdmit = Math.round((totalMs / admittedInPeriod.length) / 3600000);
     }
 
+    // ── 5b. Top Payors (by period) ────────────────────────────────────────────
+    const payorRows = await db.select({
+      provider: inquiries.insuranceProvider,
+      leads: count(),
+    }).from(inquiries)
+      .where(and(
+        sql`${inquiries.insuranceProvider} IS NOT NULL`,
+        gte(inquiries.createdAt, periodStart),
+        lte(inquiries.createdAt, periodEnd),
+      ))
+      .groupBy(inquiries.insuranceProvider)
+      .orderBy(desc(count()))
+      .limit(8);
+
+    const topPayors = await Promise.all(payorRows.map(async r => {
+      const [admRow] = await db.select({ count: count() }).from(inquiries)
+        .where(and(
+          eq(inquiries.insuranceProvider, r.provider!),
+          eq(inquiries.status, "admitted"),
+          gte(inquiries.createdAt, periodStart),
+          lte(inquiries.createdAt, periodEnd),
+        ));
+      const leads = Number(r.leads);
+      const admits = Number(admRow.count);
+      return {
+        provider: r.provider || "Unknown",
+        leads,
+        admits,
+        conversion: leads > 0 ? Math.round((admits / leads) * 100) : 0,
+      };
+    }));
+    topPayors.sort((a, b) => b.leads - a.leads);
+
     // ── 6. Pipeline Snapshot (always current, period-independent) ─────────────
     const [activeCount] = await db.select({ count: count() }).from(inquiries)
       .where(sql`${inquiries.status} NOT IN ('admitted','discharged','did_not_admit','referred_out')`);
@@ -374,6 +407,7 @@ router.get("/admissions-performance", async (req, res) => {
       week:  { leads: periodLeads, admits: periodAdmits, conversion: periodConversion },
       month: { leads: periodLeads, admits: periodAdmits, conversion: periodConversion },
       referralSources: referralSources2,
+      topPayors,
       topPerformers: {
         admissionsRep: repAdmits[0] ? { name: repAdmits[0].name, admits: Number(repAdmits[0].admits) } : null,
         leadRep: repLeads[0] ? { name: repLeads[0].name, leads: Number(repLeads[0].leads) } : null,

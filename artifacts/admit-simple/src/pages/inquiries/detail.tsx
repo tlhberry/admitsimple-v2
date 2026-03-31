@@ -1099,6 +1099,18 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                         </div>
                         <div>
                           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Insurance Provider</label>
+                          <div className="flex gap-1.5 mb-1.5 flex-wrap">
+                            {["Self-Pay", "Medicaid", "Medicare", "Tricare"].map(p => (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => setIntakeEdit(prev => ({ ...prev, insuranceProvider: p }))}
+                                className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground border border-border transition-all"
+                              >
+                                {p}
+                              </button>
+                            ))}
+                          </div>
                           <Input
                             value={intakeEdit.insuranceProvider}
                             onChange={e => setIntakeEdit(p => ({ ...p, insuranceProvider: e.target.value }))}

@@ -421,6 +421,21 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
             )}
           </div>
 
+          {/* Quick-select payor shortcuts */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quick:</span>
+            {["Self-Pay", "Medicaid", "Medicare", "Tricare"].map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => form.setValue("insuranceProvider", p)}
+                className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground border border-border transition-all"
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Field label="Provider / Carrier" name="insuranceProvider" form={form} isAi={isAi("insuranceProvider")} placeholder="e.g. Aetna" />
             <Field label="Member ID" name="insuranceMemberId" form={form} isAi={isAi("insuranceMemberId")} placeholder="Member ID" />
