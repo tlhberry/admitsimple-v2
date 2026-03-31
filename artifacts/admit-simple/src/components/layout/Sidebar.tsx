@@ -13,7 +13,6 @@ import {
   LogOut,
   Building2,
   Activity,
-  BedDouble,
   Phone,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -55,7 +54,6 @@ export function Sidebar() {
         { icon: Building2,  label: "Referral Accounts", href: "/referral-accounts" },
         { icon: Activity,   label: "Activity Feed",     href: "/bd-activity-feed" },
         { icon: TrendingUp, label: "BD Reports",        href: "/bd-reports" },
-        { icon: BedDouble,  label: "Bed Board",         href: "/bed-board" },
       ],
     },
     {
