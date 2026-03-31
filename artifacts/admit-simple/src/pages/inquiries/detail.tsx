@@ -169,6 +169,11 @@ const LEGACY_STATUS_MAP: Record<string, string> = {
   qualified: "Insurance Verification",
   "Clinical Assessment": "Scheduled to Admit",
 };
+
+const STAGE_DISPLAY_NAMES: Record<string, string> = {
+  "Insurance Verification": "VOB",
+  "Pre-Assessment": "Pre-Screen",
+};
 const TERMINAL_STAGES = new Set(["Did Not Admit", "Discharged", "Non-Viable"]);
 
 function PipelineStageTracker({ stages, currentStatus }: { stages: any[]; currentStatus: string }) {
@@ -216,7 +221,7 @@ function PipelineStageTracker({ stages, currentStatus }: { stages: any[]; curren
                       done ? "text-muted-foreground" :
                       "text-muted-foreground/40"
                     )}>
-                      {stage.name}
+                      {STAGE_DISPLAY_NAMES[stage.name] ?? stage.name}
                     </span>
                   </div>
                   {idx < mainStages.length - 1 && (
