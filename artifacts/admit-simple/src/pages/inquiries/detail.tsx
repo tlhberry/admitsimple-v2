@@ -91,23 +91,8 @@ function AuditLogCard({ inquiryId, parsedAt, vobData, onTabChange }: {
       <CardHeader className="py-4 border-b border-border">
         <CardTitle className="text-sm text-foreground">Change History</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 space-y-4">
-        <button
-          onClick={() => onTabChange("clinical_ai")}
-          className="w-full flex items-center gap-2 p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-400 hover:bg-indigo-500/15 transition-colors"
-        >
-          <ClipboardCheck className="w-3.5 h-3.5" />
-          Pre-Screen Forms &amp; Clinical AI
-        </button>
-        <button
-          onClick={() => onTabChange("vob")}
-          className="w-full flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/15 transition-colors"
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          {vobData ? "View/Edit VOB" : "Start Insurance Verification"}
-        </button>
-
-        <div className="border-t border-border pt-4">
+      <CardContent className="p-4">
+        <div className="pt-0">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity Log</p>
           {isLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
