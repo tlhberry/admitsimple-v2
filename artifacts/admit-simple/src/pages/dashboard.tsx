@@ -124,7 +124,6 @@ export default function Dashboard() {
   const period   = perf?.period    ?? { leads: 0, admits: 0, conversion: 0 };
   const periodLabel = perf?.periodLabel ?? (timeframe === "week" ? "This Week" : timeframe === "month" ? "This Month" : timeframe === "year" ? "This Year" : "Custom Range");
   const refs     = (perf?.referralSources ?? []) as any[];
-  const payors   = (perf?.topPayors ?? []) as any[];
   const perf_    = perf?.topPerformers ?? { admissionsRep: null, bdRep: null, leadRep: null };
   const calls    = perf?.calls    ?? { missedToday: 0, missedWeek: 0, answerRate: 100 };
   const speed    = perf?.speed    ?? { avgHoursToAdmit: null, sampleSize: 0 };
@@ -492,32 +491,6 @@ export default function Dashboard() {
                       <span className="text-muted-foreground">{r.leads} → </span>
                       <span className="text-emerald-400">{r.admits}</span>
                       <span className="text-muted-foreground/50 ml-1">({r.conversion}%)</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* ── 3b. Top Payors ──────────────────────────────────────────── */}
-          <Section title={`Top Payors (${periodLabel})`} badge="Reports" onClick={() => navigate("/reports")}>
-            {payors.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No payor data for {periodLabel.toLowerCase()}</p>
-            ) : (
-              <div className="space-y-2.5">
-                {payors.slice(0, 6).map((p: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0 pr-3">
-                      <span className={cn(
-                        "w-1.5 h-1.5 rounded-full shrink-0",
-                        p.provider === "Self-Pay" ? "bg-amber-400" : "bg-primary",
-                      )} />
-                      <span className="text-sm text-foreground truncate">{p.provider}</span>
-                    </div>
-                    <span className="text-xs font-semibold tabular-nums shrink-0 text-right">
-                      <span className="text-muted-foreground">{p.leads} → </span>
-                      <span className="text-emerald-400">{p.admits}</span>
-                      <span className="text-muted-foreground/50 ml-1">({p.conversion}%)</span>
                     </span>
                   </div>
                 ))}

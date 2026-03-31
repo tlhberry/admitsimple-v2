@@ -17,27 +17,41 @@ import ReactMarkdown from "react-markdown";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
+type Timeframe = "week" | "month" | "year" | "custom";
+
 // ── Admissions Insights — vertical performance feed ──────────────
 function AdmissionsInsights() {
   const [, navigate] = useLocation();
+  const [timeframe, setTimeframe] = useState<Timeframe>("week");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd,   setCustomEnd]   = useState("");
+
+  const perfUrl = (() => {
+    const p = new URLSearchParams({ timeframe });
+    if (timeframe === "custom" && customStart && customEnd) {
+      p.set("startDate", customStart);
+      p.set("endDate", customEnd);
+    }
+    return `/api/admissions-performance?${p.toString()}`;
+  })();
+
   const { data, isLoading } = useQuery<any>({
-    queryKey: ["/api/admissions-performance"],
-    queryFn: () => fetch("/api/admissions-performance", { credentials: "include" }).then(r => r.json()),
+    queryKey: ["admissions-performance-reports", timeframe, customStart, customEnd],
+    queryFn: () => fetch(perfUrl, { credentials: "include" }).then(r => r.json()),
     staleTime: 60000,
     refetchInterval: 60000,
+    enabled: timeframe !== "custom" || (!!customStart && !!customEnd),
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-        <Loader2 className="w-7 h-7 animate-spin text-primary" />
-        <p className="text-sm">Loading…</p>
-      </div>
-    );
-  }
+  const periodLabel = data?.periodLabel ?? (
+    timeframe === "week" ? "This Week" :
+    timeframe === "month" ? "This Month" :
+    timeframe === "year" ? "This Year" : "Custom Range"
+  );
 
-  const week   = data?.week   ?? { leads: 0, admits: 0, conversion: 0 };
+  const period = data?.period  ?? { leads: 0, admits: 0, conversion: 0 };
   const refs   = (data?.referralSources ?? []) as { source: string; leads: number; admits: number; conversion: number }[];
+  const payors = (data?.topPayors ?? []) as { provider: string; leads: number; admits: number; conversion: number }[];
   const perf   = data?.topPerformers ?? { admissionsRep: null, leadRep: null, bdRep: null };
   const calls  = data?.calls  ?? { missedToday: 0, totalToday: 0, missedWeek: 0, totalWeek: 0, answerRate: 100 };
   const speed  = data?.speed  ?? { avgHoursToAdmit: null, sampleSize: 0 };
@@ -67,29 +81,73 @@ function AdmissionsInsights() {
 
   return (
     <div className="divide-y divide-border/0">
-      {/* 1 — This Week */}
-      <Section title="This Week">
-        <div className="flex gap-6">
-          <div>
-            <div className="text-2xl font-extrabold text-foreground tabular-nums">{week.leads}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Leads</div>
-          </div>
-          <div>
-            <div className="text-2xl font-extrabold text-emerald-400 tabular-nums">{week.admits}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Admits</div>
-          </div>
-          <div>
-            <div className="text-2xl font-extrabold text-primary tabular-nums">{week.conversion}%</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Conversion</div>
-          </div>
+      {/* 0 — Timeframe picker */}
+      <div className="px-5 py-3 border-b border-border/60">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(["week", "month", "year", "custom"] as Timeframe[]).map(tf => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all",
+                timeframe === tf
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tf === "week" ? "Week" : tf === "month" ? "Month" : tf === "year" ? "Year" : "Custom"}
+            </button>
+          ))}
+          {timeframe === "custom" && (
+            <div className="flex items-center gap-1.5 mt-1.5 w-full flex-wrap">
+              <input
+                type="date"
+                value={customStart}
+                onChange={e => setCustomStart(e.target.value)}
+                className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={e => setCustomEnd(e.target.value)}
+                className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* 1 — Period stats */}
+      <Section title={periodLabel}>
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Loading…</span>
+          </div>
+        ) : (
+          <div className="flex gap-6">
+            <div>
+              <div className="text-2xl font-extrabold text-foreground tabular-nums">{period.leads}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Leads</div>
+            </div>
+            <div>
+              <div className="text-2xl font-extrabold text-emerald-400 tabular-nums">{period.admits}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Admits</div>
+            </div>
+            <div>
+              <div className="text-2xl font-extrabold text-primary tabular-nums">{period.conversion}%</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Conversion</div>
+            </div>
+          </div>
+        )}
       </Section>
 
       {/* 2 — Referral Sources */}
-      <Section title="Top Referral Sources" badge="Sources" onClick={() => navigate("/referrals")}>
+      <Section title={`Top Referral Sources (${periodLabel})`} badge="Sources" onClick={() => navigate("/referrals")}>
         <div className="space-y-2">
           {refs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No activity this week</p>
+            <p className="text-sm text-muted-foreground">No activity for {periodLabel.toLowerCase()}</p>
           ) : refs.slice(0, 6).map((r, i) => (
             <div key={i} className="flex items-center justify-between">
               <span className="text-sm text-foreground truncate flex-1 pr-3">{r.source}</span>
@@ -102,15 +160,38 @@ function AdmissionsInsights() {
         </div>
       </Section>
 
+      {/* 2b — Top Payors */}
+      <Section title={`Top Payors (${periodLabel})`}>
+        <div className="space-y-2">
+          {payors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No payor data for {periodLabel.toLowerCase()}</p>
+          ) : payors.slice(0, 6).map((p, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <div className="flex items-center gap-2 flex-1 min-w-0 pr-3">
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full shrink-0",
+                  p.provider === "Self-Pay" ? "bg-amber-400" : "bg-primary",
+                )} />
+                <span className="text-sm text-foreground truncate">{p.provider}</span>
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0 tabular-nums">
+                {p.leads} → <span className="text-emerald-400">{p.admits}</span>
+                <span className="text-muted-foreground/50 ml-1">({p.conversion}%)</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       {/* 3 — Top Performers */}
-      <Section title="Top Performers" badge="Reps" onClick={() => navigate("/inquiries?tab=admitted")}>
+      <Section title={`Top Performers (${periodLabel})`} badge="Reps" onClick={() => navigate("/inquiries?tab=admitted")}>
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-muted-foreground">Closer</span>
             <span className="text-sm font-bold text-foreground">
               {perf.admissionsRep
                 ? `${perf.admissionsRep.name} — ${perf.admissionsRep.admits} admits`
-                : "No data this week"}
+                : "No data"}
             </span>
           </div>
           <div className="flex items-baseline justify-between">
@@ -120,7 +201,7 @@ function AdmissionsInsights() {
                 ? `${perf.bdRep.name} — ${perf.bdRep.leads} admits`
                 : perf.leadRep
                   ? `${perf.leadRep.name} — ${perf.leadRep.leads} leads`
-                  : "No data this week"}
+                  : "No data"}
             </span>
           </div>
         </div>
@@ -149,7 +230,7 @@ function AdmissionsInsights() {
         <div>
           <div className="text-3xl font-extrabold text-primary tabular-nums">{formatSpeed(speed.avgHoursToAdmit)}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
-            avg time · {speed.sampleSize} admit{speed.sampleSize !== 1 ? "s" : ""} this week
+            avg time · {speed.sampleSize} admit{speed.sampleSize !== 1 ? "s" : ""} · {periodLabel.toLowerCase()}
           </div>
         </div>
       </Section>
