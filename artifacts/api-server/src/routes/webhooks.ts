@@ -314,6 +314,28 @@ router.post("/webhooks/ctm", async (req, res) => {
   }
 });
 
+// ── POST /api/webhooks/twilio/voice — TwiML for outbound browser calls ────────
+router.post("/webhooks/twilio/voice", (req, res) => {
+  const to       = (req.body.To       as string | undefined) || "";
+  const callerId = process.env.TWILIO_PHONE_NUMBER || "";
+
+  res.setHeader("Content-Type", "text/xml");
+
+  if (!to) {
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say>No destination number provided.</Say></Response>`);
+    return;
+  }
+
+  res.send(
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Response>` +
+    `<Dial callerId="${callerId}" timeout="30">` +
+    `<Number>${to}</Number>` +
+    `</Dial>` +
+    `</Response>`
+  );
+});
+
 // ── POST /api/webhooks/twilio/incoming — new inbound call ─────────────────────
 router.post("/webhooks/twilio/incoming", async (req, res) => {
   try {

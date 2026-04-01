@@ -7,9 +7,9 @@ import { useCallback, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Phone, Clock, UserCheck, Users, ExternalLink, Loader2,
+  Phone, UserCheck, Users, ExternalLink, Loader2,
   PhoneOff, Radio, CheckCircle2, AlertTriangle, PhoneMissed,
-  PhoneCall, PhoneIncoming, BarChart3, ArrowRight,
+  PhoneCall, PhoneIncoming, Mic, MicOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -122,7 +122,15 @@ interface LogCall {
 type Filter = "all" | "missed" | "answered";
 
 // ── Recent call row ───────────────────────────────────────────────────────────
-function CallRow({ call, onNavigate }: { call: LogCall; onNavigate: (id: number) => void }) {
+function CallRow({
+  call,
+  onNavigate,
+  onCallBack,
+}: {
+  call: LogCall;
+  onNavigate: (id: number) => void;
+  onCallBack?: (phone: string, name: string) => void;
+}) {
   const known = isKnown(call.name);
   const dur = formatDuration(call.duration);
 
@@ -161,12 +169,13 @@ function CallRow({ call, onNavigate }: { call: LogCall; onNavigate: (id: number)
       <div className="shrink-0 flex flex-col items-end gap-1.5" onClick={e => e.stopPropagation()}>
         <span className="text-[10px] text-muted-foreground/60">{timeAgo(call.callDateTime)}</span>
         {call.phone && (
-          <a
-            href={`tel:${call.phone}`}
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onCallBack?.(call.phone!, call.name); }}
             className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
           >
             <Phone className="w-3 h-3" /> Call Back
-          </a>
+          </button>
         )}
       </div>
     </div>
@@ -181,7 +190,11 @@ export default function ActiveCallsPage() {
   const { toast } = useToast();
   const [claiming, setClaiming] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
-  const { activeCalls, answerCall, declineCall } = useTwilioVoice();
+  const {
+    activeCalls, answerCall, declineCall,
+    makeCall, hangUp, toggleMute,
+    outboundStatus, outboundTo, outboundName, isMuted, callDuration,
+  } = useTwilioVoice();
 
   // Live active calls
   const { data: calls = [], isLoading: liveLoading } = useQuery<ActiveCall[]>({
@@ -498,13 +511,82 @@ export default function ActiveCallsPage() {
               </div>
             ) : (
               filtered.map(call => (
-                <CallRow key={call.id} call={call} onNavigate={(id) => navigate(`/inquiries/${id}`)} />
+                <CallRow
+                  key={call.id}
+                  call={call}
+                  onNavigate={(id) => navigate(`/inquiries/${id}`)}
+                  onCallBack={(phone, name) => makeCall(phone, name)}
+                />
               ))
             )}
           </div>
         </div>
 
       </div>
+
+      {/* ── Floating outbound call panel ──────────────────────────────── */}
+      {outboundStatus !== "idle" && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[340px] max-w-[calc(100vw-2rem)]">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header bar */}
+            <div className={cn(
+              "px-4 py-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider",
+              outboundStatus === "open"       ? "bg-emerald-500/15 text-emerald-400 border-b border-emerald-500/20" :
+              outboundStatus === "ringing"    ? "bg-amber-500/15  text-amber-400  border-b border-amber-500/20"  :
+                                               "bg-muted/60        text-muted-foreground border-b border-border",
+            )}>
+              <div className={cn(
+                "w-2 h-2 rounded-full animate-pulse",
+                outboundStatus === "open"    ? "bg-emerald-400" :
+                outboundStatus === "ringing" ? "bg-amber-400"   : "bg-muted-foreground",
+              )} />
+              {outboundStatus === "connecting" ? "Connecting…" :
+               outboundStatus === "ringing"    ? "Ringing…"    :
+                                                "Connected"}
+              {outboundStatus === "open" && (
+                <span className="ml-auto font-mono font-normal">
+                  {String(Math.floor(callDuration / 60)).padStart(2, "0")}:{String(callDuration % 60).padStart(2, "0")}
+                </span>
+              )}
+            </div>
+
+            {/* Call info + controls */}
+            <div className="px-4 py-4 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground truncate">
+                  {outboundName && outboundName !== outboundTo ? outboundName : "Unknown"}
+                </p>
+                <p className="text-xs text-muted-foreground font-mono truncate">{outboundTo}</p>
+              </div>
+
+              {/* Mute */}
+              <button
+                type="button"
+                onClick={toggleMute}
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center border transition-colors",
+                  isMuted
+                    ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
+                    : "bg-muted border-border text-muted-foreground hover:text-foreground",
+                )}
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+
+              {/* Hang up */}
+              <button
+                type="button"
+                onClick={hangUp}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-700 text-white transition-colors"
+                title="Hang up"
+              >
+                <PhoneOff className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
