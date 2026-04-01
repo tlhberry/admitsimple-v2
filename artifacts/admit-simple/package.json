@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
+    "@twilio/voice-sdk": "^2.18.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "react-markdown": "^10.1.0"

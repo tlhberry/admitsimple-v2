@@ -1,4 +1,5 @@
 import { Router } from "express";
+import twilio from "twilio";
 import { db } from "@workspace/db";
 import { inquiries, activities, settings, users } from "@workspace/db/schema";
 import { eq, desc, ilike } from "drizzle-orm";
@@ -309,6 +310,118 @@ router.post("/webhooks/ctm", async (req, res) => {
     res.status(200).json({ ok: true, inquiryId: inquiry.id });
   } catch (err) {
     console.error("[CTM Webhook] Error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/webhooks/twilio/incoming — new inbound call ─────────────────────
+router.post("/webhooks/twilio/incoming", async (req, res) => {
+  try {
+    const { CallerName, From: callerPhone, CallSid } = req.body as Record<string, string>;
+    const callerName = CallerName || "Unknown Caller";
+
+    // Upsert inquiry by phone number
+    let inquiryId: number;
+    if (callerPhone) {
+      const [existing] = await db
+        .select({ id: inquiries.id })
+        .from(inquiries)
+        .where(eq(inquiries.phone, callerPhone))
+        .orderBy(desc(inquiries.createdAt))
+        .limit(1);
+
+      if (existing) {
+        await db.update(inquiries).set({
+          ctmCallId: CallSid,
+          callStatus: "ringing",
+          callDateTime: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(inquiries.id, existing.id));
+        inquiryId = existing.id;
+      } else {
+        const nameParts = callerName.trim().split(/\s+/);
+        const [created] = await db.insert(inquiries).values({
+          firstName: nameParts[0] || "Unknown",
+          lastName:  nameParts.slice(1).join(" ") || "Caller",
+          phone: callerPhone,
+          referralSource: "Twilio",
+          referralOrigin: "online",
+          ctmCallId: CallSid,
+          callStatus: "ringing",
+          callDateTime: new Date(),
+          status: "new",
+          priority: "medium",
+          updatedAt: new Date(),
+        }).returning({ id: inquiries.id });
+        inquiryId = created.id;
+        const inquiryNum = `INQ-${inquiryId.toString().padStart(6, "0")}`;
+        await db.update(inquiries).set({ inquiryNumber: inquiryNum }).where(eq(inquiries.id, inquiryId));
+      }
+    } else {
+      inquiryId = 0;
+    }
+
+    broadcastSSE("incoming_call", {
+      callSid: CallSid,
+      inquiryId,
+      callerPhone,
+      callerName,
+      status: "ringing",
+      claimable: true,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Auto-miss after 30 seconds if still ringing
+    if (inquiryId) {
+      const id = inquiryId;
+      setTimeout(async () => {
+        try {
+          const [cur] = await db.select({ callStatus: inquiries.callStatus }).from(inquiries).where(eq(inquiries.id, id));
+          if (cur?.callStatus === "ringing") {
+            await db.update(inquiries).set({ callStatus: "missed", updatedAt: new Date() }).where(eq(inquiries.id, id));
+            broadcastSSE("call_status", { inquiryId: id, status: "missed" });
+          }
+        } catch { /* best-effort */ }
+      }, 30000);
+    }
+
+    res.setHeader("Content-Type", "text/xml");
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Enqueue waitUrl="/api/webhooks/twilio/wait">support</Enqueue></Response>`);
+  } catch (err) {
+    console.error("[Twilio Incoming]", err);
+    res.setHeader("Content-Type", "text/xml");
+    res.status(500).send(`<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>`);
+  }
+});
+
+// ── POST /api/webhooks/twilio/status — call status callbacks ──────────────────
+router.post("/webhooks/twilio/status", async (req, res) => {
+  try {
+    const { CallSid, CallStatus, CallDuration } = req.body as Record<string, string>;
+
+    const statusMap: Record<string, string> = {
+      "in-progress": "active",
+      "completed":   "completed",
+      "no-answer":   "missed",
+      "busy":        "missed",
+      "failed":      "missed",
+      "ringing":     "ringing",
+      "initiated":   "ringing",
+    };
+    const mappedStatus = statusMap[CallStatus] ?? "completed";
+
+    const update: Record<string, unknown> = { callStatus: mappedStatus, updatedAt: new Date() };
+    if (CallDuration) update.callDurationSeconds = parseInt(CallDuration, 10);
+
+    await db.update(inquiries)
+      .set(update)
+      .where(eq(inquiries.ctmCallId, CallSid));
+
+    broadcastSSE("call_status", { callSid: CallSid, status: mappedStatus });
+
+    res.status(204).send();
+  } catch (err) {
+    console.error("[Twilio Status]", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

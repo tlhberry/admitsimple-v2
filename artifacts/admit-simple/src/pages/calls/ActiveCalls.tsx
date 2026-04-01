@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { useLiveEvents } from "@/hooks/use-live-events";
 import { useAuth } from "@/hooks/use-auth";
+import { useTwilioVoice } from "@/hooks/useTwilioVoice";
 import { useCallback, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -105,6 +106,7 @@ interface ActiveCall {
   assignedToName: string | null;
   callDateTime: string | null;
   ctmSource: string | null;
+  ctmCallId: string | null;
 }
 
 interface LogCall {
@@ -179,6 +181,7 @@ export default function ActiveCallsPage() {
   const { toast } = useToast();
   const [claiming, setClaiming] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const { activeCalls, answerCall, declineCall } = useTwilioVoice();
 
   // Live active calls
   const { data: calls = [], isLoading: liveLoading } = useQuery<ActiveCall[]>({
@@ -333,12 +336,31 @@ export default function ActiveCallsPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    {/* Twilio browser answer/decline — only when Device has the incoming call */}
+                    {call.callStatus === "ringing" && call.ctmCallId && activeCalls.has(call.ctmCallId) && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => answerCall(call.ctmCallId!)}
+                          className="flex-1 flex items-center justify-center gap-2 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                        >
+                          <Phone className="w-4 h-4" /> Answer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => declineCall(call.ctmCallId!)}
+                          className="flex items-center justify-center gap-2 px-3 h-9 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                        >
+                          <PhoneOff className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                     {isOwned && (
                       <Link href={`/inquiries/${call.id}?mode=live`} className="flex-1 flex items-center justify-center gap-2 h-9 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-semibold transition-colors">
                         <ExternalLink className="w-4 h-4" /> Resume Call
                       </Link>
                     )}
-                    {isClaimable && (
+                    {isClaimable && !(call.ctmCallId && activeCalls.has(call.ctmCallId)) && (
                       <button type="button" onClick={() => handleClaim(call.id)} disabled={claiming === call.id}
                         className="flex-1 flex items-center justify-center gap-2 h-9 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors">
                         {claiming === call.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
@@ -350,7 +372,7 @@ export default function ActiveCallsPage() {
                         <ExternalLink className="w-4 h-4" /> View Inquiry
                       </Link>
                     )}
-                    {!isOwned && !isClaimable && !isTakenByOther && (
+                    {!isOwned && !isClaimable && !isTakenByOther && !(call.ctmCallId && activeCalls.has(call.ctmCallId)) && (
                       <Link href={`/inquiries/${call.id}`} className="flex-1 flex items-center justify-center gap-2 h-9 border border-border rounded-xl text-sm text-muted-foreground transition-colors hover:text-foreground">
                         <ExternalLink className="w-4 h-4" /> View
                       </Link>

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import twilio from "twilio";
 import { db } from "@workspace/db";
 import { inquiries, users, patients, auditLogs, settings } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt, sql } from "drizzle-orm";
@@ -592,6 +593,34 @@ router.get("/inquiries/:id/audit-log", async (req, res) => {
   }
 });
 
+// ── GET /api/calls/token — Twilio Voice access token for browser SDK ─────────
+router.get("/calls/token", async (req, res) => {
+  try {
+    const sess = req.session as any;
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken  = process.env.TWILIO_AUTH_TOKEN;
+    const appSid     = process.env.TWILIO_TWIML_APP_SID;
+
+    if (!accountSid || !authToken || !appSid) {
+      res.status(503).json({ error: "Twilio not configured" });
+      return;
+    }
+
+    const AccessToken = twilio.jwt.AccessToken;
+    const VoiceGrant  = AccessToken.VoiceGrant;
+
+    const identity = String(sess.userId);
+    const accessToken = new AccessToken(accountSid, authToken, { identity, ttl: 3600 } as any);
+    const voiceGrant  = new VoiceGrant({ outgoingApplicationSid: appSid, incomingAllow: true });
+    accessToken.addGrant(voiceGrant);
+
+    res.json({ token: accessToken.toJwt(), identity });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── GET /api/calls/active — live & ringing calls (admin view) ──────────────
 router.get("/calls/active", async (req, res) => {
   try {
@@ -608,6 +637,7 @@ router.get("/calls/active", async (req, res) => {
         assignedToName: users.name,
         callDateTime: inquiries.callDateTime,
         ctmSource: inquiries.ctmSource,
+        ctmCallId: inquiries.ctmCallId,
       })
       .from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
