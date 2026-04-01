@@ -27,3 +27,8 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+TWILIO_TWIML_APP_SID = "AP73b639e49e62750928823f580a80c352"
