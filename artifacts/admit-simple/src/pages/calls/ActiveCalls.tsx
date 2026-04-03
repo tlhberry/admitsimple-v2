@@ -3,13 +3,14 @@ import { Layout } from "@/components/layout/Layout";
 import { useLiveEvents } from "@/hooks/use-live-events";
 import { useAuth } from "@/hooks/use-auth";
 import { useTwilioVoice } from "@/hooks/useTwilioVoice";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
   Phone, UserCheck, Users, ExternalLink, Loader2,
   PhoneOff, Radio, CheckCircle2, AlertTriangle, PhoneMissed,
   PhoneCall, PhoneIncoming, Mic, MicOff,
+  MessageSquare, Send, Delete,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +121,146 @@ interface LogCall {
 }
 
 type Filter = "all" | "missed" | "answered";
+type CommTab = "dialer" | "sms";
+
+// ── Dialer ────────────────────────────────────────────────────────────────────
+function Dialer({ onCall }: { onCall: (number: string) => void }) {
+  const [digits, setDigits] = useState("");
+  const keys = ["1","2","3","4","5","6","7","8","9","*","0","#"];
+  const subLabels: Record<string, string> = {
+    "2":"ABC","3":"DEF","4":"GHI","5":"JKL","6":"MNO",
+    "7":"PQRS","8":"TUV","9":"WXYZ","0":"+","*":"","#":"",
+  };
+
+  const press = (k: string) => setDigits(d => (d + k).slice(0, 15));
+
+  return (
+    <div className="select-none">
+      {/* Display */}
+      <div className="h-14 flex items-center justify-center mb-5 relative">
+        <span className={cn(
+          "font-mono text-2xl tracking-widest font-semibold",
+          digits ? "text-foreground" : "text-muted-foreground/40",
+        )}>
+          {digits || "Enter number"}
+        </span>
+        {digits && (
+          <button
+            type="button"
+            onClick={() => setDigits(d => d.slice(0, -1))}
+            className="absolute right-0 w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          >
+            <Delete className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Keypad grid */}
+      <div className="grid grid-cols-3 gap-2.5 mb-5">
+        {keys.map(k => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => press(k)}
+            className="h-14 flex flex-col items-center justify-center rounded-2xl bg-muted/40 hover:bg-muted active:scale-95 transition-all border border-border/50"
+          >
+            <span className="text-lg font-semibold text-foreground leading-none">{k}</span>
+            {subLabels[k] && (
+              <span className="text-[9px] text-muted-foreground mt-0.5 tracking-widest">{subLabels[k]}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Call button */}
+      <button
+        type="button"
+        disabled={!digits}
+        onClick={() => digits && onCall(digits)}
+        className="w-full h-14 flex items-center justify-center gap-2.5 rounded-2xl bg-[#5BC8DC] hover:bg-[#4ab8cc] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-base transition-all active:scale-[0.98] shadow-lg shadow-[#5BC8DC]/20"
+      >
+        <Phone className="w-5 h-5" />
+        Call
+      </button>
+    </div>
+  );
+}
+
+// ── SMS Compose ───────────────────────────────────────────────────────────────
+function SMSCompose({ toast }: { toast: ReturnType<typeof import("@/hooks/use-toast").useToast>["toast"] }) {
+  const [to,      setTo]      = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const maxChars = 160;
+
+  const handleSend = async () => {
+    if (!to || !message || sending) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/sms/send", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, message }),
+      });
+      if (res.ok) {
+        toast({ title: "Message sent", description: `SMS delivered to ${to}` });
+        setMessage("");
+      } else {
+        const data = await res.json();
+        toast({ title: "Failed to send", description: data.error ?? "Unknown error", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* To field */}
+      <div>
+        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">To</label>
+        <input
+          type="tel"
+          value={to}
+          onChange={e => setTo(e.target.value)}
+          placeholder="+1 (555) 000-0000"
+          className="w-full h-10 bg-muted/30 border border-border rounded-xl px-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-[#5BC8DC] focus:border-[#5BC8DC] transition-colors"
+        />
+      </div>
+
+      {/* Message field */}
+      <div>
+        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">Message</label>
+        <textarea
+          value={message}
+          onChange={e => setMessage(e.target.value.slice(0, maxChars))}
+          placeholder="Type your message…"
+          rows={4}
+          className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-[#5BC8DC] focus:border-[#5BC8DC] transition-colors"
+        />
+        <div className="flex justify-end mt-1">
+          <span className={cn("text-[10px]", message.length >= maxChars ? "text-red-400" : "text-muted-foreground")}>
+            {message.length}/{maxChars}
+          </span>
+        </div>
+      </div>
+
+      {/* Send button */}
+      <button
+        type="button"
+        disabled={!to || !message || sending}
+        onClick={handleSend}
+        className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-[#5BC8DC] hover:bg-[#4ab8cc] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-[#5BC8DC]/20"
+      >
+        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        {sending ? "Sending…" : "Send Message"}
+      </button>
+    </div>
+  );
+}
 
 // ── Recent call row ───────────────────────────────────────────────────────────
 function CallRow({
@@ -189,7 +330,8 @@ export default function ActiveCallsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [claiming, setClaiming] = useState<number | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter,   setFilter]   = useState<Filter>("all");
+  const [commTab,  setCommTab]  = useState<CommTab>("dialer");
   const {
     activeCalls, answerCall, declineCall,
     makeCall, hangUp, toggleMute,
@@ -467,6 +609,40 @@ export default function ActiveCallsPage() {
             </div>
           </div>
         )}
+
+        {/* ── Dial & Message ───────────────────────────────────────────────── */}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          {/* Tab strip */}
+          <div className="flex items-center border-b border-border bg-muted/20">
+            {([
+              { id: "dialer", label: "Dialer",       icon: <Phone       className="w-3.5 h-3.5" /> },
+              { id: "sms",    label: "Text Message",  icon: <MessageSquare className="w-3.5 h-3.5" /> },
+            ] as { id: CommTab; label: string; icon: ReactNode }[]).map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setCommTab(tab.id)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2",
+                  commTab === tab.id
+                    ? "border-[#5BC8DC] text-[#5BC8DC] bg-[#5BC8DC]/5"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab body */}
+          <div className="px-5 py-5 max-w-sm mx-auto">
+            {commTab === "dialer"
+              ? <Dialer onCall={(num) => makeCall(num, num)} />
+              : <SMSCompose toast={toast} />
+            }
+          </div>
+        </div>
 
         {/* ── Recent Calls ─────────────────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">

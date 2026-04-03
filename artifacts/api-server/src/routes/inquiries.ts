@@ -873,4 +873,32 @@ router.post("/inquiries/:id/call-outcome", async (req, res) => {
   }
 });
 
+// ── POST /api/sms/send — send an outbound SMS via Twilio ──────────────────────
+router.post("/sms/send", async (req, res) => {
+  try {
+    const { to, message } = req.body as { to?: string; message?: string };
+    if (!to || !message) {
+      res.status(400).json({ error: "to and message are required" });
+      return;
+    }
+
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken  = process.env.TWILIO_AUTH_TOKEN;
+    const from       = process.env.TWILIO_PHONE_NUMBER;
+
+    if (!accountSid || !authToken || !from) {
+      res.status(503).json({ error: "Twilio not configured" });
+      return;
+    }
+
+    const client = twilio(accountSid, authToken);
+    const msg = await client.messages.create({ body: message, from, to });
+
+    res.json({ ok: true, sid: msg.sid });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to send SMS" });
+  }
+});
+
 export default router;
