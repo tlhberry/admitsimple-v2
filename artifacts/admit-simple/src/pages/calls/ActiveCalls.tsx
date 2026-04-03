@@ -610,40 +610,6 @@ export default function ActiveCallsPage() {
           </div>
         )}
 
-        {/* ── Dial & Message ───────────────────────────────────────────────── */}
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          {/* Tab strip */}
-          <div className="flex items-center border-b border-border bg-muted/20">
-            {([
-              { id: "dialer", label: "Dialer",       icon: <Phone       className="w-3.5 h-3.5" /> },
-              { id: "sms",    label: "Text Message",  icon: <MessageSquare className="w-3.5 h-3.5" /> },
-            ] as { id: CommTab; label: string; icon: ReactNode }[]).map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setCommTab(tab.id)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2",
-                  commTab === tab.id
-                    ? "border-[#5BC8DC] text-[#5BC8DC] bg-[#5BC8DC]/5"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab body */}
-          <div className="px-5 py-5 max-w-sm mx-auto">
-            {commTab === "dialer"
-              ? <Dialer onCall={(num) => makeCall(num, num)} />
-              : <SMSCompose toast={toast} />
-            }
-          </div>
-        </div>
-
         {/* ── Recent Calls ─────────────────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           {/* Section header + filter */}
@@ -695,6 +661,40 @@ export default function ActiveCallsPage() {
                 />
               ))
             )}
+          </div>
+        </div>
+
+        {/* ── Dial & Message ───────────────────────────────────────────────── */}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          {/* Tab strip */}
+          <div className="flex items-center border-b border-border bg-muted/20">
+            {([
+              { id: "dialer", label: "Dialer",       icon: <Phone       className="w-3.5 h-3.5" /> },
+              { id: "sms",    label: "Text Message",  icon: <MessageSquare className="w-3.5 h-3.5" /> },
+            ] as { id: CommTab; label: string; icon: ReactNode }[]).map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setCommTab(tab.id)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2",
+                  commTab === tab.id
+                    ? "border-[#5BC8DC] text-[#5BC8DC] bg-[#5BC8DC]/5"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab body */}
+          <div className="px-5 py-5 max-w-sm mx-auto">
+            {commTab === "dialer"
+              ? <Dialer onCall={(num) => makeCall(num, num)} />
+              : <SMSCompose toast={toast} />
+            }
           </div>
         </div>
 
