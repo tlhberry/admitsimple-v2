@@ -383,6 +383,18 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
       inquiryId = 0;
     }
 
+    // ── Log inbound call activity ──────────────────────────────────────────
+    if (inquiryId) {
+      try {
+        await db.insert(activities).values({
+          inquiryId,
+          type: "call",
+          subject: `Inbound call from ${callerName}${callerPhone ? ` (${callerPhone})` : ""}`,
+          body: null,
+        });
+      } catch { /* best-effort */ }
+    }
+
     broadcastSSE("incoming_call", {
       callSid: CallSid,
       inquiryId,

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import twilio from "twilio";
 import { db } from "@workspace/db";
-import { inquiries, users, patients, auditLogs, settings } from "@workspace/db/schema";
+import { inquiries, users, patients, auditLogs, settings, activities } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
@@ -876,7 +876,7 @@ router.post("/inquiries/:id/call-outcome", async (req, res) => {
 // ── POST /api/sms/send — send an outbound SMS via Twilio ──────────────────────
 router.post("/sms/send", async (req, res) => {
   try {
-    const { to, message } = req.body as { to?: string; message?: string };
+    const { to, message, inquiryId: rawInquiryId } = req.body as { to?: string; message?: string; inquiryId?: number };
     if (!to || !message) {
       res.status(400).json({ error: "to and message are required" });
       return;
@@ -894,10 +894,75 @@ router.post("/sms/send", async (req, res) => {
     const client = twilio(accountSid, authToken);
     const msg = await client.messages.create({ body: message, from, to });
 
+    // ── Log activity to inquiry ────────────────────────────────────────────
+    try {
+      let resolvedInquiryId = rawInquiryId ?? null;
+      if (!resolvedInquiryId) {
+        const [found] = await db
+          .select({ id: inquiries.id })
+          .from(inquiries)
+          .where(eq(inquiries.phone, to))
+          .orderBy(desc(inquiries.createdAt))
+          .limit(1);
+        if (found) resolvedInquiryId = found.id;
+      }
+      if (resolvedInquiryId) {
+        await db.insert(activities).values({
+          inquiryId: resolvedInquiryId,
+          userId: (req as any).session?.userId ?? null,
+          type: "sms",
+          subject: `SMS sent to ${to}`,
+          body: message,
+        });
+      }
+    } catch { /* best-effort */ }
+
     res.json({ ok: true, sid: msg.sid });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to send SMS" });
+  }
+});
+
+// ── POST /api/calls/log — log an outbound call to an inquiry ──────────────────
+router.post("/calls/log", async (req, res) => {
+  try {
+    const { to, name, duration, inquiryId: rawInquiryId } = req.body as {
+      to?: string; name?: string; duration?: number; inquiryId?: number;
+    };
+
+    let resolvedInquiryId = rawInquiryId ?? null;
+    if (!resolvedInquiryId && to) {
+      const [found] = await db
+        .select({ id: inquiries.id })
+        .from(inquiries)
+        .where(eq(inquiries.phone, to))
+        .orderBy(desc(inquiries.createdAt))
+        .limit(1);
+      if (found) resolvedInquiryId = found.id;
+    }
+
+    if (!resolvedInquiryId) {
+      res.json({ ok: true, logged: false });
+      return;
+    }
+
+    const durationLabel = duration != null
+      ? `${Math.floor(duration / 60)}m ${duration % 60}s`
+      : null;
+
+    await db.insert(activities).values({
+      inquiryId: resolvedInquiryId,
+      userId: (req as any).session?.userId ?? null,
+      type: "call",
+      subject: `Outbound call${name ? ` to ${name}` : ""}${to ? ` (${to})` : ""}`,
+      body: durationLabel ? `Duration: ${durationLabel}` : null,
+    });
+
+    res.json({ ok: true, logged: true, inquiryId: resolvedInquiryId });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to log call" });
   }
 });
 

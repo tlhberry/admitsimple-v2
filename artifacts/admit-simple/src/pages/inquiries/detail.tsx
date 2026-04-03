@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity,
+  ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, MessageSquare,
   Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check,
   ShieldCheck, XCircle, SendHorizontal, AlertTriangle, Play, ArrowRight,
 } from "lucide-react";
@@ -401,6 +401,31 @@ function AdmissionSnapshotCard({ inq }: { inq: any }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ── SMS body with "Read more" truncation ──────────────────────────────────────
+function SmsTruncated({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const sentenceRx = /[^.!?]*[.!?]+/g;
+  const sentences  = text.match(sentenceRx) ?? [];
+  const preview    = sentences.slice(0, 2).join("").trim() || text;
+  const needsMore  = sentences.length > 2 || text.length > preview.length + 1;
+  return (
+    <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded-lg">
+      <span style={{ whiteSpace: "pre-wrap" }}>
+        {expanded || !needsMore ? text : preview}
+      </span>
+      {needsMore && (
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          className="ml-1 text-[#5BC8DC] font-semibold hover:underline"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1395,32 +1420,60 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             <div className="space-y-3 relative before:absolute before:left-5 before:top-0 before:h-full before:w-px before:bg-border">
               {activities?.length === 0 && <p className="text-center text-muted-foreground py-8 text-sm">No activities recorded yet.</p>}
               {activities?.map((act: any) => {
-                const name: string = act.userName || "";
-                const parts = name.trim().split(/\s+/).filter(Boolean);
+                const userName: string = act.userName || "";
+                const parts = userName.trim().split(/\s+/).filter(Boolean);
                 const hasUser = parts.length > 0;
                 const initials = hasUser
                   ? parts.length >= 2
                     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
                     : parts[0][0].toUpperCase()
                   : null;
+
+                // Type-specific avatar
+                const isCall = act.type === "call";
+                const isSms  = act.type === "sms";
+                const avatarContent = hasUser
+                  ? <span className="text-sm font-bold">{initials}</span>
+                  : isCall
+                    ? <Phone       className="w-4 h-4" />
+                    : isSms
+                      ? <MessageSquare className="w-4 h-4" />
+                      : <Activity className="w-4 h-4" />;
+                const avatarClass = isCall
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                  : isSms
+                    ? "bg-[#5BC8DC]/15 text-[#5BC8DC] border-[#5BC8DC]/30"
+                    : hasUser
+                      ? "bg-primary/20 text-primary border-border"
+                      : "bg-muted text-muted-foreground border-border";
+
+                const typeLabel =
+                  isCall ? "Call" :
+                  isSms  ? "SMS" :
+                  act.type.replace(/_/g, " ");
+
                 return (
                   <div key={act.id} className="relative flex gap-4 pl-12">
                     <div className={cn(
-                      "absolute left-0 w-10 h-10 rounded-full border-2 border-border flex items-center justify-center z-10 text-sm font-bold",
-                      hasUser ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                      "absolute left-0 w-10 h-10 rounded-full border-2 flex items-center justify-center z-10",
+                      avatarClass,
                     )}>
-                      {hasUser ? initials : <Activity className="w-4 h-4" />}
+                      {avatarContent}
                     </div>
                     <div className="flex-1 p-4 rounded-xl border border-border bg-card">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-foreground text-sm capitalize">{act.type}</span>
-                          {hasUser && <span className="text-xs text-muted-foreground">· {name}</span>}
+                          <span className="font-semibold text-foreground text-sm capitalize">{typeLabel}</span>
+                          {hasUser && <span className="text-xs text-muted-foreground">· {userName}</span>}
                         </div>
                         <time className="text-xs text-muted-foreground">{formatDate(act.createdAt)}</time>
                       </div>
                       <p className="text-sm text-muted-foreground">{act.subject}</p>
-                      {act.body && <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded-lg">{act.body}</p>}
+                      {act.body && (
+                        isSms
+                          ? <SmsTruncated text={act.body} />
+                          : <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded-lg">{act.body}</p>
+                      )}
                     </div>
                   </div>
                 );

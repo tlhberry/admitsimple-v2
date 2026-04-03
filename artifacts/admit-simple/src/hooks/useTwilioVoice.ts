@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Device, Call } from "@twilio/voice-sdk";
 
 export function useTwilioVoice() {
-  const deviceRef       = useRef<Device | null>(null);
-  const outboundCallRef = useRef<Call | null>(null);
-  const durationRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const deviceRef          = useRef<Device | null>(null);
+  const outboundCallRef    = useRef<Call | null>(null);
+  const durationRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const liveDurationRef    = useRef(0); // always-current mirror of callDuration
 
   const [isReady,        setIsReady]        = useState(false);
   const [activeCalls,    setActiveCalls]    = useState<Map<string, Call>>(new Map());
@@ -92,7 +93,9 @@ export function useTwilioVoice() {
 
       call.on("accept", () => {
         setOutboundStatus("open");
+        liveDurationRef.current = 0;
         durationRef.current = setInterval(() => {
+          liveDurationRef.current += 1;
           setCallDuration(d => d + 1);
         }, 1000);
       });
@@ -100,6 +103,11 @@ export function useTwilioVoice() {
       call.on("mute", (muted: boolean) => setIsMuted(muted));
 
       const onEnd = () => {
+        // Capture duration before resetting (use ref — never stale)
+        const finalDuration = liveDurationRef.current;
+        const finalTo   = to;
+        const finalName = name;
+
         setOutboundStatus("idle");
         setOutboundCall(null);
         outboundCallRef.current = null;
@@ -109,6 +117,14 @@ export function useTwilioVoice() {
         }
         setCallDuration(0);
         setIsMuted(false);
+
+        // Log call activity (best-effort)
+        fetch("/api/calls/log", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: finalTo, name: finalName, duration: finalDuration }),
+        }).catch(() => {});
       };
 
       call.on("disconnect", onEnd);
