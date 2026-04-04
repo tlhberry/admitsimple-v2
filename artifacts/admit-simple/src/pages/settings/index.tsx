@@ -80,6 +80,7 @@ export default function Settings() {
 
   const [copied, setCopied] = useState(false);
   const [showApiSecret, setShowApiSecret] = useState(false);
+  const [showTwilioGuide, setShowTwilioGuide] = useState(false);
   const [savingTwilio, setSavingTwilio] = useState(false);
 
   const saveTwilioKeys = async () => {
@@ -319,20 +320,84 @@ export default function Settings() {
           {activeTab === "integrations" && (
             <Card className="rounded-2xl border-border">
               <CardHeader className="border-b border-border pb-4">
-                <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                  <Phone className="w-4 h-4 text-[#5BC8DC]" /> Twilio Voice — Browser Calling
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <Phone className="w-4 h-4 text-[#5BC8DC]" /> Twilio Voice — Browser Calling
+                  </CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => setShowTwilioGuide(g => !g)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#5BC8DC] hover:text-[#5BC8DC]/80 bg-[#5BC8DC]/10 hover:bg-[#5BC8DC]/15 border border-[#5BC8DC]/20 px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    {showTwilioGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    {showTwilioGuide ? "Hide Guide" : "Setup Guide"}
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div className="p-4 bg-[#5BC8DC]/10 rounded-xl border border-[#5BC8DC]/20 text-sm space-y-1">
-                  <p className="font-semibold text-[#5BC8DC]">API Key required for browser calls</p>
-                  <p className="text-muted-foreground">
-                    Twilio's browser Voice SDK requires a dedicated API Key (not the Auth Token). Create one at{" "}
-                    <a href="https://console.twilio.com/us1/account/keys-credentials/api-keys" target="_blank" rel="noopener noreferrer" className="text-[#5BC8DC] underline underline-offset-2">
-                      Twilio Console → API Keys &amp; Tokens
-                    </a>, then paste the SID and Secret below.
-                  </p>
-                </div>
+                {showTwilioGuide && (
+                  <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border bg-muted/50">
+                      <p className="text-sm font-semibold text-foreground">How to set up Twilio Voice browser calling</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Takes about 5 minutes. You'll need access to your Twilio Console.</p>
+                    </div>
+                    <div className="p-4 space-y-4 text-sm">
+                      {[
+                        {
+                          n: 1,
+                          title: "Create a Twilio API Key",
+                          body: "In your Twilio Console, go to",
+                          link: { href: "https://console.twilio.com/us1/account/keys-credentials/api-keys", label: "Account → API Keys & Tokens" },
+                          detail: "Click Create API Key, choose Standard, give it a name (e.g. \"AdmitSimple\"), then click Create.",
+                        },
+                        {
+                          n: 2,
+                          title: "Copy the SID and Secret",
+                          body: null,
+                          link: null,
+                          detail: "The SID starts with SK and the Secret is shown only once — copy both immediately before closing the page.",
+                        },
+                        {
+                          n: 3,
+                          title: "Create a TwiML App (if you haven't already)",
+                          body: "Go to",
+                          link: { href: "https://console.twilio.com/us1/develop/voice/manage/twiml-apps", label: "Voice → TwiML Apps" },
+                          detail: "Create a new app. Set the Voice Request URL to your webhook endpoint. The TwiML App SID (starts with AP) goes in your server environment as TWILIO_TWIML_APP_SID.",
+                        },
+                        {
+                          n: 4,
+                          title: "Paste the API Key SID and Secret below",
+                          body: null,
+                          link: null,
+                          detail: "Enter the SK… SID in the first field and the secret in the second. Click Save Twilio Keys. Browser calling will activate immediately — no restart needed.",
+                        },
+                      ].map(step => (
+                        <div key={step.n} className="flex gap-3">
+                          <div className="w-6 h-6 rounded-full bg-[#5BC8DC]/15 border border-[#5BC8DC]/25 text-[#5BC8DC] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                            {step.n}
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{step.title}</p>
+                            <p className="text-muted-foreground text-xs mt-0.5 leading-relaxed">
+                              {step.body && <>{step.body}{" "}</>}
+                              {step.link && (
+                                <a href={step.link.href} target="_blank" rel="noopener noreferrer" className="text-[#5BC8DC] underline underline-offset-2 hover:text-[#5BC8DC]/80">
+                                  {step.link.label}
+                                </a>
+                              )}
+                              {step.link && " — "}
+                              {step.detail}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="mt-2 pt-3 border-t border-border flex items-start gap-2 text-xs text-amber-300/80">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                        <span>The API Key Secret is shown only once. If you lose it, you'll need to create a new key.</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label className={labelCls}>API Key SID <span className="text-xs text-muted-foreground font-normal">(starts with SK…)</span></Label>
