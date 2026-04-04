@@ -385,7 +385,7 @@ export function SMSInbox({ initialPhone }: { initialPhone?: string }) {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(initialPhone ?? null);
   const [searchQuery,   setSearchQuery]   = useState("");
   const [showNewModal,  setShowNewModal]  = useState(false);
-  const [mobileView,    setMobileView]    = useState<"list" | "chat">("list");
+  const [mobileView,    setMobileView]    = useState<"list" | "chat">(initialPhone ? "chat" : "list");
 
   const { data: threads = [], isLoading: threadsLoading } = useQuery<Thread[]>({
     queryKey: ["/api/sms/threads"],

@@ -6,6 +6,7 @@ import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SMSInbox } from "@/components/SMSInbox";
 import {
   ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, MessageSquare,
   Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check,
@@ -685,6 +686,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
     "overview",
     "vob",
     "activities",
+    "messages",
     "clinical_ai",
   ];
 
@@ -770,6 +772,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
   const tabLabel = (tab: string) => {
     if (tab === "clinical_ai") return "Pre-Screen / AI";
     if (tab === "vob") return "Insurance / VOB";
+    if (tab === "messages") return "Messages";
     return tab.charAt(0).toUpperCase() + tab.slice(1);
   };
 
@@ -967,14 +970,15 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             >
               {tab === "clinical_ai" && <Brain className="w-3.5 h-3.5" />}
               {tab === "vob" && <ShieldCheck className="w-3.5 h-3.5" />}
+              {tab === "messages" && <MessageSquare className="w-3.5 h-3.5" />}
               {tabLabel(tab)}
             </button>
           ))}
         </div>
       </div>
 
-      <div className={cn("grid gap-6", (activeTab === "clinical_ai" || activeTab === "vob") ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
-        <div className={cn("space-y-5", (activeTab === "clinical_ai" || activeTab === "vob") ? "" : "lg:col-span-2")}>
+      <div className={cn("grid gap-6", (activeTab === "clinical_ai" || activeTab === "vob" || activeTab === "messages") ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
+        <div className={cn("space-y-5", (activeTab === "clinical_ai" || activeTab === "vob" || activeTab === "messages") ? "" : "lg:col-span-2")}>
           {activeTab === "overview" && (
             <>
               {/* ── Scheduled to Admit: Appointment Card ── */}
@@ -1480,10 +1484,14 @@ Keep it warm, concise, and professional. Include a request for the other facilit
               })}
             </div>
           )}
+
+          {activeTab === "messages" && (
+            <SMSInbox initialPhone={inq.phone ?? undefined} />
+          )}
         </div>
 
         {/* Right sidebar — hide on full-width tabs */}
-        {activeTab !== "clinical_ai" && activeTab !== "vob" && (
+        {activeTab !== "clinical_ai" && activeTab !== "vob" && activeTab !== "messages" && (
           <div className="space-y-5">
             <AuditLogCard inquiryId={id} parsedAt={inq.parsedAt} vobData={inq.vobData} onTabChange={setActiveTab} />
 
