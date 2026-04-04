@@ -78,6 +78,7 @@ function ThreadItem({
   thread, selected, onClick,
 }: { thread: Thread; selected: boolean; onClick: () => void }) {
   const name = contactLabel(thread);
+  const hasRealName = !!(thread.first_name || thread.last_name);
   const unread = Number(thread.unread_count) > 0;
   const isInbound = thread.direction === "inbound";
 
@@ -96,7 +97,7 @@ function ThreadItem({
         "w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold",
         "bg-[#5BC8DC]/15 text-[#5BC8DC]",
       )}>
-        {name[0]?.toUpperCase() ?? "?"}
+        {hasRealName ? name[0]?.toUpperCase() : <Phone className="w-4 h-4" />}
       </div>
 
       {/* Content */}
