@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { referralSources, inquiries, users } from "@workspace/db/schema";
+import { referralSources, inquiries, users, referralAccounts, referralContacts } from "@workspace/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { logAudit } from "../lib/logAudit";
@@ -101,6 +101,84 @@ router.delete("/referrals/:id", async (req, res) => {
     await db.delete(referralSources).where(eq(referralSources.id, id));
     await logAudit(req, "Deleted Referral Source", "referral_source", id);
     res.json({ message: "Deleted" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Combined referral suggestions for autocomplete ────────────────────────────
+router.get("/referral-suggestions", async (req, res) => {
+  try {
+    const [sources, accounts, pastInquiries] = await Promise.all([
+      db.select({ name: referralSources.name, contact: referralSources.contact, phone: referralSources.phone })
+        .from(referralSources).orderBy(referralSources.name),
+      db.select({ name: referralAccounts.name }).from(referralAccounts).orderBy(referralAccounts.name),
+      db.selectDistinct({ name: inquiries.referralSource })
+        .from(inquiries)
+        .where(sql`${inquiries.referralSource} IS NOT NULL AND ${inquiries.referralSource} != ''`),
+    ]);
+
+    const seen = new Set<string>();
+    const results: { name: string; type: string; contact?: string; phone?: string }[] = [];
+
+    for (const s of sources) {
+      if (s.name && !seen.has(s.name.toLowerCase())) {
+        seen.add(s.name.toLowerCase());
+        results.push({ name: s.name, type: "source", contact: s.contact || undefined, phone: s.phone || undefined });
+      }
+    }
+    for (const a of accounts) {
+      if (a.name && !seen.has(a.name.toLowerCase())) {
+        seen.add(a.name.toLowerCase());
+        results.push({ name: a.name, type: "account" });
+      }
+    }
+    for (const p of pastInquiries) {
+      if (p.name && !seen.has(p.name.toLowerCase())) {
+        seen.add(p.name.toLowerCase());
+        results.push({ name: p.name, type: "past" });
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Contact suggestions for a specific referral source ────────────────────────
+router.get("/referral-contact-suggestions", async (req, res) => {
+  try {
+    const sourceName = (req.query.source as string || "").trim();
+    if (!sourceName) { res.json([]); return; }
+
+    const [rsContacts, bdContacts] = await Promise.all([
+      // From referralSources table (the contact person field)
+      db.select({ name: referralSources.contact, phone: referralSources.phone })
+        .from(referralSources)
+        .where(sql`LOWER(${referralSources.name}) = LOWER(${sourceName})`)
+        .limit(5),
+      // From BD referral accounts contacts
+      db.select({ name: referralContacts.name, phone: referralContacts.phone })
+        .from(referralContacts)
+        .leftJoin(referralAccounts, eq(referralContacts.accountId, referralAccounts.id))
+        .where(sql`LOWER(${referralAccounts.name}) = LOWER(${sourceName})`)
+        .orderBy(referralContacts.name),
+    ]);
+
+    const seen = new Set<string>();
+    const results: { name: string; phone?: string }[] = [];
+
+    for (const c of [...rsContacts, ...bdContacts]) {
+      if (c.name && !seen.has(c.name.toLowerCase())) {
+        seen.add(c.name.toLowerCase());
+        results.push({ name: c.name, phone: c.phone || undefined });
+      }
+    }
+
+    res.json(results);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

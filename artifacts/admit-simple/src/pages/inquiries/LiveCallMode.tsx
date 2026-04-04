@@ -12,93 +12,10 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Phone, Clock, Save, CheckCircle2,
   Loader2, XCircle, SendHorizontal, ShieldCheck, CalendarClock,
-  PhoneOff, Lock, ChevronDown, Search,
+  PhoneOff, Lock, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ── Referral Source typeahead ─────────────────────────────────────────────────
-function ReferralSourceInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [query, setQuery] = useState(value);
-  const [options, setOptions] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Fetch all referral sources once
-  useEffect(() => {
-    fetch("/api/referrals", { credentials: "include" })
-      .then(r => r.json())
-      .then((data: any[]) => {
-        const names = data.map((d: any) => d.name).filter(Boolean);
-        setOptions(names);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Keep query in sync if value changes externally (e.g. seeding)
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const filtered = query.trim()
-    ? options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
-    : options;
-
-  const select = (name: string) => {
-    setQuery(name);
-    onChange(name);
-    setOpen(false);
-  };
-
-  return (
-    <div ref={containerRef} className="relative">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-        <Input
-          value={query}
-          onChange={e => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder="Type to search or enter free text…"
-          className="h-12 rounded-xl bg-muted border-border text-foreground text-base pl-9"
-        />
-      </div>
-      {open && filtered.length > 0 && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
-          {filtered.map(name => (
-            <button
-              key={name}
-              type="button"
-              onMouseDown={() => select(name)}
-              className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import { ReferralSourceInput } from "@/components/ReferralSourceInput";
 
 // ── Call timer ────────────────────────────────────────────────────────────────
 function useCallTimer() {
@@ -968,7 +885,9 @@ export function LiveCallMode({ id }: { id: number }) {
           <Label className="text-sm font-semibold text-foreground">Referral Source</Label>
           <ReferralSourceInput
             value={referralSource}
-            onChange={v => { setReferralSource(v); scheduleSave(); }}
+            onChange={name => { setReferralSource(name); scheduleSave(); }}
+            placeholder="Type to search or enter free text…"
+            inputClassName="h-12 rounded-xl bg-muted border-border text-foreground text-base"
           />
         </div>
 

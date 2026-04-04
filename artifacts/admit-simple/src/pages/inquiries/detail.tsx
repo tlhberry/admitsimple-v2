@@ -1388,6 +1388,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                 inquiryId={id}
                 currentNotes={inq.preAssessmentNotes || ""}
                 onComplete={handlePreAssessmentComplete}
+                inquiry={inq}
               />
 
               {/* ── Claude Clinical Summary ── */}

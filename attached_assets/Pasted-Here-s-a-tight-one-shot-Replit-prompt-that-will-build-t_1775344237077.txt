@@ -1,0 +1,233 @@
+Here’s a **tight, one-shot Replit prompt** that will build this clean without breaking your app.
+
+---
+
+## 🔧 REPLIT MASTER PROMPT (Discharge System)
+
+Build a complete **patient discharge system** inside the existing Admissions CRM app.
+
+### CONTEXT
+
+* Stack: React + TypeScript (Vite frontend), Express + TypeScript backend, PostgreSQL (Drizzle ORM)
+* Existing: patients/inquiries, referral_sources table, pipeline stages
+* Goal: Track discharges, referral destinations, and enable alumni + referral analytics
+
+---
+
+## 1. FRONTEND – DISCHARGE BUTTON + MODAL
+
+### Add Discharge Button
+
+* Add “Discharge” button:
+
+  * On each patient row
+  * On patient detail page
+
+---
+
+### Create Discharge Modal (Stepper UI)
+
+Use a clean 3-step modal (mobile friendly):
+
+---
+
+### STEP 1: Outcome Type (required)
+
+Radio buttons:
+
+* Completed Successfully
+* Left AMA
+* Administrative Discharge
+* Clinical Transfer
+
+Store as: `discharge_type`
+
+---
+
+### STEP 2: Level of Care (editable)
+
+Dropdown:
+
+* Detox
+* RTC
+* PHP
+* IOP
+* Other (text input)
+
+Store as: `level_of_care`
+
+---
+
+### STEP 3: Destination + Referral
+
+#### If NOT Clinical Transfer:
+
+Dropdown:
+
+* Home
+* IOP
+* Sober Living
+* Private Practice Therapist
+* Other
+
+IF destination ≠ Home:
+
+* Show typeahead search input:
+
+  * Search `referral_sources`
+  * Predictive dropdown
+  * Select `referral_source_id`
+
+---
+
+#### If Clinical Transfer:
+
+Show:
+
+* Hospital Name (text input)
+* Referral Source (typeahead dropdown)
+
+Set:
+
+* `clinical_transfer = true`
+
+---
+
+### Additional Fields
+
+* Notes (textarea)
+* Follow-up needed (toggle)
+
+---
+
+## 2. BACKEND – DATABASE (DRIZZLE)
+
+### Create new table: `discharges`
+
+Fields:
+
+* id (uuid, pk)
+* patient_id (fk)
+* discharge_type (text)
+* level_of_care (text)
+* destination_type (text)
+* referral_source_id (nullable fk)
+* hospital_name (nullable)
+* clinical_transfer (boolean default false)
+* notes (text)
+* follow_up (boolean default false)
+* created_at (timestamp)
+* created_by (user id)
+
+---
+
+### Update patients table
+
+Add:
+
+* status = “discharged”
+* discharge_date
+* is_alumni (boolean default false)
+
+---
+
+## 3. API ROUTES
+
+### POST /api/discharges
+
+Function:
+
+1. Create discharge record
+
+2. Update patient:
+
+   * status = discharged
+   * discharge_date = now
+   * is_alumni = true
+
+3. If referral_source_id exists:
+
+   * increment `outbound_referrals` count on referral_sources
+
+4. Return success
+
+---
+
+### GET /api/discharges
+
+* Filter by date, referral source, type
+
+---
+
+## 4. TYPEAHEAD SEARCH (IMPORTANT)
+
+Create reusable component:
+
+* Input field
+* Debounced search (300ms)
+* API: `/api/referral-sources/search?q=`
+* Show dropdown results
+* Click to select
+
+Must feel like CRM search, fast and simple.
+
+---
+
+## 5. UI BEHAVIOR
+
+* Disable submit until:
+
+  * discharge_type selected
+  * level_of_care selected
+  * destination valid
+
+* If destination ≠ Home → referral required
+
+* If clinical_transfer → hospital required
+
+---
+
+## 6. ANALYTICS PREP
+
+Track:
+
+* outbound_referral_count per referral source
+* discharge_type counts
+* destinations breakdown
+
+Do NOT build charts yet, just ensure data is stored correctly.
+
+---
+
+## 7. CLEAN UX RULES
+
+* Mobile-first layout
+* Large buttons
+* No clutter
+* Stepper navigation (Next / Back)
+* Confirm screen before submit
+
+---
+
+## 8. DO NOT BREAK EXISTING APP
+
+* Reuse existing patient schema
+* Do not modify pipeline logic
+* Add discharge as separate flow
+
+---
+
+## GOAL
+
+End result:
+
+* User clicks Discharge
+* Completes 3 steps in <10 seconds
+* Patient moves to Alumni
+* Referral is tracked
+* Data is stored clean for reporting
+
+---
+
+If you want next, I’ll give you:
+👉 the **analytics dashboard prompt** so you can actually SEE referral ROI (this is where it gets powerful)

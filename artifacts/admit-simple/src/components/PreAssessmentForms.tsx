@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, Clock, Loader2, Download, ClipboardCheck, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { ReferralSourceInput, ReferralContactInput } from "@/components/ReferralSourceInput";
 
 // ── Simple debounce hook ─────────────────────────────────────────────────────
 function useDebounce<T>(value: T, delay: number): T {
@@ -96,7 +97,7 @@ const WITHDRAWAL_SYMPTOMS = [
   "Agitation", "Hallucinations", "Seizure History", "Elevated HR", "Elevated BP",
 ];
 
-function Form1PreCert({ inquiryId, onComplete }: { inquiryId: number; onComplete: (done: boolean) => void }) {
+function Form1PreCert({ inquiryId, onComplete, inquiry }: { inquiryId: number; onComplete: (done: boolean) => void; inquiry?: any }) {
   const [data, setData] = useState(DEFAULT_PRECERT);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [isComplete, setIsComplete] = useState(false);
@@ -110,7 +111,13 @@ function Form1PreCert({ inquiryId, onComplete }: { inquiryId: number; onComplete
 
   useEffect(() => {
     if (initialized.data) {
-      setData({ ...DEFAULT_PRECERT, ...(initialized.data.formData || {}) });
+      const existing = initialized.data.formData || {};
+      const seeded: Partial<typeof DEFAULT_PRECERT> = {};
+      if (!existing.presentingProblem && inquiry?.notes) seeded.presentingProblem = inquiry.notes;
+      if (!existing.primarySubstance && inquiry?.substanceHistory) seeded.primarySubstance = inquiry.substanceHistory;
+      if (!existing.mentalHealthHistory && inquiry?.mentalHealthHistory) seeded.mentalHealthHistory = inquiry.mentalHealthHistory;
+      if (!existing.medicalConditions && inquiry?.medicalHistory) seeded.medicalConditions = inquiry.medicalHistory;
+      setData({ ...DEFAULT_PRECERT, ...seeded, ...existing });
       setIsComplete(initialized.data.isComplete === "yes");
       onComplete(initialized.data.isComplete === "yes");
     }
@@ -457,7 +464,7 @@ const REFERRAL_SOURCE_OPTIONS = [
   "Employer/EAP", "Online/Website", "Insurance Company", "Other",
 ];
 
-function Form3PreScreening({ inquiryId, onComplete }: { inquiryId: number; onComplete: (done: boolean) => void }) {
+function Form3PreScreening({ inquiryId, onComplete, inquiry }: { inquiryId: number; onComplete: (done: boolean) => void; inquiry?: any }) {
   const [data, setData] = useState(DEFAULT_PRESCREENING);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [isComplete, setIsComplete] = useState(false);
@@ -472,7 +479,16 @@ function Form3PreScreening({ inquiryId, onComplete }: { inquiryId: number; onCom
 
   useEffect(() => {
     if (initialized.data) {
-      setData({ ...DEFAULT_PRESCREENING, ...(initialized.data.formData || {}) });
+      const existing = initialized.data.formData || {};
+      const seeded: Partial<typeof DEFAULT_PRESCREENING> = {};
+      if (!existing.referralSource && inquiry?.referralSource) seeded.referralSource = inquiry.referralSource;
+      if (!existing.referralContact && inquiry?.referralContact) seeded.referralContact = inquiry.referralContact;
+      if (!existing.primarySubstance && inquiry?.substanceHistory) seeded.primarySubstance = inquiry.substanceHistory;
+      if (!existing.mentalHealthDiagnoses && inquiry?.mentalHealthHistory) seeded.mentalHealthDiagnoses = inquiry.mentalHealthHistory;
+      if (!existing.currentMedications && inquiry?.medicalHistory) seeded.currentMedications = inquiry.medicalHistory;
+      if (!existing.levelOfCareInterest && inquiry?.levelOfCare) seeded.levelOfCareInterest = inquiry.levelOfCare;
+      if (!existing.substanceUseHistory && inquiry?.substanceHistory) seeded.substanceUseHistory = inquiry.substanceHistory;
+      setData({ ...DEFAULT_PRESCREENING, ...seeded, ...existing });
       setIsComplete(initialized.data.isComplete === "yes");
       onComplete(initialized.data.isComplete === "yes");
     }
@@ -525,17 +541,27 @@ function Form3PreScreening({ inquiryId, onComplete }: { inquiryId: number; onCom
       <div className="space-y-4">
         <div>
           <FL>Referral Source</FL>
-          <Select value={data.referralSource} onValueChange={v => setVal("referralSource", v)}>
-            <SelectTrigger className={selectTriggerCls}><SelectValue placeholder="Select source..." /></SelectTrigger>
-            <SelectContent className="bg-card border-border text-foreground">
-              {REFERRAL_SOURCE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <ReferralSourceInput
+            value={data.referralSource}
+            onChange={(name, opt) => {
+              setVal("referralSource", name);
+              if (opt?.contact && !data.referralContact) setVal("referralContact", opt.contact);
+              if (opt?.phone && !data.referralPhone) setVal("referralPhone", opt.phone);
+            }}
+            placeholder="Type to search referral sources…"
+            inputClassName={cn(inputCls, "pl-9")}
+          />
         </div>
-        {data.referralSource === "Other" && (
-          <div><FL>Specify Other</FL><Input value={data.referralSourceOther} onChange={set("referralSourceOther")} placeholder="Specify other referral source..." className={inputCls} /></div>
-        )}
-        <div><FL>Referral Contact Name</FL><Input value={data.referralContact} onChange={set("referralContact")} placeholder="Contact name..." className={inputCls} /></div>
+        <div>
+          <FL>Referral Contact Name</FL>
+          <ReferralContactInput
+            value={data.referralContact}
+            onChange={v => setVal("referralContact", v)}
+            referralSourceName={data.referralSource}
+            placeholder="Contact name…"
+            inputClassName={inputCls}
+          />
+        </div>
         <div><FL>Referral Phone</FL><Input value={data.referralPhone} onChange={set("referralPhone")} placeholder="(555) 000-0000" className={inputCls} /></div>
       </div>
 
@@ -651,9 +677,10 @@ interface PreAssessmentSectionProps {
   inquiryId: number;
   currentNotes?: string;
   onComplete: (notes: string) => void;
+  inquiry?: any;
 }
 
-export function PreAssessmentSection({ inquiryId, currentNotes = "", onComplete }: PreAssessmentSectionProps) {
+export function PreAssessmentSection({ inquiryId, currentNotes = "", onComplete, inquiry }: PreAssessmentSectionProps) {
   const [form1Done, setForm1Done] = useState(false);
   const [form2Done, setForm2Done] = useState(false);
   const [form3Done, setForm3Done] = useState(false);
@@ -753,13 +780,13 @@ export function PreAssessmentSection({ inquiryId, currentNotes = "", onComplete 
             </TabsList>
 
             <TabsContent value="form1" className="p-6 mt-0">
-              <Form1PreCert inquiryId={inquiryId} onComplete={setForm1Done} />
+              <Form1PreCert inquiryId={inquiryId} onComplete={setForm1Done} inquiry={inquiry} />
             </TabsContent>
             <TabsContent value="form2" className="p-6 mt-0">
               <Form2Nursing inquiryId={inquiryId} onComplete={setForm2Done} />
             </TabsContent>
             <TabsContent value="form3" className="p-6 mt-0">
-              <Form3PreScreening inquiryId={inquiryId} onComplete={setForm3Done} />
+              <Form3PreScreening inquiryId={inquiryId} onComplete={setForm3Done} inquiry={inquiry} />
             </TabsContent>
           </Tabs>
         </CardContent>

@@ -17,6 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateInquiryBody } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { ReferralSourceInput } from "@/components/ReferralSourceInput";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -128,12 +129,6 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 
   const addEntry = () => setTxEntries(prev => [...prev, emptyEntry()]);
   const removeEntry = (idx: number) => setTxEntries(prev => prev.filter((_, i) => i !== idx));
-
-  const { data: referralSources = [] } = useQuery<any[]>({
-    queryKey: ["/api/referrals"],
-    queryFn: () => fetch("/api/referrals", { credentials: "include" }).then(r => r.json()),
-    staleTime: 60000,
-  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -343,20 +338,12 @@ export function CreateInquiryForm({ onSuccess }: { onSuccess: () => void }) {
 
           <div className="space-y-1.5">
             <Label className="text-foreground font-medium">Referral Source</Label>
-            <Select
-              onValueChange={v => form.setValue("referralSource", v === "none" ? "" : v)}
-              defaultValue={form.getValues("referralSource")}
-            >
-              <SelectTrigger className="h-11 rounded-xl bg-muted border-border text-foreground">
-                <SelectValue placeholder="Select source" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground">
-                <SelectItem value="none">— None —</SelectItem>
-                {referralSources.map((s: any) => (
-                  <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ReferralSourceInput
+              value={form.watch("referralSource") || ""}
+              onChange={name => form.setValue("referralSource", name)}
+              placeholder="Type to search referral sources…"
+              inputClassName="h-11 rounded-xl bg-muted border-border text-foreground"
+            />
           </div>
 
           {(watchedReferralSource === "Google PPC" || watchedReferralSource === "Google Organic") && (
