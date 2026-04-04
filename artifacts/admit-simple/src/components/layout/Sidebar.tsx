@@ -15,8 +15,9 @@ import {
   Activity,
   Phone,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useLiveEvents } from "@/hooks/use-live-events";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -28,6 +29,8 @@ export function Sidebar() {
   const isActive = (href: string) =>
     href === "/" ? location === "/" : location.startsWith(href);
 
+  const queryClient = useQueryClient();
+
   // Live call count badge
   const { data: activeCalls = [] } = useQuery<any[]>({
     queryKey: ["/api/calls/active"],
@@ -37,6 +40,22 @@ export function Sidebar() {
   });
   const liveCallCount = activeCalls.length;
 
+  // Unread SMS badge
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/sms/unread-count"],
+    queryFn: () => fetch("/api/sms/unread-count", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+  const unreadSmsCount = unreadData?.count ?? 0;
+
+  // Refresh unread count in real-time when new SMS arrives or thread is read
+  useLiveEvents((event) => {
+    if (event === "sms_message") {
+      queryClient.invalidateQueries({ queryKey: ["/api/sms/unread-count"] });
+    }
+  });
+
   const navSections = [
     {
       label: "Admissions",
@@ -45,7 +64,7 @@ export function Sidebar() {
         { icon: ClipboardList, label: "Inquiries",  href: "/inquiries" },
         { icon: Users,         label: "Patients",   href: "/patients" },
         { icon: GitBranch,     label: "Pipeline",   href: "/pipeline" },
-        { icon: Phone,         label: "Active Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const },
+        { icon: Phone,         label: "Active Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: unreadSmsCount > 0 ? String(unreadSmsCount) : undefined },
       ],
     },
     {
@@ -76,8 +95,8 @@ export function Sidebar() {
     { icon: ClipboardList, label: "Inquiries", href: "/inquiries" },
     { icon: GitBranch,     label: "Pipeline",  href: "/pipeline" },
     isBdRole
-      ? { icon: Building2, label: "BD",    href: "/referral-accounts", badge: undefined, badgeColor: undefined }
-      : { icon: Phone,     label: "Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const },
+      ? { icon: Building2, label: "BD",    href: "/referral-accounts", badge: undefined, badgeColor: undefined, smsBadge: undefined }
+      : { icon: Phone,     label: "Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: unreadSmsCount > 0 ? String(unreadSmsCount) : undefined },
     { icon: BarChart2, label: "Reports", href: "/reports", badge: undefined, badgeColor: undefined },
   ];
 
@@ -110,14 +129,21 @@ export function Sidebar() {
                           active ? "text-primary" : "text-sidebar-foreground group-hover:text-white"
                         )} />
                         <span className="text-sm flex-1">{item.label}</span>
-                        {anyItem.badge && (
-                          <span className={cn(
-                            "ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
-                            anyItem.badgeColor === "rose"
-                              ? "bg-rose-500 text-white"
-                              : "bg-primary text-white"
-                          )}>
-                            {anyItem.badge}
+                        {(anyItem.badge || anyItem.smsBadge) && (
+                          <span className="ml-auto flex items-center gap-1">
+                            {anyItem.badge && (
+                              <span className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
+                                anyItem.badgeColor === "rose" ? "bg-rose-500 text-white" : "bg-primary text-white"
+                              )}>
+                                {anyItem.badge}
+                              </span>
+                            )}
+                            {anyItem.smsBadge && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center bg-[#5BC8DC] text-white">
+                                {anyItem.smsBadge}
+                              </span>
+                            )}
                           </span>
                         )}
                       </div>
@@ -165,6 +191,16 @@ export function Sidebar() {
                       anyItem.badgeColor === "rose" ? "bg-rose-500 text-white" : "bg-primary text-white"
                     )}>
                       {anyItem.badge}
+                    </span>
+                  )}
+                  {anyItem.smsBadge && !anyItem.badge && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1 bg-[#5BC8DC] text-white">
+                      {anyItem.smsBadge}
+                    </span>
+                  )}
+                  {anyItem.smsBadge && anyItem.badge && (
+                    <span className="absolute -bottom-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1 bg-[#5BC8DC] text-white">
+                      {anyItem.smsBadge}
                     </span>
                   )}
                 </div>

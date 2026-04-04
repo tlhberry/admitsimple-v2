@@ -2,7 +2,7 @@ import { Router } from "express";
 import twilio from "twilio";
 import { db } from "@workspace/db";
 import { smsMessages, inquiries, activities } from "@workspace/db/schema";
-import { eq, desc, sql, isNull } from "drizzle-orm";
+import { eq, desc, sql, isNull, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { broadcastSSE } from "../lib/sse";
 
@@ -141,6 +141,20 @@ router.post("/sms/send", requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to send SMS" });
+  }
+});
+
+// ── GET /api/sms/unread-count — global unread inbound SMS count ──────────────
+router.get("/unread-count", requireAuth, async (_req, res) => {
+  try {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(smsMessages)
+      .where(and(eq(smsMessages.direction, "inbound"), isNull(smsMessages.readAt)));
+    res.json({ count });
+  } catch (err) {
+    console.error("[SMS unread-count]", err);
+    res.status(500).json({ count: 0 });
   }
 });
 
