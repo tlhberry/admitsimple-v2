@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useListSettings, useBulkUpdateSettings } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import {
   Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check,
   RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff, UserPlus, Mail,
   Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
+  MessageSquare, Globe, Bot,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -91,6 +92,7 @@ export default function Settings() {
     { id: "ai",            label: "AI Settings",   icon: Brain },
     { id: "integrations",  label: "Integrations",  icon: Phone },
     ...(isAdmin ? [
+      { id: "chatbot",    label: "Chatbot",      icon: Bot },
       { id: "admissions", label: "Admissions",   icon: UserPlus },
       { id: "users",      label: "Users",        icon: Users },
       { id: "import",     label: "Import",       icon: Upload },
@@ -322,9 +324,11 @@ export default function Settings() {
 
           {activeTab === "users" && isAdmin && <UserManagement currentUserId={user?.id} />}
 
+          {activeTab === "chatbot" && isAdmin && <ChatbotSettings />}
+
           {activeTab === "import" && isAdmin && <ReferralImport />}
 
-          {activeTab !== "integrations" && activeTab !== "users" && activeTab !== "import" && (
+          {activeTab !== "integrations" && activeTab !== "users" && activeTab !== "import" && activeTab !== "chatbot" && (
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                 {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -335,6 +339,173 @@ export default function Settings() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+// ─── Chatbot Settings Panel ───────────────────────────────────────────────────
+
+function ChatbotSettings() {
+  const { toast } = useToast();
+  const [brain, setBrain] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/chatbot_brain", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.value) setBrain(d.value); })
+      .catch(() => {});
+  }, []);
+
+  const saveBrain = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings/chatbot_brain", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: brain }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Chatbot brain saved" });
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target?.result as string;
+      if (file.name.endsWith(".json")) {
+        try {
+          const parsed = JSON.parse(text);
+          setBrain(typeof parsed === "string" ? parsed : JSON.stringify(parsed, null, 2));
+        } catch {
+          setBrain(text);
+        }
+      } else {
+        setBrain(text);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const embedCode = `<!-- AdmitSimple Chat Widget -->
+<script>
+  (function() {
+    var btn = document.createElement('button');
+    btn.title = 'Check Insurance';
+    btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#5BC8DC;border:none;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(91,200,220,0.4);display:flex;align-items:center;justify-content:center';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/chatbot-widget';
+    iframe.style.cssText = 'display:none;position:fixed;bottom:92px;right:24px;width:380px;height:580px;max-width:calc(100vw - 48px);border:none;border-radius:16px;z-index:9998;box-shadow:0 8px 40px rgba(0,0,0,0.5)';
+    iframe.title = 'Insurance Verification Chat';
+    var open = false;
+    btn.onclick = function() {
+      open = !open;
+      iframe.style.display = open ? 'block' : 'none';
+    };
+    document.body.appendChild(iframe);
+    document.body.appendChild(btn);
+  })();
+</script>`;
+
+  const copyEmbed = () => {
+    navigator.clipboard.writeText(embedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Brain file */}
+      <Card className="rounded-2xl border-border">
+        <CardHeader className="border-b border-border pb-4">
+          <CardTitle className="text-base flex items-center gap-2 text-foreground">
+            <Brain className="w-4 h-4 text-primary" /> Chatbot Brain
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upload a .txt or .json file with your admissions playbook — scripts, tone, insurance objection handlers, etc. The AI will use this as its personality and knowledge base.
+          </p>
+          <div className="flex gap-2">
+            <input ref={fileRef} type="file" accept=".txt,.json" className="hidden" onChange={handleFileUpload} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Upload Brain File
+            </button>
+            <span className="text-xs text-muted-foreground self-center">.txt or .json</span>
+          </div>
+          <div>
+            <Label className="text-sm font-medium text-foreground mb-1.5 block">Brain Content</Label>
+            <textarea
+              value={brain}
+              onChange={e => setBrain(e.target.value)}
+              rows={12}
+              placeholder="Paste or upload your chatbot instructions here. Examples:&#10;- Tone guidelines&#10;- Common objections and responses&#10;- Insurance-specific scripts&#10;- Treatment program details"
+              className="w-full rounded-xl bg-muted border border-border text-foreground placeholder:text-muted-foreground text-sm px-4 py-3 resize-y focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+            <p className="text-xs text-muted-foreground mt-1">{brain.length.toLocaleString()} characters</p>
+          </div>
+          <div className="flex items-center justify-between">
+            <a
+              href="/chatbot-widget"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <Globe className="w-3.5 h-3.5" /> Preview chatbot
+            </a>
+            <button
+              onClick={saveBrain}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold disabled:opacity-50 transition-all"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Brain
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Embed code */}
+      <Card className="rounded-2xl border-border">
+        <CardHeader className="border-b border-border pb-4">
+          <CardTitle className="text-base flex items-center gap-2 text-foreground">
+            <MessageSquare className="w-4 h-4 text-primary" /> Website Embed Code
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Paste this snippet before the <code className="bg-muted px-1 rounded text-xs">&lt;/body&gt;</code> tag of your website to add the floating chat widget.
+          </p>
+          <div className="relative">
+            <pre className="bg-muted rounded-xl p-4 text-xs text-foreground overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+              {embedCode}
+            </pre>
+            <button
+              onClick={copyEmbed}
+              className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

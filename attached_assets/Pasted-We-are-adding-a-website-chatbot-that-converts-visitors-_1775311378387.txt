@@ -1,0 +1,163 @@
+We are adding a website chatbot that converts visitors into inquiries and triggers the existing admissions workflow.
+
+IMPORTANT:
+- DO NOT modify or break existing inquiry, SMS, pipeline, or VOB logic
+- ONLY extend current system
+- Reuse existing APIs, schema, and services wherever possible
+
+---
+
+FEATURE: Website Chatbot → Inquiry + VOB Automation
+
+---
+
+PART 1 — Frontend Chat Widget
+
+Create a lightweight, embeddable chatbot widget:
+
+- Floating chat button (bottom right of website)
+- Opens modal chat interface
+- Mobile-first design
+- Clean, minimal UI (match existing app style)
+
+Chat flow (step-based, not free-form AI):
+
+1. Intro:
+"Hey, I can check your insurance and see what treatment would cost. Takes about 60 seconds."
+
+2. Collect:
+- Full Name
+- Date of Birth
+- Insurance Carrier
+
+3. Insurance capture step:
+Prompt:
+"You can upload your insurance card or just type your member ID"
+
+Support:
+- Image upload (front/back)
+- OR text input for member ID
+
+---
+
+PART 2 — Backend Endpoint
+
+Create new endpoint:
+
+POST /api/chatbot/submit
+
+Payload:
+{
+  name,
+  dob,
+  insuranceCarrier,
+  memberId (optional),
+  images (optional array)
+}
+
+---
+
+PART 3 — Data Processing
+
+On submit:
+
+1. Validate required fields:
+- name
+- dob
+- insuranceCarrier
+- AND (memberId OR images)
+
+2. If images exist:
+- Store images (reuse existing upload system)
+- (Optional) Extract basic text if OCR already exists, otherwise skip for now
+
+---
+
+PART 4 — Inquiry Creation (CRITICAL)
+
+Use EXISTING inquiry creation logic.
+
+DO NOT create a new system.
+
+Create inquiry with:
+- name
+- dob
+- phone = null (if not collected yet)
+- insurance info
+- source = "Website Chatbot"
+- status = "New Inquiry"
+
+Attach:
+- memberId
+- uploaded images
+
+---
+
+PART 5 — Trigger VOB
+
+Immediately after inquiry creation:
+
+- Call existing VOB function/service
+- DO NOT duplicate VOB logic
+- Ensure inquiry moves into correct pipeline stage
+
+---
+
+PART 6 — Activity Logging
+
+Add activity to inquiry:
+
+type: "chatbot"
+description: "Inquiry created via website chatbot"
+
+Also log:
+- insurance data collected
+- whether images were uploaded
+
+---
+
+PART 7 — Chatbot Response
+
+Return response to frontend:
+
+"Perfect. I just sent your insurance for verification.
+
+This will show what your coverage looks like and what your out-of-pocket may be.
+
+One of our admissions counselors will call you shortly to walk through everything and help you get started.
+
+If for any reason this isn’t a fit, we’ll help you find a program that works with your insurance."
+
+---
+
+PART 8 — Integration with Existing App
+
+Ensure:
+- New inquiries appear instantly in pipeline
+- Inquiry detail page shows chatbot as source
+- Images appear in inquiry documents/uploads
+- Activity timeline includes chatbot entry
+
+---
+
+PART 9 — Safety Constraints
+
+- Do NOT modify existing SMS system
+- Do NOT modify pipeline logic
+- Do NOT change database schema unless absolutely required
+- If schema change is required, extend safely (no breaking changes)
+
+---
+
+PART 10 — Optional (only if easy)
+
+- Capture phone number if user provides it
+- Store chatbot conversation transcript in inquiry
+
+---
+
+GOAL:
+
+Visitor → chatbot → inquiry created → VOB triggered → appears in pipeline
+
+This must be fast, stable, and integrated into the current admissions workflow without breaking anything.

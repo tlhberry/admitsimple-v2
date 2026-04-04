@@ -20,9 +20,11 @@ import savedReportsRouter from "./savedReports";
 import eventsRouter from "./events";
 import adminRouter from "./admin";
 import smsRouter from "./sms";
+import chatbotRouter from "./chatbot";
 
 const router: IRouter = Router();
 
+router.use(chatbotRouter);  // chatbot/message, chatbot/submit (public)
 router.use(smsRouter);      // sms/send, sms/threads, webhooks/twilio/sms
 router.use(webhooksRouter);
 router.use(healthRouter);

@@ -22,6 +22,7 @@ import BDReports from "@/pages/bd-reports/index";
 import BedBoard from "@/pages/bed-board/index";
 import ActiveCalls from "@/pages/calls/ActiveCalls";
 import NotFound from "@/pages/not-found";
+import ChatbotWidget from "@/pages/chatbot-widget";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,9 +63,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
+          <Switch>
+            {/* Public route — no auth required */}
+            <Route path="/chatbot-widget" component={ChatbotWidget} />
+            {/* All other routes require authentication */}
+            <Route>
+              <AuthProvider>
+                <Router />
+              </AuthProvider>
+            </Route>
+          </Switch>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

@@ -115,6 +115,25 @@ All use Claude claude-opus-4-5 via Replit AI Integrations:
 - `POST /api/ai/summarize-inquiry` — Clinical inquiry summary
 - `POST /api/ai/custom-query` — Natural language facility data query
 
+## Website Chatbot Widget
+
+**Public** (no auth required) — suitable for embedding on treatment center websites.
+
+- **Route**: `/chatbot-widget` (React page, rendered outside AuthProvider)
+- **Backend**: `artifacts/api-server/src/routes/chatbot.ts` — registered first in routes/index.ts with NO requireAuth
+  - `POST /api/chatbot/message` — AI response generation using brain file from settings
+  - `POST /api/chatbot/submit` — Creates inquiry in DB, logs activity, broadcasts SSE event
+- **Frontend**: `artifacts/admit-simple/src/pages/chatbot-widget.tsx`
+  - Step-based conversation: loading → name → dob → insurance → memberid → phone → review → done
+  - Dark theme (#0d1117), teal (#5BC8DC) brand color, mobile-first iMessage-style bubbles
+  - AI generates each message using the facility's "brain file" (stored in settings key `chatbot_brain`)
+- **Settings Tab**: Settings → Chatbot (admin only)
+  - Upload .txt/.json brain file, edit textarea, save to `/api/settings/chatbot_brain`
+  - Preview link to `/chatbot-widget`
+  - Copyable JavaScript embed snippet (floating button + iframe) for any website
+- **Embed**: JavaScript snippet creates floating chat button; clicking opens 380×580 iframe
+- **IMPORTANT**: Route path in `chatbot.ts` must NOT include `/api/` prefix — routes are `/chatbot/message` and `/chatbot/submit` (router is mounted at `/api` in app.ts)
+
 ## Authentication
 
 - Session-based (express-session) with httpOnly cookies
