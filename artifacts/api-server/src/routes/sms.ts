@@ -155,13 +155,33 @@ router.post("/webhooks/twilio/sms", async (req, res) => {
       return;
     }
 
-    // Find matching inquiry
-    const [inquiry] = await db
+    // Find matching inquiry by phone
+    let [inquiry] = await db
       .select({ id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName })
       .from(inquiries)
       .where(eq(inquiries.phone, from))
       .orderBy(desc(inquiries.createdAt))
       .limit(1);
+
+    // Auto-create inquiry if none exists (mirrors voice webhook behavior)
+    if (!inquiry) {
+      const [created] = await db.insert(inquiries).values({
+        firstName: "Unknown",
+        lastName:  "Caller",
+        phone:     from,
+        referralSource: "SMS",
+        referralOrigin: "online",
+        status:    "new",
+        priority:  "medium",
+        updatedAt: new Date(),
+      }).returning({ id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName });
+
+      // Assign inquiry number
+      const inquiryNum = `INQ-${created.id.toString().padStart(6, "0")}`;
+      await db.update(inquiries).set({ inquiryNumber: inquiryNum }).where(eq(inquiries.id, created.id));
+
+      inquiry = created;
+    }
 
     const [saved] = await db.insert(smsMessages).values({
       phone: from,
@@ -169,26 +189,24 @@ router.post("/webhooks/twilio/sms", async (req, res) => {
       body,
       twilioSid: MessageSid,
       status: "received",
-      inquiryId: inquiry?.id ?? null,
+      inquiryId: inquiry.id,
     }).returning();
 
     // Log activity
-    if (inquiry) {
-      try {
-        await db.insert(activities).values({
-          inquiryId: inquiry.id,
-          type: "sms",
-          subject: `Inbound SMS from ${inquiry.firstName} ${inquiry.lastName} (${from})`,
-          body,
-        });
-      } catch { /* best-effort */ }
-    }
+    try {
+      await db.insert(activities).values({
+        inquiryId: inquiry.id,
+        type: "sms",
+        subject: `Inbound SMS from ${inquiry.firstName} ${inquiry.lastName} (${from})`,
+        body,
+      });
+    } catch { /* best-effort */ }
 
     broadcastSSE("sms_message", {
       message: saved,
       phone: from,
       direction: "inbound",
-      contactName: inquiry ? `${inquiry.firstName} ${inquiry.lastName}` : null,
+      contactName: `${inquiry.firstName} ${inquiry.lastName}`,
     });
 
     res.setHeader("Content-Type", "text/xml");
