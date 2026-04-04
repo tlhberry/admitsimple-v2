@@ -24,6 +24,7 @@ import ActiveCalls from "@/pages/calls/ActiveCalls";
 import NotFound from "@/pages/not-found";
 import ChatbotWidget from "@/pages/chatbot-widget";
 import ChatbotDemo from "@/pages/chatbot-demo";
+import LiveChat from "@/pages/live-chat";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/bd-reports" component={BDReports} />
       <Route path="/bed-board" component={BedBoard} />
       <Route path="/calls/active" component={ActiveCalls} />
+      <Route path="/live-chat/:sessionId" component={LiveChat} />
       <Route component={NotFound} />
     </Switch>
   );

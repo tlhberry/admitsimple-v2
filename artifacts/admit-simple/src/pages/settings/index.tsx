@@ -347,7 +347,9 @@ export default function Settings() {
 function ChatbotSettings() {
   const { toast } = useToast();
   const [brain, setBrain] = useState("");
+  const [notifPhones, setNotifPhones] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingPhones, setSavingPhones] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -355,6 +357,10 @@ function ChatbotSettings() {
     fetch("/api/settings/chatbot_brain", { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.value) setBrain(d.value); })
+      .catch(() => {});
+    fetch("/api/settings/chatbot_notification_phones", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.value) setNotifPhones(d.value); })
       .catch(() => {});
   }, []);
 
@@ -373,6 +379,24 @@ function ChatbotSettings() {
       toast({ title: "Failed to save", variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const savePhones = async () => {
+    setSavingPhones(true);
+    try {
+      const res = await fetch("/api/settings/chatbot_notification_phones", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: notifPhones }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Notification numbers saved" });
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSavingPhones(false);
     }
   };
 
@@ -475,6 +499,40 @@ function ChatbotSettings() {
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Brain
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* SMS Notifications */}
+      <Card className="rounded-2xl border-border">
+        <CardHeader className="border-b border-border pb-4">
+          <CardTitle className="text-base flex items-center gap-2 text-foreground">
+            <Phone className="w-4 h-4 text-primary" /> Admissions Notification Numbers
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            When a visitor sends their first message in the chat widget, we'll text these numbers with a link to view the live conversation inside AdmitSimple.
+          </p>
+          <div>
+            <Label className="text-sm font-medium text-foreground mb-1.5 block">Phone Numbers</Label>
+            <Input
+              value={notifPhones}
+              onChange={e => setNotifPhones(e.target.value)}
+              placeholder="+15551234567, +15559876543"
+              className="rounded-xl"
+            />
+            <p className="text-xs text-muted-foreground mt-1.5">Comma-separated. Use full format: +1XXXXXXXXXX</p>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={savePhones}
+              disabled={savingPhones}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold disabled:opacity-50 transition-all"
+            >
+              {savingPhones ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Numbers
             </button>
           </div>
         </CardContent>

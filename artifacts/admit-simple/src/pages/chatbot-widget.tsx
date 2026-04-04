@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { Send, MessageSquare, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function generateSessionId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 type Step = "loading" | "name" | "dob" | "insurance" | "memberid" | "phone" | "review" | "submitting" | "done";
 
 interface ChatMessage {
@@ -18,7 +23,7 @@ interface CollectedData {
 }
 
 const STEP_INSTRUCTIONS: Partial<Record<Step, string>> = {
-  loading:    "Warmly greet the user. Briefly mention you can check their insurance coverage in about 60 seconds. Ask for their full name to get started.",
+  loading:    "Warmly greet the user. Introduce yourself and ask for their full name to get started.",
   name:       "The user just provided their name. Acknowledge them warmly by first name and ask for their date of birth.",
   dob:        "The user provided their date of birth. Acknowledge it and ask which insurance carrier or insurance company they have.",
   insurance:  "The user provided their insurance carrier. Acknowledge it and ask for their insurance member ID — it's on their insurance card.",
@@ -43,6 +48,7 @@ export default function ChatbotWidget() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sessionId = useRef<string>(generateSessionId()).current;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -57,7 +63,11 @@ export default function ChatbotWidget() {
   const addMsg = (role: "ai" | "user", content: string) =>
     setMessages(prev => [...prev, { role, content }]);
 
-  const callAI = async (instruction: string, history: ChatMessage[]): Promise<string | null> => {
+  const callAI = async (
+    instruction: string,
+    history: ChatMessage[],
+    opts?: { userMessage?: string; isFirstMessage?: boolean },
+  ): Promise<string | null> => {
     setIsTyping(true);
     try {
       const apiMessages = [
@@ -73,7 +83,12 @@ export default function ChatbotWidget() {
       const res = await fetch("/api/chatbot/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          sessionId,
+          userMessage: opts?.userMessage,
+          isFirstMessage: opts?.isFirstMessage ?? false,
+        }),
       });
       const json = await res.json();
       const reply: string = json.reply || "I'm sorry, could you repeat that?";
@@ -95,7 +110,12 @@ export default function ChatbotWidget() {
     })();
   }, []);
 
-  const advance = async (userText: string, currentStep: Step, newData: CollectedData) => {
+  const advance = async (
+    userText: string,
+    currentStep: Step,
+    newData: CollectedData,
+    isFirstMessage = false,
+  ) => {
     addMsg("user", userText);
     const updated = { ...data, ...newData };
     setData(updated);
@@ -110,7 +130,7 @@ export default function ChatbotWidget() {
     };
 
     const instruction = STEP_INSTRUCTIONS[currentStep];
-    if (instruction) await callAI(instruction, history);
+    if (instruction) await callAI(instruction, history, { userMessage: userText, isFirstMessage });
     const next = stepMap[currentStep];
     if (next) setStep(next);
   };
@@ -121,7 +141,7 @@ export default function ChatbotWidget() {
     setInputValue("");
 
     if (step === "name") {
-      await advance(trimmed, "name", { name: trimmed });
+      await advance(trimmed, "name", { name: trimmed }, true);
     } else if (step === "dob") {
       await advance(trimmed, "dob", { dob: trimmed });
     } else if (step === "insurance") {

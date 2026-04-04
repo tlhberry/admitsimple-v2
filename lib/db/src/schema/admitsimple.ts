@@ -405,3 +405,11 @@ export const auditLogs = pgTable("audit_logs", {
   ipAddress: varchar("ip_address", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const chatbotSessions = pgTable("chatbot_sessions", {
+  sessionId: varchar("session_id", { length: 100 }).primaryKey(),
+  messages: jsonb("messages").default([]),
+  notifiedAt: timestamp("notified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
