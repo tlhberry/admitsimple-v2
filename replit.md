@@ -190,3 +190,15 @@ Loaded on first startup:
 - The `user_sessions` table is managed by `connect-pg-simple`, NOT by Drizzle schema
 - If `user_sessions` is accidentally dropped, recreate with: `CREATE TABLE "user_sessions" ("sid" varchar NOT NULL COLLATE "default", "sess" json NOT NULL, "expire" timestamp(6) NOT NULL, CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("sid"))`
 - Pipeline status logic: inquiry `status` field stores exact stage name after drag; legacy statuses: `new`→"New Inquiry", `contacted`→"Initial Contact", `qualified`→"Insurance Verification"
+
+## Known Issues / Deferred Investigation
+
+### The "7 Problem" (SMS Unread Badge)
+- A badge showing "7" appeared on the Active Calls nav item (teal SMS unread badge).
+- Root cause not fully determined. Observations:
+  - `GET /api/sms/unread-count` was previously 404-ing (route had `/unread-count` instead of `/sms/unread-count`) — fixed.
+  - DB shows 0 unread inbound SMS messages and 0 active/ringing calls.
+  - Despite the fix, the frontend still showed 7 — likely a stale React Query in-memory cache entry from an earlier session where the count was genuinely 7.
+  - `GET /api/calls/active` consistently returns HTTP 304, meaning the browser HTTP cache ETag matches, but the origin of the cached 7-item value is unclear.
+- **Interim fix**: SMS unread `smsBadge` prop hard-set to `undefined` in Sidebar (both desktop and mobile nav) — badge no longer renders.
+- **To investigate**: Whether there is a persistent source of stale data (HTTP cache, React Query persistence, or DB records) that could cause incorrect badge counts in production. Check if `call_status` values are being properly reset after calls end.
