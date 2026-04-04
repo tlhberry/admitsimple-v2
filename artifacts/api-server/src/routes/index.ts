@@ -19,9 +19,11 @@ import bedsRouter from "./beds";
 import savedReportsRouter from "./savedReports";
 import eventsRouter from "./events";
 import adminRouter from "./admin";
+import smsRouter from "./sms";
 
 const router: IRouter = Router();
 
+router.use(smsRouter);      // sms/send, sms/threads, webhooks/twilio/sms
 router.use(webhooksRouter);
 router.use(healthRouter);
 router.use(authRouter);

@@ -10,8 +10,9 @@ import {
   Phone, UserCheck, Users, ExternalLink, Loader2,
   PhoneOff, Radio, CheckCircle2, AlertTriangle, PhoneMissed,
   PhoneCall, PhoneIncoming, Mic, MicOff,
-  MessageSquare, Send, Delete,
+  MessageSquare, Delete,
 } from "lucide-react";
+import { SMSInbox } from "@/components/SMSInbox";
 import { cn } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -186,81 +187,6 @@ function Dialer({ onCall }: { onCall: (number: string) => void }) {
   );
 }
 
-// ── SMS Compose ───────────────────────────────────────────────────────────────
-function SMSCompose({ toast }: { toast: ReturnType<typeof import("@/hooks/use-toast").useToast>["toast"] }) {
-  const [to,      setTo]      = useState("");
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const maxChars = 160;
-
-  const handleSend = async () => {
-    if (!to || !message || sending) return;
-    setSending(true);
-    try {
-      const res = await fetch("/api/sms/send", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, message }),
-      });
-      if (res.ok) {
-        toast({ title: "Message sent", description: `SMS delivered to ${to}` });
-        setMessage("");
-      } else {
-        const data = await res.json();
-        toast({ title: "Failed to send", description: data.error ?? "Unknown error", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Network error", variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* To field */}
-      <div>
-        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">To</label>
-        <input
-          type="tel"
-          value={to}
-          onChange={e => setTo(e.target.value)}
-          placeholder="+1 (555) 000-0000"
-          className="w-full h-10 bg-muted/30 border border-border rounded-xl px-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-[#5BC8DC] focus:border-[#5BC8DC] transition-colors"
-        />
-      </div>
-
-      {/* Message field */}
-      <div>
-        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">Message</label>
-        <textarea
-          value={message}
-          onChange={e => setMessage(e.target.value.slice(0, maxChars))}
-          placeholder="Type your message…"
-          rows={4}
-          className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-[#5BC8DC] focus:border-[#5BC8DC] transition-colors"
-        />
-        <div className="flex justify-end mt-1">
-          <span className={cn("text-[10px]", message.length >= maxChars ? "text-red-400" : "text-muted-foreground")}>
-            {message.length}/{maxChars}
-          </span>
-        </div>
-      </div>
-
-      {/* Send button */}
-      <button
-        type="button"
-        disabled={!to || !message || sending}
-        onClick={handleSend}
-        className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-[#5BC8DC] hover:bg-[#4ab8cc] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-[#5BC8DC]/20"
-      >
-        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        {sending ? "Sending…" : "Send Message"}
-      </button>
-    </div>
-  );
-}
 
 // ── Recent call row ───────────────────────────────────────────────────────────
 function CallRow({
@@ -690,12 +616,13 @@ export default function ActiveCallsPage() {
           </div>
 
           {/* Tab body */}
-          <div className="px-5 py-5 max-w-sm mx-auto">
-            {commTab === "dialer"
-              ? <Dialer onCall={(num) => makeCall(num, num)} />
-              : <SMSCompose toast={toast} />
-            }
-          </div>
+          {commTab === "dialer" ? (
+            <div className="px-5 py-5 max-w-sm mx-auto">
+              <Dialer onCall={(num) => makeCall(num, num)} />
+            </div>
+          ) : (
+            <SMSInbox />
+          )}
         </div>
 
       </div>

@@ -378,6 +378,21 @@ export const savedReports = pgTable("saved_reports", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ─── SMS Messages ─────────────────────────────────────────────────────────────
+export const smsMessages = pgTable("sms_messages", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  direction: varchar("direction", { length: 10 }).notNull(), // "inbound" | "outbound"
+  body: text("body").notNull(),
+  twilioSid: varchar("twilio_sid", { length: 100 }),
+  status: varchar("status", { length: 20 }).default("sent"),
+  inquiryId: integer("inquiry_id").references(() => inquiries.id),
+  userId: integer("user_id").references(() => users.id),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type SmsMessage = typeof smsMessages.$inferSelect;
+
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),

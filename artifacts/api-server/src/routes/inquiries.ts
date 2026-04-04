@@ -873,56 +873,7 @@ router.post("/inquiries/:id/call-outcome", async (req, res) => {
   }
 });
 
-// ── POST /api/sms/send — send an outbound SMS via Twilio ──────────────────────
-router.post("/sms/send", async (req, res) => {
-  try {
-    const { to, message, inquiryId: rawInquiryId } = req.body as { to?: string; message?: string; inquiryId?: number };
-    if (!to || !message) {
-      res.status(400).json({ error: "to and message are required" });
-      return;
-    }
-
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken  = process.env.TWILIO_AUTH_TOKEN;
-    const from       = process.env.TWILIO_PHONE_NUMBER;
-
-    if (!accountSid || !authToken || !from) {
-      res.status(503).json({ error: "Twilio not configured" });
-      return;
-    }
-
-    const client = twilio(accountSid, authToken);
-    const msg = await client.messages.create({ body: message, from, to });
-
-    // ── Log activity to inquiry ────────────────────────────────────────────
-    try {
-      let resolvedInquiryId = rawInquiryId ?? null;
-      if (!resolvedInquiryId) {
-        const [found] = await db
-          .select({ id: inquiries.id })
-          .from(inquiries)
-          .where(eq(inquiries.phone, to))
-          .orderBy(desc(inquiries.createdAt))
-          .limit(1);
-        if (found) resolvedInquiryId = found.id;
-      }
-      if (resolvedInquiryId) {
-        await db.insert(activities).values({
-          inquiryId: resolvedInquiryId,
-          userId: (req as any).session?.userId ?? null,
-          type: "sms",
-          subject: `SMS sent to ${to}`,
-          body: message,
-        });
-      }
-    } catch { /* best-effort */ }
-
-    res.json({ ok: true, sid: msg.sid });
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Failed to send SMS" });
-  }
-});
+// NOTE: POST /api/sms/send is handled by sms.ts router (mounted first)
 
 // ── POST /api/calls/log — log an outbound call to an inquiry ──────────────────
 router.post("/calls/log", async (req, res) => {

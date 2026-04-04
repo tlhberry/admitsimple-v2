@@ -1,0 +1,81 @@
+PROMPT (paste into Claude)
+
+We need to redesign the Text Messaging UI in our admissions CRM to function like a real messaging inbox (mobile-first).
+
+Current problem:
+The UI only allows sending a single message and does not show conversation history or multiple threads. This is not usable for admissions teams.
+
+OBJECTIVE
+
+Transform the TEXT MESSAGE tab into a full messaging inbox similar to iMessage.
+
+CORE REQUIREMENTS
+1. Split Layout (Responsive)
+Desktop:
+Left panel = conversation list (threads)
+Right panel = active conversation
+Mobile:
+Default = thread list
+Tap thread → opens full conversation view
+Back button returns to thread list
+2. Conversation Thread List (Top Priority)
+
+Display last 10–20 conversations:
+
+Contact name (or phone if unknown)
+Last message preview (truncate to 1 line)
+Timestamp (relative: 2m, 1h, etc.)
+Unread indicator (dot or bold)
+Highlight selected thread
+
+Sort by:
+
+Most recent activity (text or call)
+3. Conversation View
+
+When a thread is selected:
+
+Show full message history (chat bubbles)
+Outgoing = right aligned
+Incoming = left aligned
+Auto-scroll to latest message
+Show timestamps subtly
+4. Message Input
+
+At bottom of conversation:
+
+Text input (160 char limit optional)
+Send button
+Press Enter to send (desktop)
+Mobile-friendly spacing
+5. Smart Behavior (IMPORTANT)
+Clicking a phone number anywhere in app:
+→ Opens existing thread if exists
+→ Creates new thread if not
+Merge calls + texts under same contact timeline (future-ready structure)
+6. Data Structure (Backend Expectation)
+
+Each thread:
+
+contactId (nullable)
+phoneNumber
+messages[]:
+id
+direction (inbound/outbound)
+body
+timestamp
+status (sent/delivered/read optional)
+7. UI/UX Style
+Match existing dark theme
+Clean, minimal, no clutter
+Smooth transitions between thread list and conversation
+Subtle hover + active states
+Mobile-first spacing
+8. Bonus (if easy)
+Search bar at top of thread list
+“+ New Message” button
+Empty state: “No conversations yet”
+IMPORTANT
+
+Do NOT build this as a simple message form.
+This must feel like a real messaging inbox used all day by admissions reps.
