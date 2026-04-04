@@ -23,6 +23,7 @@ import BedBoard from "@/pages/bed-board/index";
 import ActiveCalls from "@/pages/calls/ActiveCalls";
 import NotFound from "@/pages/not-found";
 import ChatbotWidget from "@/pages/chatbot-widget";
+import ChatbotDemo from "@/pages/chatbot-demo";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,8 +65,9 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Switch>
-            {/* Public route — no auth required */}
+            {/* Public routes — no auth required */}
             <Route path="/chatbot-widget" component={ChatbotWidget} />
+            <Route path="/chatbot-demo" component={ChatbotDemo} />
             {/* All other routes require authentication */}
             <Route>
               <AuthProvider>
