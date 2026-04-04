@@ -609,8 +609,12 @@ router.get("/calls/token", async (req, res) => {
     const AccessToken = twilio.jwt.AccessToken;
     const VoiceGrant  = AccessToken.VoiceGrant;
 
-    const identity = String(sess.userId);
-    const accessToken = new AccessToken(accountSid, authToken, { identity, ttl: 3600 } as any);
+    const identity = String(sess.userId ?? `guest-${Date.now()}`);
+    // SDK v5 requires 4 args: (accountSid, keySid, keySecret, opts)
+    // Use TWILIO_API_KEY_SID/SECRET if set, otherwise fall back to accountSid/authToken
+    const apiKeySid    = process.env.TWILIO_API_KEY_SID    ?? accountSid;
+    const apiKeySecret = process.env.TWILIO_API_KEY_SECRET ?? authToken;
+    const accessToken = new AccessToken(accountSid, apiKeySid, apiKeySecret, { identity, ttl: 3600 } as any);
     const voiceGrant  = new VoiceGrant({ outgoingApplicationSid: appSid, incomingAllow: true });
     accessToken.addGrant(voiceGrant);
 

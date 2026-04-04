@@ -5,12 +5,12 @@ export function useTwilioVoice() {
   const deviceRef          = useRef<Device | null>(null);
   const outboundCallRef    = useRef<Call | null>(null);
   const durationRef        = useRef<ReturnType<typeof setInterval> | null>(null);
-  const liveDurationRef    = useRef(0); // always-current mirror of callDuration
+  const liveDurationRef    = useRef(0);
 
   const [isReady,        setIsReady]        = useState(false);
+  const [setupError,     setSetupError]     = useState<string | null>(null);
   const [activeCalls,    setActiveCalls]    = useState<Map<string, Call>>(new Map());
 
-  // Outbound call state
   const [outboundCall,   setOutboundCall]   = useState<Call | null>(null);
   const [outboundTo,     setOutboundTo]     = useState("");
   const [outboundName,   setOutboundName]   = useState("");
@@ -24,13 +24,21 @@ export function useTwilioVoice() {
     async function setup() {
       try {
         const res = await fetch("/api/calls/token", { credentials: "include" });
-        if (!res.ok) return;
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setSetupError(body.error ?? "Twilio Voice is not configured");
+          return;
+        }
         const { token } = await res.json();
 
         device = new Device(token, { logLevel: 1 });
 
-        device.on("registered",   () => setIsReady(true));
+        device.on("registered",   () => { setIsReady(true); setSetupError(null); });
         device.on("unregistered", () => setIsReady(false));
+        device.on("error", (err: { message?: string }) => {
+          setSetupError(err.message ?? "Twilio Device error");
+          setIsReady(false);
+        });
 
         device.on("incoming", (call: Call) => {
           const callSid =
@@ -53,8 +61,9 @@ export function useTwilioVoice() {
 
         await device.register();
         deviceRef.current = device;
-      } catch (err) {
+      } catch (err: any) {
         console.error("Twilio Device setup failed:", err);
+        setSetupError(err?.message ?? "Could not connect to Twilio Voice");
       }
     }
 
@@ -76,7 +85,7 @@ export function useTwilioVoice() {
   // ── Outbound call ──────────────────────────────────────────────────────────
   async function makeCall(to: string, name: string) {
     const device = deviceRef.current;
-    if (!device) return;
+    if (!device || !isReady) return;
 
     try {
       setOutboundTo(to);
@@ -103,7 +112,6 @@ export function useTwilioVoice() {
       call.on("mute", (muted: boolean) => setIsMuted(muted));
 
       const onEnd = () => {
-        // Capture duration before resetting (use ref — never stale)
         const finalDuration = liveDurationRef.current;
         const finalTo   = to;
         const finalName = name;
@@ -118,7 +126,6 @@ export function useTwilioVoice() {
         setCallDuration(0);
         setIsMuted(false);
 
-        // Log call activity (best-effort)
         fetch("/api/calls/log", {
           method: "POST",
           credentials: "include",
@@ -153,6 +160,7 @@ export function useTwilioVoice() {
 
   return {
     isReady,
+    setupError,
     activeCalls,
     answerCall,
     declineCall,
