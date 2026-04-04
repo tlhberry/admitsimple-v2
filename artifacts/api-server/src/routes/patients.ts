@@ -33,6 +33,7 @@ const patientSelect = {
   creditOverrideBy: patients.creditOverrideBy,
   creditOverriddenAt: patients.creditOverriddenAt,
   status: patients.status,
+  isAlumni: patients.isAlumni,
   notes: patients.notes,
   createdAt: patients.createdAt,
   updatedAt: patients.updatedAt,

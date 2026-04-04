@@ -4,9 +4,10 @@ import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Search, Loader2, UserCheck, Calendar, Activity, ChevronRight } from "lucide-react";
+import { Search, Loader2, UserCheck, Calendar, Activity, ChevronRight, LogOut } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { DischargeModal } from "@/components/DischargeModal";
 
 const statusColors: Record<string, string> = {
   active:     "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
@@ -26,6 +27,7 @@ export default function Patients() {
   const [search, setSearch] = useState("");
   const { data, isLoading } = useListPatients({ search: search || undefined });
   const [, navigate] = useLocation();
+  const [dischargePatient, setDischargePatient] = useState<any | null>(null);
 
   const active     = data?.filter(p => p.status === "active").length ?? 0;
   const inDetox    = data?.filter(p => p.levelOfCare === "Detox" && p.status === "active").length ?? 0;
@@ -82,11 +84,14 @@ export default function Patients() {
       {!isLoading && (data?.length ?? 0) > 0 && (
         <div className="md:hidden flex flex-col gap-2">
           {data?.map((patient) => (
-            <div key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)} className="bg-card border border-border rounded-xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-primary/40 transition-colors">
-              <div className="w-9 h-9 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+            <div key={patient.id} className="bg-card border border-border rounded-xl px-4 py-3.5 flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold text-sm shrink-0 cursor-pointer"
+                onClick={() => navigate(`/patients/${patient.id}`)}
+              >
                 {patient.firstName?.charAt(0) ?? "?"}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/patients/${patient.id}`)}>
                 <div className="font-semibold text-foreground text-sm truncate">{patient.firstName} {patient.lastName}</div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   {patient.levelOfCare && (
@@ -99,9 +104,16 @@ export default function Patients() {
                   </span>
                 </div>
               </div>
-              <div className="shrink-0 text-right">
+              <div className="shrink-0 flex flex-col items-end gap-1.5">
                 <div className="text-xs text-muted-foreground">{patient.admitDate ? formatDate(patient.admitDate as string) : "—"}</div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 ml-auto" />
+                {patient.status === "active" && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDischargePatient(patient); }}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-full px-2 py-0.5 hover:bg-rose-500/20 transition-colors"
+                  >
+                    <LogOut className="w-3 h-3" /> Discharge
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -144,7 +156,26 @@ export default function Patients() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }}>View</Button>
+                    <div className="flex items-center justify-end gap-2">
+                      {patient.status === "active" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 gap-1"
+                          onClick={(e) => { e.stopPropagation(); setDischargePatient(patient); }}
+                        >
+                          <LogOut className="w-3.5 h-3.5" /> Discharge
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }}
+                      >
+                        View
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -161,6 +192,14 @@ export default function Patients() {
           <p className="font-semibold text-foreground">No patients found</p>
           <p className="text-sm text-muted-foreground mt-1">Convert an inquiry to add a patient to the census.</p>
         </div>
+      )}
+
+      {dischargePatient && (
+        <DischargeModal
+          patient={dischargePatient}
+          open={!!dischargePatient}
+          onOpenChange={(open) => { if (!open) setDischargePatient(null); }}
+        />
       )}
     </Layout>
   );

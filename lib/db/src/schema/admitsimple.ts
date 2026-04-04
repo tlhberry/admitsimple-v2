@@ -134,6 +134,7 @@ export const patients = pgTable("patients", {
   creditOverrideBy: integer("credit_override_by").references(() => users.id),
   creditOverriddenAt: timestamp("credit_overridden_at"),
   status: varchar("status", { length: 50 }).notNull().default("active"),
+  isAlumni: boolean("is_alumni").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -405,6 +406,28 @@ export const auditLogs = pgTable("audit_logs", {
   ipAddress: varchar("ip_address", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// ─── Discharges ───────────────────────────────────────────────────────────────
+export const discharges = pgTable("discharges", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").notNull().references(() => patients.id),
+  dischargeType: varchar("discharge_type", { length: 100 }).notNull(),
+  levelOfCare: varchar("level_of_care", { length: 100 }),
+  levelOfCareOther: varchar("level_of_care_other", { length: 255 }),
+  destinationType: varchar("destination_type", { length: 100 }),
+  referralSourceId: integer("referral_source_id").references(() => referralSources.id),
+  referralSourceName: varchar("referral_source_name", { length: 255 }),
+  hospitalName: varchar("hospital_name", { length: 255 }),
+  clinicalTransfer: boolean("clinical_transfer").notNull().default(false),
+  notes: text("notes"),
+  followUp: boolean("follow_up").notNull().default(false),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDischargeSchema = createInsertSchema(discharges).omit({ id: true, createdAt: true });
+export type Discharge = typeof discharges.$inferSelect;
+export type InsertDischarge = z.infer<typeof insertDischargeSchema>;
 
 export const chatbotSessions = pgTable("chatbot_sessions", {
   sessionId: varchar("session_id", { length: 100 }).primaryKey(),

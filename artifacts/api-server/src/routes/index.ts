@@ -21,6 +21,7 @@ import eventsRouter from "./events";
 import adminRouter from "./admin";
 import smsRouter from "./sms";
 import chatbotRouter from "./chatbot";
+import dischargesRouter from "./discharges";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(bedsRouter);
 router.use(savedReportsRouter);
 router.use(eventsRouter);
 router.use(adminRouter);
+router.use(dischargesRouter);
 
 export default router;

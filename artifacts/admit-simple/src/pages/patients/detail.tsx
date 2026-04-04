@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetPatient } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
@@ -6,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PreAssessmentSection } from "@/components/PreAssessmentForms";
-import { Loader2, ArrowLeft, User, Phone, Mail, Calendar, Building2, CreditCard, Stethoscope, ClipboardCheck, AlertCircle } from "lucide-react";
+import { DischargeModal } from "@/components/DischargeModal";
+import { Loader2, ArrowLeft, User, Phone, Mail, Calendar, Building2, CreditCard, Stethoscope, ClipboardCheck, AlertCircle, LogOut } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
@@ -41,8 +43,9 @@ export default function PatientDetail() {
   const [, params] = useRoute("/patients/:id");
   const [, navigate] = useLocation();
   const id = params?.id ? parseInt(params.id) : 0;
+  const [showDischarge, setShowDischarge] = useState(false);
 
-  const { data: patient, isLoading } = useGetPatient(id);
+  const { data: patient, isLoading, refetch } = useGetPatient(id);
 
   if (isLoading) {
     return (
@@ -100,6 +103,11 @@ export default function PatientDetail() {
                   {patient.status}
                 </Badge>
               )}
+              {(patient as any).isAlumni && (
+                <Badge variant="outline" className="rounded-full border text-xs bg-amber-500/15 text-amber-400 border-amber-500/25">
+                  Alumni
+                </Badge>
+              )}
               {patient.currentStage && (
                 <span className="text-xs text-muted-foreground border border-border rounded-full px-2.5 py-0.5">
                   {patient.currentStage}
@@ -107,6 +115,18 @@ export default function PatientDetail() {
               )}
             </div>
           </div>
+
+          {/* Discharge button — only show for active patients */}
+          {patient.status === "active" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowDischarge(true)}
+              className="shrink-0 gap-1.5 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-500/50"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Discharge
+            </Button>
+          )}
         </div>
       </div>
 
@@ -189,6 +209,16 @@ export default function PatientDetail() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Discharge Modal */}
+      {showDischarge && (
+        <DischargeModal
+          patient={patient}
+          open={showDischarge}
+          onOpenChange={setShowDischarge}
+          onSuccess={() => refetch()}
+        />
+      )}
     </Layout>
   );
 }
