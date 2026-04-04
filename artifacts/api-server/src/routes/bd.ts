@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import {
   referralAccounts, referralContacts, bdActivityLogs, users,
 } from "@workspace/db/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -288,49 +288,47 @@ router.post("/bd-activities", async (req, res) => {
 // BD Analytics
 router.get("/bd-analytics", async (req, res) => {
   try {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = req.query;
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const end = endDate ? new Date(endDate as string) : new Date();
 
     const [totalAccounts] = await db.select({ count: sql<number>`count(*)::int` })
       .from(referralAccounts);
 
-    // Active accounts (had activity in last 30 days)
     const activeAccountIds = await db.selectDistinct({ accountId: bdActivityLogs.accountId })
       .from(bdActivityLogs)
-      .where(gte(bdActivityLogs.activityDate, thirtyDaysAgo));
+      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)));
 
-    const [totalActivities30] = await db.select({ count: sql<number>`count(*)::int` })
+    const [totalActivitiesPeriod] = await db.select({ count: sql<number>`count(*)::int` })
       .from(bdActivityLogs)
-      .where(gte(bdActivityLogs.activityDate, thirtyDaysAgo));
+      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)));
 
-    // Activities by type (last 30 days)
     const byType = await db.select({
       activityType: bdActivityLogs.activityType,
       count: sql<number>`count(*)::int`,
     }).from(bdActivityLogs)
-      .where(gte(bdActivityLogs.activityDate, thirtyDaysAgo))
+      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)))
       .groupBy(bdActivityLogs.activityType);
 
-    // Accounts by type
     const byAccountType = await db.select({
       type: referralAccounts.type,
       count: sql<number>`count(*)::int`,
     }).from(referralAccounts).groupBy(referralAccounts.type);
 
-    // Top BD reps (last 30 days)
     const topReps = await db.select({
       userId: bdActivityLogs.userId,
       userName: users.name,
       count: sql<number>`count(*)::int`,
     }).from(bdActivityLogs)
       .leftJoin(users, eq(bdActivityLogs.userId, users.id))
-      .where(gte(bdActivityLogs.activityDate, thirtyDaysAgo))
+      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)))
       .groupBy(bdActivityLogs.userId, users.name)
       .orderBy(sql`count(*) desc`);
 
     res.json({
       totalAccounts: totalAccounts?.count ?? 0,
       activeAccounts30: activeAccountIds.length,
-      totalActivities30: totalActivities30?.count ?? 0,
+      totalActivities30: totalActivitiesPeriod?.count ?? 0,
       activitiesByType: byType,
       accountsByType: byAccountType,
       topBdReps: topReps,
