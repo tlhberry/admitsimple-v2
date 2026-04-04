@@ -64,7 +64,7 @@ export function Sidebar() {
         { icon: ClipboardList, label: "Inquiries",  href: "/inquiries" },
         { icon: Users,         label: "Patients",   href: "/patients" },
         { icon: GitBranch,     label: "Pipeline",   href: "/pipeline" },
-        { icon: Phone,         label: "Active Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: undefined },
+        { icon: Phone,         label: "Active Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: unreadSmsCount > 0 ? String(unreadSmsCount) : undefined },
       ],
     },
     {
@@ -96,7 +96,7 @@ export function Sidebar() {
     { icon: GitBranch,     label: "Pipeline",  href: "/pipeline" },
     isBdRole
       ? { icon: Building2, label: "BD",    href: "/referral-accounts", badge: undefined, badgeColor: undefined, smsBadge: undefined }
-      : { icon: Phone,     label: "Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: undefined },
+      : { icon: Phone,     label: "Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: unreadSmsCount > 0 ? String(unreadSmsCount) : undefined },
     { icon: BarChart2, label: "Reports", href: "/reports", badge: undefined, badgeColor: undefined },
   ];
 
