@@ -145,7 +145,7 @@ router.post("/sms/send", requireAuth, async (req, res) => {
 });
 
 // ── GET /api/sms/unread-count — global unread inbound SMS count ──────────────
-router.get("/unread-count", requireAuth, async (_req, res) => {
+router.get("/sms/unread-count", requireAuth, async (_req, res) => {
   try {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
