@@ -528,6 +528,7 @@ function ChatbotSettings() {
   const [saving, setSaving] = useState(false);
   const [savingPhones, setSavingPhones] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -718,27 +719,39 @@ function ChatbotSettings() {
       {/* Embed code */}
       <Card className="rounded-2xl border-border">
         <CardHeader className="border-b border-border pb-4">
-          <CardTitle className="text-base flex items-center gap-2 text-foreground">
-            <MessageSquare className="w-4 h-4 text-primary" /> Website Embed Code
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Paste this snippet before the <code className="bg-muted px-1 rounded text-xs">&lt;/body&gt;</code> tag of your website to add the floating chat widget.
-          </p>
-          <div className="relative">
-            <pre className="bg-muted rounded-xl p-4 text-xs text-foreground overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
-              {embedCode}
-            </pre>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2 text-foreground">
+              <MessageSquare className="w-4 h-4 text-primary" /> Website Embed Code
+            </CardTitle>
             <button
-              onClick={copyEmbed}
-              className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              type="button"
+              onClick={() => setShowEmbed(s => !s)}
+              className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 border border-primary/20 px-3 py-1.5 rounded-lg transition-all"
             >
-              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? "Copied!" : "Copy"}
+              {showEmbed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {showEmbed ? "Hide Code" : "Show Code"}
             </button>
           </div>
-        </CardContent>
+        </CardHeader>
+        {showEmbed && (
+          <CardContent className="p-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Paste this snippet before the <code className="bg-muted px-1 rounded text-xs">&lt;/body&gt;</code> tag of your website to add the floating chat widget.
+            </p>
+            <div className="relative">
+              <pre className="bg-muted rounded-xl p-4 text-xs text-foreground overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+                {embedCode}
+              </pre>
+              <button
+                onClick={copyEmbed}
+                className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
