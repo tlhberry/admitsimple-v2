@@ -42,7 +42,11 @@ export default function Pipeline() {
       toast({ title: "No phone number on file", variant: "destructive" });
       return;
     }
-    window.location.href = type === "phone_call" ? `tel:${phone}` : `sms:${phone}`;
+    if (type === "phone_call") {
+      window.location.href = `tel:${phone}`;
+    } else {
+      navigate(`/active-calls?sms=${encodeURIComponent(phone)}`);
+    }
     try {
       await logContact(item.id, type);
     } catch {

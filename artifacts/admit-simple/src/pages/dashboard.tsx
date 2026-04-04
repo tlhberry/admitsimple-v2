@@ -365,13 +365,14 @@ export default function Dashboard() {
                         >
                           <Phone className="w-3.5 h-3.5" />
                         </a>
-                        <a
-                          href={`sms:${r.phone}`}
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/active-calls?sms=${encodeURIComponent(r.phone)}`)}
                           className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
                           title={`Text ${r.phone}`}
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                        </a>
+                        </button>
                       </div>
                     )}
                   </div>

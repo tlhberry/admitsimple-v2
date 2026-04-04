@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { useLiveEvents } from "@/hooks/use-live-events";
 import { useAuth } from "@/hooks/use-auth";
 import { useTwilioVoice } from "@/hooks/useTwilioVoice";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -258,6 +258,17 @@ export default function ActiveCallsPage() {
   const [claiming, setClaiming] = useState<number | null>(null);
   const [filter,   setFilter]   = useState<Filter>("all");
   const [commTab,  setCommTab]  = useState<CommTab>("dialer");
+  const [smsPhone, setSmsPhone] = useState<string | undefined>(undefined);
+
+  // Auto-switch to SMS tab when navigated here with ?sms=<phone>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phone = params.get("sms");
+    if (phone) {
+      setSmsPhone(phone);
+      setCommTab("sms");
+    }
+  }, []);
   const {
     activeCalls, answerCall, declineCall,
     makeCall, hangUp, toggleMute,
@@ -621,7 +632,7 @@ export default function ActiveCallsPage() {
               <Dialer onCall={(num) => makeCall(num, num)} />
             </div>
           ) : (
-            <SMSInbox />
+            <SMSInbox initialPhone={smsPhone} />
           )}
         </div>
 

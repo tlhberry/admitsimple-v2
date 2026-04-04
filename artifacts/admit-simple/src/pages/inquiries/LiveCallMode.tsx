@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useGetInquiry } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -145,6 +145,7 @@ function WhatsNextModal({
     | "refer_loc" | "refer_search" | "refer_message" | "refer_success"
     | "dna_reason" | "dna_success";
 
+  const [, navigate] = useLocation();
   const [step, setStep] = useState<Step>("menu");
   const [loading, setLoading] = useState(false);
   const [referrals, setReferrals] = useState<any[]>([]);
@@ -208,7 +209,7 @@ function WhatsNextModal({
       (r.address ? `\n📍 ${r.address}` : "") +
       `\n\nLet me know if you'd like help getting started.`;
     if (isMobile) {
-      window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+      navigate(`/active-calls?sms=${encodeURIComponent(phone)}`);
     } else {
       const subject = encodeURIComponent(`Treatment Referral – ${r.name}`);
       window.open(`mailto:${email || ""}?subject=${subject}&body=${encodeURIComponent(msg)}`, "_blank");
@@ -253,7 +254,7 @@ function WhatsNextModal({
   const handleDNA = async () => {
     const msg = `Thanks for calling today. If anything changes or you need help in the future, feel free to reach out. We're here when you're ready.`;
     if (isMobile) {
-      window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+      navigate(`/active-calls?sms=${encodeURIComponent(phone)}`);
     } else {
       window.open(`mailto:${email || ""}?body=${encodeURIComponent(msg)}`, "_blank");
     }
@@ -630,6 +631,7 @@ export function LiveCallMode({ id }: { id: number }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const timer = useCallTimer();
 
   const inq = inquiry as any;
