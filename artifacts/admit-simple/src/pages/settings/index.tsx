@@ -79,6 +79,33 @@ export default function Settings() {
   const toggle = (key: string) => setValues(v => ({ ...v, [key]: v[key] === "true" ? "false" : "true" }));
 
   const [copied, setCopied] = useState(false);
+  const [showApiSecret, setShowApiSecret] = useState(false);
+  const [savingTwilio, setSavingTwilio] = useState(false);
+
+  const saveTwilioKeys = async () => {
+    setSavingTwilio(true);
+    try {
+      const keysToSave = [
+        { key: "twilio_api_key_sid",    value: values["twilio_api_key_sid"]    || "" },
+        { key: "twilio_api_key_secret", value: values["twilio_api_key_secret"] || "" },
+      ];
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: keysToSave }),
+      });
+      if (res.ok) {
+        toast({ title: "Twilio API keys saved" });
+        queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      } else {
+        toast({ title: "Failed to save", variant: "destructive" });
+      }
+    } finally {
+      setSavingTwilio(false);
+    }
+  };
+
   const webhookUrl = `${window.location.origin}/api/webhooks/ctm`;
   const copyWebhookUrl = () => { navigator.clipboard.writeText(webhookUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   const generateSecret = () => {
@@ -283,6 +310,72 @@ export default function Settings() {
                   <Button onClick={() => bulkUpdate.mutate({ data: { settings: [{ key: "ctm_webhook_secret", value: values["ctm_webhook_secret"] || "" }] } })} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                     {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Save Integration
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "integrations" && (
+            <Card className="rounded-2xl border-border">
+              <CardHeader className="border-b border-border pb-4">
+                <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                  <Phone className="w-4 h-4 text-[#5BC8DC]" /> Twilio Voice — Browser Calling
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="p-4 bg-[#5BC8DC]/10 rounded-xl border border-[#5BC8DC]/20 text-sm space-y-1">
+                  <p className="font-semibold text-[#5BC8DC]">API Key required for browser calls</p>
+                  <p className="text-muted-foreground">
+                    Twilio's browser Voice SDK requires a dedicated API Key (not the Auth Token). Create one at{" "}
+                    <a href="https://console.twilio.com/us1/account/keys-credentials/api-keys" target="_blank" rel="noopener noreferrer" className="text-[#5BC8DC] underline underline-offset-2">
+                      Twilio Console → API Keys &amp; Tokens
+                    </a>, then paste the SID and Secret below.
+                  </p>
+                </div>
+
+                <div>
+                  <Label className={labelCls}>API Key SID <span className="text-xs text-muted-foreground font-normal">(starts with SK…)</span></Label>
+                  <Input
+                    value={values["twilio_api_key_sid"] || ""}
+                    onChange={e => set("twilio_api_key_sid", e.target.value)}
+                    placeholder="SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    className={`${fieldCls} mt-1.5 font-mono text-sm`}
+                  />
+                </div>
+
+                <div>
+                  <Label className={labelCls}>API Key Secret</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <Input
+                      type={showApiSecret ? "text" : "password"}
+                      value={values["twilio_api_key_secret"] || ""}
+                      onChange={e => set("twilio_api_key_secret", e.target.value)}
+                      placeholder="Paste the secret shown once at creation"
+                      className={`${fieldCls} font-mono text-sm flex-1 mt-0`}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowApiSecret(s => !s)}
+                      className="shrink-0 rounded-xl px-3 border-border text-muted-foreground hover:bg-muted"
+                    >
+                      {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                {values["twilio_api_key_sid"] && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    API Key SID is set. Save below to activate browser calling.
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button onClick={saveTwilioKeys} disabled={savingTwilio} className="h-10 px-6 rounded-xl gap-2">
+                    {savingTwilio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Twilio Keys
                   </Button>
                 </div>
               </CardContent>

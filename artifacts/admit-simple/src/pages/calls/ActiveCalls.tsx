@@ -369,9 +369,15 @@ export default function ActiveCallsPage() {
         {setupError && (
           <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-sm">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
-            <div>
-              <p className="font-semibold">Voice calling unavailable</p>
-              <p className="text-amber-300/70 text-xs mt-0.5">{setupError}. To enable browser calling, add a Twilio API Key SID and Secret in your environment settings.</p>
+            <div className="flex-1">
+              <p className="font-semibold">Voice calling unavailable — Twilio API Key required</p>
+              <p className="text-amber-300/70 text-xs mt-0.5">
+                Browser calling needs a dedicated Twilio API Key (not the Auth Token).{" "}
+                <Link href="/settings?tab=integrations" className="underline underline-offset-2 text-amber-300 hover:text-amber-200">
+                  Go to Settings → Integrations
+                </Link>{" "}
+                to add your API Key SID and Secret.
+              </p>
             </div>
           </div>
         )}
