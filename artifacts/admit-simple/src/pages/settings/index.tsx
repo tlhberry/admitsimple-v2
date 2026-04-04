@@ -81,6 +81,7 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const [showApiSecret, setShowApiSecret] = useState(false);
   const [showTwilioGuide, setShowTwilioGuide] = useState(false);
+  const [showCtmFields, setShowCtmFields] = useState(false);
   const [savingTwilio, setSavingTwilio] = useState(false);
 
   const saveTwilioKeys = async () => {
@@ -253,9 +254,19 @@ export default function Settings() {
           {activeTab === "integrations" && (
             <Card className="rounded-2xl border-border">
               <CardHeader className="border-b border-border pb-4">
-                <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                  <Phone className="w-4 h-4 text-emerald-400" /> Call Tracking Metrics
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <Phone className="w-4 h-4 text-emerald-400" /> Call Tracking Metrics
+                  </CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => setShowCtmFields(s => !s)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    {showCtmFields ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    {showCtmFields ? "Hide Fields" : "Field Reference"}
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-sm space-y-1">
@@ -283,30 +294,38 @@ export default function Settings() {
                     </Button>
                   </div>
                 </div>
-                <div className="bg-muted/40 rounded-xl border border-border p-4 text-sm space-y-4">
-                  <div>
-                    <p className="font-semibold text-foreground mb-2">CTM Fields → Stored As</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-mono text-muted-foreground">
-                      <span><strong className="text-foreground">caller_name</strong> → First / Last Name</span>
-                      <span><strong className="text-foreground">caller_number</strong> → Phone</span>
-                      <span><strong className="text-foreground">call_id</strong> → CTM Call ID</span>
-                      <span><strong className="text-foreground">tracking_number</strong> → CTM Tracking Number</span>
-                      <span><strong className="text-foreground">source</strong> → CTM Source (raw)</span>
-                      <span><strong className="text-foreground">duration</strong> → Call Duration (seconds)</span>
-                      <span><strong className="text-foreground">call_start_time</strong> → Call Date/Time</span>
-                      <span><strong className="text-foreground">recording_url</strong> → Recording URL (clickable)</span>
+                {showCtmFields && (
+                  <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border bg-muted/50">
+                      <p className="text-sm font-semibold text-foreground">Field Reference</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">How CTM webhook fields map into AdmitSimple.</p>
+                    </div>
+                    <div className="p-4 space-y-4 text-sm">
+                      <div>
+                        <p className="font-semibold text-foreground mb-2">CTM Fields → Stored As</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-mono text-muted-foreground">
+                          <span><strong className="text-foreground">caller_name</strong> → First / Last Name</span>
+                          <span><strong className="text-foreground">caller_number</strong> → Phone</span>
+                          <span><strong className="text-foreground">call_id</strong> → CTM Call ID</span>
+                          <span><strong className="text-foreground">tracking_number</strong> → CTM Tracking Number</span>
+                          <span><strong className="text-foreground">source</strong> → CTM Source (raw)</span>
+                          <span><strong className="text-foreground">duration</strong> → Call Duration (seconds)</span>
+                          <span><strong className="text-foreground">call_start_time</strong> → Call Date/Time</span>
+                          <span><strong className="text-foreground">recording_url</strong> → Recording URL (clickable)</span>
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-4">
+                        <p className="font-semibold text-foreground mb-2">Derived Profile Fields</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-mono text-muted-foreground">
+                          <span><strong className="text-foreground">referralSource</strong> — e.g. "Google PPC"</span>
+                          <span><strong className="text-foreground">referralDetails</strong> — raw source, e.g. "google_ads"</span>
+                          <span><strong className="text-foreground">onlineSource</strong> — e.g. "google_ppc"</span>
+                          <span><strong className="text-foreground">referralOrigin</strong> — always "online"</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground mb-2">Derived Profile Fields</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-mono text-muted-foreground">
-                      <span><strong className="text-foreground">referralSource</strong> — e.g. "Google PPC"</span>
-                      <span><strong className="text-foreground">referralDetails</strong> — raw source, e.g. "google_ads"</span>
-                      <span><strong className="text-foreground">onlineSource</strong> — e.g. "google_ppc"</span>
-                      <span><strong className="text-foreground">referralOrigin</strong> — always "online"</span>
-                    </div>
-                  </div>
-                </div>
+                )}
                 <div className="flex justify-end">
                   <Button onClick={() => bulkUpdate.mutate({ data: { settings: [{ key: "ctm_webhook_secret", value: values["ctm_webhook_secret"] || "" }] } })} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                     {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
