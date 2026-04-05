@@ -174,6 +174,7 @@ const LEGACY_STATUS_MAP: Record<string, string> = {
 const STAGE_DISPLAY_NAMES: Record<string, string> = {
   "Insurance Verification": "VOB",
   "Pre-Assessment": "Pre-Screen",
+  "Scheduled to Admit": "Scheduled",
 };
 const TERMINAL_STAGES = new Set(["Did Not Admit", "Discharged", "Non-Viable"]);
 
@@ -200,40 +201,44 @@ function PipelineStageTracker({ stages, currentStatus }: { stages: any[]; curren
         </div>
       ) : (
         <>
-          {/* Stepper — scrollable so it never squishes */}
-          <div className="flex items-center gap-0 overflow-x-auto pb-1 min-w-0">
+          {/* Stepper — equal flex steps, connectors split left/right inside each step */}
+          <div className="flex w-full items-start">
             {mainStages.map((stage: any, idx: number) => {
-              const done = idx < currentIdx;
+              const done  = idx < currentIdx;
               const active = idx === currentIdx;
               const label = STAGE_DISPLAY_NAMES[stage.name] ?? stage.name;
+              const isFirst = idx === 0;
+              const isLast  = idx === mainStages.length - 1;
               return (
-                <div key={stage.id} className="flex items-center shrink-0">
-                  <div className="flex flex-col items-center">
+                <div key={stage.id} className="flex-1 min-w-0 flex flex-col items-center">
+                  {/* Row: left-line · circle · right-line */}
+                  <div className="flex items-center w-full">
                     <div className={cn(
-                      "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all",
-                      done
-                        ? "bg-primary text-primary-foreground"
-                        : active
-                        ? "bg-primary text-primary-foreground ring-[3px] ring-primary/25"
-                        : "bg-muted border border-border/60 text-muted-foreground/50"
+                      "flex-1 h-px",
+                      isFirst ? "invisible" : done ? "bg-primary" : "bg-border/60"
+                    )} />
+                    <div className={cn(
+                      "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all",
+                      done   ? "bg-primary text-primary-foreground" :
+                      active ? "bg-primary text-primary-foreground ring-[3px] ring-primary/20" :
+                               "bg-muted border border-border text-muted-foreground/40"
                     )}>
                       {done ? <Check className="w-3 h-3" /> : idx + 1}
                     </div>
-                    <span className={cn(
-                      "text-[10px] mt-1.5 font-medium text-center whitespace-nowrap",
-                      active ? "text-primary font-semibold" :
-                      done  ? "text-muted-foreground" :
-                              "text-muted-foreground/40"
-                    )}>
-                      {label}
-                    </span>
-                  </div>
-                  {idx < mainStages.length - 1 && (
                     <div className={cn(
-                      "w-8 h-px mx-1 mb-4 shrink-0",
-                      idx < currentIdx ? "bg-primary" : "bg-border/60"
+                      "flex-1 h-px",
+                      isLast ? "invisible" : done ? "bg-primary" : "bg-border/60"
                     )} />
-                  )}
+                  </div>
+                  {/* Label — full width of the step, centered, wraps naturally */}
+                  <span className={cn(
+                    "text-[9px] mt-1 text-center leading-tight w-full px-0.5",
+                    active ? "text-primary font-semibold" :
+                    done   ? "text-muted-foreground" :
+                             "text-muted-foreground/40"
+                  )}>
+                    {label}
+                  </span>
                 </div>
               );
             })}
