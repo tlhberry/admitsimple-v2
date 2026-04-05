@@ -13,6 +13,7 @@ interface IncomingCall {
   callerName: string;
   source?: string;
   isExisting?: boolean;
+  isExistingInquiry?: boolean;
   claimable?: boolean;
   assignedUserId?: number | null;
   callStatus?: string;
@@ -71,7 +72,8 @@ export function IncomingCallBanner() {
 
   const openLive = (call: IncomingCall) => {
     dismiss(call.inquiryId);
-    navigate(`/inquiries/${call.inquiryId}?mode=live`);
+    const isReturning = call.isExistingInquiry || call.isExisting;
+    navigate(isReturning ? `/inquiries/${call.inquiryId}` : `/inquiries/${call.inquiryId}?mode=live`);
   };
 
   if (calls.length === 0) return null;
@@ -140,7 +142,8 @@ function MobileCallBanner({ call, currentUserId, onDismiss, onOpen, onClaimed }:
       if (res.ok) {
         acceptFirstRinging();
         onClaimed();
-        navigate(`/inquiries/${call.inquiryId}?mode=live`);
+        const isReturning = call.isExistingInquiry || call.isExisting;
+        navigate(isReturning ? `/inquiries/${call.inquiryId}` : `/inquiries/${call.inquiryId}?mode=live`);
       } else if (res.status === 409) {
         toast({ title: "Already claimed", description: data.message || "Another rep got there first", variant: "destructive", duration: 4000 });
         onDismiss();
@@ -260,7 +263,8 @@ function DesktopCallCard({ call, currentUserId, onDismiss, onOpen, onClaimed }: 
       if (res.ok) {
         acceptFirstRinging();
         onClaimed();
-        navigate(`/inquiries/${call.inquiryId}?mode=live`);
+        const isReturning = call.isExistingInquiry || call.isExisting;
+        navigate(isReturning ? `/inquiries/${call.inquiryId}` : `/inquiries/${call.inquiryId}?mode=live`);
       } else if (res.status === 409) {
         toast({ title: "Already claimed", description: data.message || "Another rep got there first", variant: "destructive", duration: 4000 });
         onDismiss();

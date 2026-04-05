@@ -344,6 +344,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
 
     // Upsert inquiry by phone number
     let inquiryId: number;
+    let isExistingInquiry = false;
     if (callerPhone) {
       const [existing] = await db
         .select({ id: inquiries.id })
@@ -360,6 +361,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
           updatedAt: new Date(),
         }).where(eq(inquiries.id, existing.id));
         inquiryId = existing.id;
+        isExistingInquiry = true;
       } else {
         const nameParts = callerName.trim().split(/\s+/);
         const [created] = await db.insert(inquiries).values({
@@ -402,6 +404,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
       callerName,
       status: "ringing",
       claimable: true,
+      isExistingInquiry,
       timestamp: new Date().toISOString(),
     });
 
