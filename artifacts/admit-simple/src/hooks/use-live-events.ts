@@ -16,7 +16,7 @@ export function useLiveEvents(handlers: Record<string, EventHandler>) {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let active = true;
 
-    const EVENTS = ["incoming_call", "call_claimed", "call_status", "call_status_update"];
+    const EVENTS = ["incoming_call", "call_claimed", "call_status", "call_status_update", "sms_message"];
 
     const connect = () => {
       if (!active) return;

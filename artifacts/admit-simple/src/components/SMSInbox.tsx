@@ -396,13 +396,13 @@ export function SMSInbox({ initialPhone }: { initialPhone?: string }) {
   });
 
   // SSE — refresh when new SMS arrives
-  useLiveEvents((event, data: any) => {
-    if (event === "sms_message") {
+  useLiveEvents({
+    sms_message: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sms/threads"] });
       if (data?.phone === selectedPhone) {
         queryClient.invalidateQueries({ queryKey: ["/api/sms/thread", selectedPhone] });
       }
-    }
+    },
   });
 
   const selectThread = useCallback((phone: string) => {

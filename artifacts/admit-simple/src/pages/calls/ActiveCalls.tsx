@@ -44,10 +44,10 @@ function isKnown(name: string): boolean {
 // ── Call duration display (live counter) ──────────────────────────────────────
 function CallAge({ callDateTime }: { callDateTime: string | null }) {
   const [now, setNow] = useState(Date.now());
-  useState(() => {
+  useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  });
+  }, []);
   if (!callDateTime) return <span className="text-muted-foreground">—</span>;
   const secs = Math.floor((now - new Date(callDateTime).getTime()) / 1000);
   if (secs < 0) return <span className="text-muted-foreground">just now</span>;
@@ -279,7 +279,12 @@ export default function ActiveCallsPage() {
   // Live active calls
   const { data: calls = [], isLoading: liveLoading } = useQuery<ActiveCall[]>({
     queryKey: ["/api/calls/active"],
-    queryFn: () => fetch("/api/calls/active", { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/calls/active", { credentials: "include" });
+      if (!r.ok) throw new Error(`calls/active: ${r.status}`);
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    },
     refetchInterval: 5000,
   });
 
@@ -290,7 +295,11 @@ export default function ActiveCallsPage() {
     recentCalls: LogCall[];
   }>({
     queryKey: ["/api/calls/log"],
-    queryFn: () => fetch("/api/calls/log", { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/calls/log", { credentials: "include" });
+      if (!r.ok) throw new Error(`calls/log: ${r.status}`);
+      return r.json();
+    },
     refetchInterval: 30000,
     staleTime: 15000,
   });

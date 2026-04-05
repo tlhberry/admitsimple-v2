@@ -53,10 +53,10 @@ export function Sidebar() {
   const unreadSmsCount = unreadData?.count ?? 0;
 
   // Refresh unread count in real-time when new SMS arrives or thread is read
-  useLiveEvents((event) => {
-    if (event === "sms_message") {
+  useLiveEvents({
+    sms_message: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sms/unread-count"] });
-    }
+    },
   });
 
   const navSections = [
