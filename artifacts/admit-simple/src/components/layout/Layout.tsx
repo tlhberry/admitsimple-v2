@@ -24,7 +24,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      <main className="md:pl-64 min-h-screen pb-20 md:pb-0 transition-all">
+      <main className="md:pl-64 min-h-screen pb-36 md:pb-0 transition-all">
         <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
           {children}
         </div>

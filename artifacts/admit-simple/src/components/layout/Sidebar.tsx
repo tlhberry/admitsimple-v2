@@ -94,14 +94,22 @@ export function Sidebar() {
     }] : []),
   ];
 
-  const mobileItems = [
+  const mobileRowTop = [
     { icon: Home,          label: "Home",      href: "/" },
     { icon: ClipboardList, label: "Inquiries", href: "/inquiries" },
     { icon: GitBranch,     label: "Pipeline",  href: "/pipeline" },
     isBdRole
       ? { icon: Building2, label: "BD",    href: "/referral-accounts", badge: undefined, badgeColor: undefined, smsBadge: undefined }
       : { icon: Phone,     label: "Calls", href: "/calls/active", badge: liveCallCount > 0 ? String(liveCallCount) : undefined, badgeColor: "rose" as const, smsBadge: unreadSmsCount > 0 ? String(unreadSmsCount) : undefined },
-    { icon: BarChart2, label: "Reports", href: "/reports", badge: undefined, badgeColor: undefined },
+    { icon: BarChart2,     label: "Reports",   href: "/reports", badge: undefined, badgeColor: undefined },
+  ];
+
+  const mobileRowBottom = [
+    { icon: Building2,    label: "Accounts",  href: "/referral-accounts" },
+    { icon: Users,        label: "Patients",  href: "/patients" },
+    { icon: TrendingUp,   label: "Analytics", href: "/analytics" },
+    { icon: Activity,     label: "Activity",  href: "/bd-activity-feed" },
+    { icon: Settings,     label: "Settings",  href: "/settings" },
   ];
 
   const userInitials = user?.initials || user?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "U";
@@ -187,42 +195,61 @@ export function Sidebar() {
         <ChangePasswordModal open={changePwOpen} onClose={() => setChangePwOpen(false)} />
       </div>
 
-      {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border flex justify-around p-2 pb-safe z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
-        {mobileItems.map(item => {
-          const active = isActive(item.href);
-          const anyItem = item as any;
-          return (
-            <Link key={item.href} href={item.href} className="flex-1">
-              <div className="flex flex-col items-center gap-1 p-2 cursor-pointer">
-                <div className="relative">
-                  <item.icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "text-sidebar-foreground")} />
-                  {anyItem.badge && (
-                    <span className={cn(
-                      "absolute -top-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1",
-                      anyItem.badgeColor === "rose" ? "bg-rose-500 text-white" : "bg-primary text-white"
-                    )}>
-                      {anyItem.badge}
-                    </span>
-                  )}
-                  {anyItem.smsBadge && !anyItem.badge && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1 bg-[#5BC8DC] text-white">
-                      {anyItem.smsBadge}
-                    </span>
-                  )}
-                  {anyItem.smsBadge && anyItem.badge && (
-                    <span className="absolute -bottom-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1 bg-[#5BC8DC] text-white">
-                      {anyItem.smsBadge}
-                    </span>
-                  )}
+      {/* Mobile Bottom Nav — 2 stacked rows */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+        {/* Row 1 — primary nav */}
+        <div className="flex justify-around border-b border-sidebar-border/30 px-1 pt-1.5 pb-1">
+          {mobileRowTop.map(item => {
+            const active = isActive(item.href);
+            const anyItem = item as any;
+            return (
+              <Link key={item.href} href={item.href} className="flex-1">
+                <div className="flex flex-col items-center gap-0.5 py-1 cursor-pointer">
+                  <div className="relative">
+                    <item.icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "text-sidebar-foreground")} />
+                    {anyItem.badge && (
+                      <span className={cn(
+                        "absolute -top-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1",
+                        anyItem.badgeColor === "rose" ? "bg-rose-500 text-white" : "bg-primary text-white"
+                      )}>
+                        {anyItem.badge}
+                      </span>
+                    )}
+                    {anyItem.smsBadge && !anyItem.badge && (
+                      <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1 bg-[#5BC8DC] text-white">
+                        {anyItem.smsBadge}
+                      </span>
+                    )}
+                    {anyItem.smsBadge && anyItem.badge && (
+                      <span className="absolute -bottom-1.5 -right-2 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold rounded-full px-1 bg-[#5BC8DC] text-white">
+                        {anyItem.smsBadge}
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn("text-[9px] font-medium transition-colors", active ? "text-primary" : "text-sidebar-foreground/70")}>
+                    {item.label}
+                  </span>
                 </div>
-                <span className={cn("text-[10px] font-medium transition-colors", active ? "text-primary" : "text-sidebar-foreground")}>
-                  {item.label}
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })}
+        </div>
+        {/* Row 2 — secondary nav */}
+        <div className="flex justify-around px-1 pt-1 pb-safe pb-1.5">
+          {mobileRowBottom.map(item => {
+            const active = isActive(item.href);
+            return (
+              <Link key={item.href} href={item.href} className="flex-1">
+                <div className="flex flex-col items-center gap-0.5 py-1 cursor-pointer">
+                  <item.icon className={cn("w-[18px] h-[18px] transition-colors", active ? "text-primary" : "text-sidebar-foreground/60")} />
+                  <span className={cn("text-[9px] font-medium transition-colors", active ? "text-primary" : "text-sidebar-foreground/50")}>
+                    {item.label}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </>
   );
