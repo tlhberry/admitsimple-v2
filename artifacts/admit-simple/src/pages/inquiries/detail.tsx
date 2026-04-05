@@ -200,57 +200,43 @@ function PipelineStageTracker({ stages, currentStatus }: { stages: any[]; curren
         </div>
       ) : (
         <>
-          {/* Desktop: full stepper */}
-          <div className="hidden sm:flex items-start overflow-x-auto pb-1 gap-0">
+          {/* Stepper — scrollable so it never squishes */}
+          <div className="flex items-center gap-0 overflow-x-auto pb-1 min-w-0">
             {mainStages.map((stage: any, idx: number) => {
               const done = idx < currentIdx;
               const active = idx === currentIdx;
+              const label = STAGE_DISPLAY_NAMES[stage.name] ?? stage.name;
               return (
-                <div key={stage.id} className="flex items-center flex-1 min-w-0">
-                  <div className="flex flex-col items-center flex-shrink-0">
+                <div key={stage.id} className="flex items-center shrink-0">
+                  <div className="flex flex-col items-center">
                     <div className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all shrink-0",
-                      done ? "bg-primary text-primary-foreground" :
-                      active ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
-                      "bg-muted border border-border text-muted-foreground/50"
+                      "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all",
+                      done
+                        ? "bg-primary text-primary-foreground"
+                        : active
+                        ? "bg-primary text-primary-foreground ring-[3px] ring-primary/25"
+                        : "bg-muted border border-border/60 text-muted-foreground/50"
                     )}>
-                      {done ? <Check className="w-2.5 h-2.5" /> : idx + 1}
+                      {done ? <Check className="w-3 h-3" /> : idx + 1}
                     </div>
                     <span className={cn(
-                      "text-[9px] mt-1 font-medium text-center leading-tight max-w-[52px] break-words",
-                      active ? "text-primary font-bold" :
-                      done ? "text-muted-foreground" :
-                      "text-muted-foreground/40"
+                      "text-[10px] mt-1.5 font-medium text-center whitespace-nowrap",
+                      active ? "text-primary font-semibold" :
+                      done  ? "text-muted-foreground" :
+                              "text-muted-foreground/40"
                     )}>
-                      {STAGE_DISPLAY_NAMES[stage.name] ?? stage.name}
+                      {label}
                     </span>
                   </div>
                   {idx < mainStages.length - 1 && (
                     <div className={cn(
-                      "flex-1 h-px min-w-[4px] mx-1 mb-3",
-                      idx < currentIdx ? "bg-primary" : "bg-border"
+                      "w-8 h-px mx-1 mb-4 shrink-0",
+                      idx < currentIdx ? "bg-primary" : "bg-border/60"
                     )} />
                   )}
                 </div>
               );
             })}
-          </div>
-          {/* Mobile: pill track */}
-          <div className="sm:hidden flex items-center gap-2.5">
-            <div className="flex items-center gap-1">
-              {mainStages.map((_: any, i: number) => (
-                <div key={i} className={cn(
-                  "h-1.5 rounded-full transition-all",
-                  i === currentIdx ? "w-5 bg-primary" :
-                  i < currentIdx ? "w-2 bg-primary/60" :
-                  "w-2 bg-muted-foreground/20"
-                )} />
-              ))}
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Step {currentIdx + 1} of {mainStages.length} —{" "}
-              <span className="text-foreground font-semibold">{resolved}</span>
-            </span>
           </div>
         </>
       )}
