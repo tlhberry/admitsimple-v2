@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLiveEvents } from "@/hooks/use-live-events";
 import { useToast } from "@/hooks/use-toast";
+import { useTwilioVoiceContext } from "@/contexts/TwilioVoiceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -550,6 +551,7 @@ export function LiveCallMode({ id }: { id: number }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const timer = useCallTimer();
+  const { activeCalls, answerCall } = useTwilioVoiceContext();
 
   const inq = inquiry as any;
   const currentUserId = (user as any)?.id;
@@ -588,6 +590,17 @@ export function LiveCallMode({ id }: { id: number }) {
 
     doCheck();
   }, [inq, id, currentUserId, claimAttempted]);
+
+  // Auto-accept the ringing Twilio call when we have a ctmCallId match
+  const autoAcceptedRef = useRef(false);
+  useEffect(() => {
+    if (autoAcceptedRef.current || !inq?.ctmCallId) return;
+    const call = activeCalls.get(inq.ctmCallId);
+    if (call) {
+      autoAcceptedRef.current = true;
+      call.accept();
+    }
+  }, [inq?.ctmCallId, activeCalls]);
 
   // Listen for call_claimed events
   useLiveEvents({

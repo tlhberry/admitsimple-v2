@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
+import { TwilioVoiceProvider } from "@/contexts/TwilioVoiceContext";
 
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -73,7 +74,9 @@ function App() {
             {/* All other routes require authentication */}
             <Route>
               <AuthProvider>
-                <Router />
+                <TwilioVoiceProvider>
+                  <Router />
+                </TwilioVoiceProvider>
               </AuthProvider>
             </Route>
           </Switch>
