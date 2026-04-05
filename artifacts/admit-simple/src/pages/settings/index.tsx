@@ -37,8 +37,30 @@ const roleBadgeCls = (role: string) => {
 };
 
 function generatePassword(length = 12) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const nums  = "23456789";
+  const syms  = "!@#$";
+  const all   = upper + lower + nums + syms;
+  const rand  = (set: string) => set[Math.floor(Math.random() * set.length)];
+  const base  = Array.from({ length: length - 3 }, () => rand(all));
+  // Guarantee at least 1 uppercase, 1 number, 1 symbol
+  const required = [rand(upper), rand(nums), rand(syms)];
+  const combined = [...base, ...required];
+  // Shuffle
+  for (let i = combined.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [combined[i], combined[j]] = [combined[j], combined[i]];
+  }
+  return combined.join("");
+}
+
+function passwordStrength(pw: string) {
+  return {
+    length: pw.length >= 8,
+    upper:  /[A-Z]/.test(pw),
+    number: /[0-9]/.test(pw),
+  };
 }
 
 export default function Settings() {
@@ -996,7 +1018,7 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
                 onClick={() => setForm(v => ({ ...v, password: generatePassword() }))}
                 className="text-xs text-primary hover:text-primary/80 underline"
               >
-                Generate
+                Auto-Generate
               </button>
             </div>
             <div className="relative">
@@ -1015,6 +1037,24 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {form.password && (() => {
+              const s = passwordStrength(form.password);
+              const checks = [
+                { ok: s.length, label: "8+ characters" },
+                { ok: s.upper,  label: "1 uppercase letter" },
+                { ok: s.number, label: "1 number" },
+              ];
+              return (
+                <div className="flex gap-3 mt-2">
+                  {checks.map(c => (
+                    <span key={c.label} className={cn("text-[11px] flex items-center gap-1",
+                      c.ok ? "text-emerald-400" : "text-rose-400")}>
+                      {c.ok ? "✓" : "✗"} {c.label}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           <div>
             <Label className="text-sm font-medium text-foreground">Role *</Label>
