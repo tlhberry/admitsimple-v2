@@ -427,15 +427,13 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
 
     const callerId = process.env.TWILIO_PHONE_NUMBER || "";
     const clientTags = activeUsers.map(u => `<Client>${u.id}</Client>`).join("");
+    console.log(`[Twilio Incoming] CallSid=${CallSid} From=${callerPhone} activeUsers=${activeUsers.map(u => u.id).join(",")} clientTags=${clientTags}`);
 
     res.setHeader("Content-Type", "text/xml");
     if (clientTags) {
-      res.send(
-        `<?xml version="1.0" encoding="UTF-8"?>` +
-        `<Response>` +
-        `<Dial timeout="30" callerId="${callerId}">${clientTags}</Dial>` +
-        `</Response>`
-      );
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="30" callerId="${callerId}">${clientTags}</Dial></Response>`;
+      console.log(`[Twilio Incoming] Sending TwiML: ${twiml}`);
+      res.send(twiml);
     } else {
       // No agents online — play a message
       res.send(
@@ -456,6 +454,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
 router.post("/webhooks/twilio/status", async (req, res) => {
   try {
     const { CallSid, CallStatus, CallDuration } = req.body as Record<string, string>;
+    console.log(`[Twilio Status] CallSid=${CallSid} CallStatus=${CallStatus} CallDuration=${CallDuration ?? "n/a"}`);
 
     const statusMap: Record<string, string> = {
       "in-progress": "active",
