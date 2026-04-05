@@ -142,11 +142,25 @@ All use Claude claude-opus-4-5 via Replit AI Integrations:
 
 ## Environment Variables
 
-- `DATABASE_URL` — PostgreSQL connection string
-- `SESSION_SECRET` — Session encryption key
+### Auto-managed (Replit)
+- `DATABASE_URL` — PostgreSQL connection string (auto)
 - `PORT` — Server port (auto-assigned per artifact)
-- `AI_INTEGRATIONS_ANTHROPIC_API_KEY` — Auto-set by Replit AI Integrations
-- `AI_INTEGRATIONS_ANTHROPIC_BASE_URL` — Auto-set by Replit AI Integrations
+- `REPLIT_DEV_DOMAIN`, `REPL_ID`, `REPLIT_DOMAINS` — Replit runtime (auto)
+- `PG*` — PostgreSQL connection parts (auto)
+
+### Secrets (configured)
+- `SESSION_SECRET` — Session encryption key ✓
+- `AI_INTEGRATIONS_ANTHROPIC_API_KEY` — Provisioned via Replit AI Integrations ✓
+- `AI_INTEGRATIONS_ANTHROPIC_BASE_URL` — Provisioned via Replit AI Integrations ✓
+- `TWILIO_ACCOUNT_SID` — Twilio account ✓
+- `TWILIO_AUTH_TOKEN` — Twilio auth ✓
+
+### Env Vars (configured, shared)
+- `TWILIO_PHONE_NUMBER` — Inbound/outbound phone number ✓
+- `TWILIO_TWIML_APP_SID` — TwiML App for browser Voice SDK ✓
+
+### Optional (not set, has fallbacks)
+- `TWILIO_API_KEY_SID` / `TWILIO_API_KEY_SECRET` — Falls back to Account SID/Auth Token for Voice tokens
 
 ## Demo Seed Data
 
