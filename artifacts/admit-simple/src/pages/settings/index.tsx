@@ -83,13 +83,41 @@ export default function Settings() {
   const [showTwilioGuide, setShowTwilioGuide] = useState(false);
   const [showCtmFields, setShowCtmFields] = useState(false);
   const [savingTwilio, setSavingTwilio] = useState(false);
+  // Track whether we're in "replace" mode for Twilio keys
+  const [replacingTwilioKeys, setReplacingTwilioKeys] = useState(false);
+  const [newTwilioSid, setNewTwilioSid] = useState("");
+  const [newTwilioSecret, setNewTwilioSecret] = useState("");
+
+  // Derived: are Twilio keys already saved in DB?
+  const twilioSidSaved   = !!values["twilio_api_key_sid"];
+  const twilioSecretSaved = !!values["twilio_api_key_secret"];
+  const twilioKeysSaved  = twilioSidSaved || twilioSecretSaved;
+
+  const maskSid    = (sid: string)    => sid.length > 4 ? sid.slice(0, 4) + "•".repeat(Math.min(sid.length - 4, 28)) : "•".repeat(sid.length);
+  const maskSecret = (secret: string) => "•".repeat(Math.min(secret.length || 32, 32));
+
+  const startReplacingTwilioKeys = () => {
+    setNewTwilioSid("");
+    setNewTwilioSecret("");
+    setShowApiSecret(false);
+    setReplacingTwilioKeys(true);
+  };
+
+  const cancelReplacingTwilioKeys = () => {
+    setReplacingTwilioKeys(false);
+    setNewTwilioSid("");
+    setNewTwilioSecret("");
+  };
 
   const saveTwilioKeys = async () => {
     setSavingTwilio(true);
     try {
+      // If replacing, use the new values; otherwise use current values (first-time entry)
+      const sidValue    = replacingTwilioKeys ? newTwilioSid    : values["twilio_api_key_sid"]    || "";
+      const secretValue = replacingTwilioKeys ? newTwilioSecret : values["twilio_api_key_secret"] || "";
       const keysToSave = [
-        { key: "twilio_api_key_sid",    value: values["twilio_api_key_sid"]    || "" },
-        { key: "twilio_api_key_secret", value: values["twilio_api_key_secret"] || "" },
+        { key: "twilio_api_key_sid",    value: sidValue },
+        { key: "twilio_api_key_secret", value: secretValue },
       ];
       const res = await fetch("/api/settings", {
         method: "PUT",
@@ -100,6 +128,9 @@ export default function Settings() {
       if (res.ok) {
         toast({ title: "Twilio API keys saved" });
         queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+        setReplacingTwilioKeys(false);
+        setNewTwilioSid("");
+        setNewTwilioSecret("");
       } else {
         toast({ title: "Failed to save", variant: "destructive" });
       }
@@ -418,50 +449,89 @@ export default function Settings() {
                   </div>
                 )}
 
-                <div>
-                  <Label className={labelCls}>API Key SID <span className="text-xs text-muted-foreground font-normal">(starts with SK…)</span></Label>
-                  <Input
-                    value={values["twilio_api_key_sid"] || ""}
-                    onChange={e => set("twilio_api_key_sid", e.target.value)}
-                    placeholder="SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    className={`${fieldCls} mt-1.5 font-mono text-sm`}
-                  />
-                </div>
-
-                <div>
-                  <Label className={labelCls}>API Key Secret</Label>
-                  <div className="flex gap-2 mt-1.5">
-                    <Input
-                      type={showApiSecret ? "text" : "password"}
-                      value={values["twilio_api_key_secret"] || ""}
-                      onChange={e => set("twilio_api_key_secret", e.target.value)}
-                      placeholder="Paste the secret shown once at creation"
-                      className={`${fieldCls} font-mono text-sm flex-1 mt-0`}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowApiSecret(s => !s)}
-                      className="shrink-0 rounded-xl px-3 border-border text-muted-foreground hover:bg-muted"
-                    >
-                      {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
+                {/* ── Keys saved → masked view ── */}
+                {twilioKeysSaved && !replacingTwilioKeys ? (
+                  <div className="space-y-3">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-emerald-400">API keys configured</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
+                            SID: {maskSid(values["twilio_api_key_sid"] || "")}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            Secret: {maskSecret(values["twilio_api_key_secret"] || "")}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={startReplacingTwilioKeys}
+                        className="shrink-0 rounded-xl border-border text-muted-foreground hover:text-foreground hover:bg-muted gap-1.5 text-xs"
+                      >
+                        <KeyRound className="w-3 h-3" /> Replace Keys
+                      </Button>
+                    </div>
                   </div>
-                </div>
-
-                {values["twilio_api_key_sid"] && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    API Key SID is set. Save below to activate browser calling.
+                ) : (
+                  /* ── First-time entry or replace mode ── */
+                  <div className="space-y-4">
+                    {replacingTwilioKeys && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 flex items-center gap-2 text-xs text-amber-300">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                        Enter new keys below. Saving will overwrite the existing keys.
+                      </div>
+                    )}
+                    <div>
+                      <Label className={labelCls}>API Key SID <span className="text-xs text-muted-foreground font-normal">(starts with SK…)</span></Label>
+                      <Input
+                        value={replacingTwilioKeys ? newTwilioSid : values["twilio_api_key_sid"] || ""}
+                        onChange={e => replacingTwilioKeys ? setNewTwilioSid(e.target.value) : set("twilio_api_key_sid", e.target.value)}
+                        placeholder="SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className={`${fieldCls} mt-1.5 font-mono text-sm`}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div>
+                      <Label className={labelCls}>API Key Secret</Label>
+                      <div className="flex gap-2 mt-1.5">
+                        <Input
+                          type={showApiSecret ? "text" : "password"}
+                          value={replacingTwilioKeys ? newTwilioSecret : values["twilio_api_key_secret"] || ""}
+                          onChange={e => replacingTwilioKeys ? setNewTwilioSecret(e.target.value) : set("twilio_api_key_secret", e.target.value)}
+                          placeholder="Paste the secret shown once at creation"
+                          className={`${fieldCls} font-mono text-sm flex-1 mt-0`}
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowApiSecret(s => !s)}
+                          className="shrink-0 rounded-xl px-3 border-border text-muted-foreground hover:bg-muted"
+                        >
+                          {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      {replacingTwilioKeys && (
+                        <Button variant="ghost" size="sm" onClick={cancelReplacingTwilioKeys} className="text-muted-foreground hover:text-foreground rounded-xl">
+                          Cancel
+                        </Button>
+                      )}
+                      <Button
+                        onClick={saveTwilioKeys}
+                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioSid.trim() || !newTwilioSecret.trim()))}
+                        className="h-10 px-6 rounded-xl gap-2 ml-auto"
+                      >
+                        {savingTwilio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {replacingTwilioKeys ? "Save New Keys" : "Save Twilio Keys"}
+                      </Button>
+                    </div>
                   </div>
                 )}
-
-                <div className="flex justify-end">
-                  <Button onClick={saveTwilioKeys} disabled={savingTwilio} className="h-10 px-6 rounded-xl gap-2">
-                    {savingTwilio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Save Twilio Keys
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           )}
