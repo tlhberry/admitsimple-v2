@@ -3,6 +3,7 @@ import { db, pool } from "@workspace/db";
 import { inquiries, patients, referralSources, pipelineStages, beds, dailyAiTasks, dailyTaskCompletions, activities } from "@workspace/db/schema";
 import { eq, count, gte, lte, and, sql, desc, ne, or, isNull, max } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { logAudit, getClientIp } from "../lib/audit";
 import Anthropic from "@anthropic-ai/sdk";
 import multer from "multer";
 
@@ -22,6 +23,8 @@ router.post("/ai/parse-intake", upload.single("document"), async (req, res) => {
       res.status(400).json({ error: "No file uploaded" });
       return;
     }
+    const sess = req.session as any;
+    await logAudit({ userId: sess.userId, action: "PHI_SENT_TO_AI", resourceType: "parse-intake", details: "Patient intake document sent to AI for parsing", ipAddress: getClientIp(req as any) });
     const base64Image = req.file.buffer.toString("base64");
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
@@ -102,6 +105,8 @@ router.post("/ai/parse-insurance-card", uploadInsuranceCard.fields([
       res.status(400).json({ error: "At least one insurance card image is required" });
       return;
     }
+    const sess2 = req.session as any;
+    await logAudit({ userId: sess2.userId, action: "PHI_SENT_TO_AI", resourceType: "parse-insurance-card", details: "Insurance card image sent to AI for parsing", ipAddress: getClientIp(req as any) });
 
     const imageContent: any[] = [];
     if (front) {
@@ -369,7 +374,8 @@ router.post("/ai/summarize-inquiry", async (req, res) => {
     const { inquiryId } = req.body;
     const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, parseInt(inquiryId)));
     if (!inq) { res.status(404).json({ error: "Inquiry not found" }); return; }
-
+    const sess3 = req.session as any;
+    await logAudit({ userId: sess3.userId, action: "PHI_SENT_TO_AI", resourceType: "summarize-inquiry", resourceId: inq.id, inquiryId: inq.id, details: "Clinical inquiry data sent to AI for summary", ipAddress: getClientIp(req as any) });
     const clinicalData = {
       levelOfCare: inq.levelOfCare,
       primaryDiagnosis: inq.primaryDiagnosis,
@@ -459,7 +465,8 @@ router.post("/ai/vob-parse", upload.single("image"), async (req, res) => {
       res.status(400).json({ error: "Provide text or image" });
       return;
     }
-
+    const sess4 = req.session as any;
+    await logAudit({ userId: sess4.userId, action: "PHI_SENT_TO_AI", resourceType: "vob-parse", details: imageFile ? "VOB document image sent to AI for parsing" : "VOB text sent to AI for parsing", ipAddress: getClientIp(req as any) });
     const systemPrompt = `You are an insurance verification specialist for an addiction treatment center.
 Extract structured VOB (Verification of Benefits) data from the provided document.
 
