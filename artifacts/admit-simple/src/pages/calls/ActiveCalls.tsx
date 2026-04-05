@@ -309,7 +309,7 @@ export default function ActiveCallsPage() {
       const res = await fetch(`/api/inquiries/${inquiryId}/claim`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (res.ok) {
-        window.location.href = `/inquiries/${inquiryId}?mode=live`;
+        navigate(`/inquiries/${inquiryId}?mode=live`);
       } else if (res.status === 409) {
         toast({ title: "Already claimed", description: data.message, variant: "destructive" });
         refresh();

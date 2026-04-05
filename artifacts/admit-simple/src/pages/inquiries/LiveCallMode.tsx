@@ -224,7 +224,7 @@ function WhatsNextModal({
       </div>
       <button
         type="button"
-        onClick={() => window.location.href = `/inquiries/${inquiryId}`}
+        onClick={() => navigate(`/inquiries/${inquiryId}`)}
         className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm transition-colors"
       >
         View Inquiry
@@ -439,7 +439,7 @@ function WhatsNextModal({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ action: "did_not_admit", reason: dnaReason === "none" ? "" : dnaReason }),
                 });
-                window.location.href = `/inquiries/${inquiryId}`;
+                navigate(`/inquiries/${inquiryId}`);
               }}
               className="w-full h-10 text-sm text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
             >
@@ -1009,7 +1009,7 @@ export function LiveCallMode({ id }: { id: number }) {
           insuranceMemberId={insuranceMemberId}
           referralSource={referralSource}
           notes={notes}
-          onClose={() => { setShowWhatsNext(false); window.location.href = `/inquiries/${id}`; }}
+          onClose={() => { setShowWhatsNext(false); navigate(`/inquiries/${id}`); }}
         />
       )}
     </div>

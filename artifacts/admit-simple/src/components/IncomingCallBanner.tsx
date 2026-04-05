@@ -116,6 +116,7 @@ function MobileCallBanner({ call, currentUserId, onDismiss, onOpen, onClaimed }:
   onOpen: () => void;
   onClaimed: () => void;
 }) {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [visible, setVisible] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -136,7 +137,7 @@ function MobileCallBanner({ call, currentUserId, onDismiss, onOpen, onClaimed }:
       const data = await res.json();
       if (res.ok) {
         onClaimed();
-        window.location.href = `/inquiries/${call.inquiryId}?mode=live`;
+        navigate(`/inquiries/${call.inquiryId}?mode=live`);
       } else if (res.status === 409) {
         toast({ title: "Already claimed", description: data.message || "Another rep got there first", variant: "destructive", duration: 4000 });
         onDismiss();
@@ -236,6 +237,7 @@ function DesktopCallCard({ call, currentUserId, onDismiss, onOpen, onClaimed }: 
   onOpen: () => void;
   onClaimed: () => void;
 }) {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [visible, setVisible] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -253,7 +255,7 @@ function DesktopCallCard({ call, currentUserId, onDismiss, onOpen, onClaimed }: 
       const data = await res.json();
       if (res.ok) {
         onClaimed();
-        window.location.href = `/inquiries/${call.inquiryId}?mode=live`;
+        navigate(`/inquiries/${call.inquiryId}?mode=live`);
       } else if (res.status === 409) {
         toast({ title: "Already claimed", description: data.message || "Another rep got there first", variant: "destructive", duration: 4000 });
         onDismiss();
