@@ -2,7 +2,7 @@ import { Router } from "express";
 import twilio from "twilio";
 import { db } from "@workspace/db";
 import { inquiries, activities, settings, users } from "@workspace/db/schema";
-import { eq, desc, ilike } from "drizzle-orm";
+import { eq, desc, ilike, and } from "drizzle-orm";
 import { broadcastSSE, sendSSEToUser } from "../lib/sse";
 
 const router = Router();
@@ -419,8 +419,32 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
       }, 30000);
     }
 
+    // Ring all active browser clients simultaneously — first to answer wins
+    const activeUsers = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.isActive, true));
+
+    const callerId = process.env.TWILIO_PHONE_NUMBER || "";
+    const clientTags = activeUsers.map(u => `<Client>${u.id}</Client>`).join("");
+
     res.setHeader("Content-Type", "text/xml");
-    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Enqueue waitUrl="/api/webhooks/twilio/wait">support</Enqueue></Response>`);
+    if (clientTags) {
+      res.send(
+        `<?xml version="1.0" encoding="UTF-8"?>` +
+        `<Response>` +
+        `<Dial timeout="30" callerId="${callerId}">${clientTags}</Dial>` +
+        `</Response>`
+      );
+    } else {
+      // No agents online — play a message
+      res.send(
+        `<?xml version="1.0" encoding="UTF-8"?>` +
+        `<Response>` +
+        `<Say>Thank you for calling. Our admissions team is not available right now. Please call back during business hours.</Say>` +
+        `</Response>`
+      );
+    }
   } catch (err) {
     console.error("[Twilio Incoming]", err);
     res.setHeader("Content-Type", "text/xml");
