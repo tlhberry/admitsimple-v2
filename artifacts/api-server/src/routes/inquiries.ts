@@ -758,6 +758,12 @@ router.post("/inquiries/:id/claim", async (req, res) => {
       return;
     }
 
+    // Fetch ctmCallId before updating so we can redirect the live call
+    const [inqData] = await db
+      .select({ ctmCallId: inquiries.ctmCallId })
+      .from(inquiries)
+      .where(eq(inquiries.id, id));
+
     // Atomic claim
     await db.update(inquiries).set({
       assignedTo: userId,
@@ -776,6 +782,21 @@ router.post("/inquiries/:id/claim", async (req, res) => {
       repId: userId,
       repName: rep?.name ?? "A rep",
     });
+
+    // ── Redirect the live Twilio call to this agent's browser ─────────────────
+    const callSid = inqData?.ctmCallId;
+    if (callSid) {
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken  = process.env.TWILIO_AUTH_TOKEN;
+      if (accountSid && authToken) {
+        const twilioClient = twilio(accountSid, authToken);
+        const dialTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="30"><Client>${userId}</Client></Dial></Response>`;
+        console.log(`[Claim] Redirecting CallSid=${callSid} to Client:${userId} via Twilio REST API`);
+        twilioClient.calls(callSid).update({ twiml: dialTwiml }).catch((err: Error) => {
+          console.error(`[Claim] Failed to redirect call ${callSid}:`, err.message);
+        });
+      }
+    }
 
     res.json({ ok: true, message: "Claimed successfully" });
   } catch (err) {

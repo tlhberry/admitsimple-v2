@@ -419,30 +419,16 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
       }, 30000);
     }
 
-    // Ring all active browser clients simultaneously — first to answer wins
-    const activeUsers = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.isActive, true));
-
-    const callerId = process.env.TWILIO_PHONE_NUMBER || "";
-    const clientTags = activeUsers.map(u => `<Client>${u.id}</Client>`).join("");
-    console.log(`[Twilio Incoming] CallSid=${CallSid} From=${callerPhone} activeUsers=${activeUsers.map(u => u.id).join(",")} clientTags=${clientTags}`);
-
+    // Put caller on hold — agent will be connected via Twilio REST API redirect when they claim
+    console.log(`[Twilio Incoming] CallSid=${CallSid} From=${callerPhone} → placing on hold, waiting for agent to claim`);
     res.setHeader("Content-Type", "text/xml");
-    if (clientTags) {
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="30" callerId="${callerId}">${clientTags}</Dial></Response>`;
-      console.log(`[Twilio Incoming] Sending TwiML: ${twiml}`);
-      res.send(twiml);
-    } else {
-      // No agents online — play a message
-      res.send(
-        `<?xml version="1.0" encoding="UTF-8"?>` +
-        `<Response>` +
-        `<Say>Thank you for calling. Our admissions team is not available right now. Please call back during business hours.</Say>` +
-        `</Response>`
-      );
-    }
+    res.send(
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<Response>` +
+      `<Say voice="alice">Thank you for calling. Please hold for a moment while we connect you with an admissions specialist.</Say>` +
+      `<Play loop="0">http://com.twilio.music.classical.s3.amazonaws.com/ClockworkWaltz.mp3</Play>` +
+      `</Response>`
+    );
   } catch (err) {
     console.error("[Twilio Incoming]", err);
     res.setHeader("Content-Type", "text/xml");
