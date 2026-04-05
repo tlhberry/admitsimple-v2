@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { useLiveEvents } from "@/hooks/use-live-events";
 import { useAuth } from "@/hooks/use-auth";
-import { useTwilioVoice } from "@/hooks/useTwilioVoice";
+import { useTwilioVoiceContext } from "@/contexts/TwilioVoiceContext";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -274,7 +274,7 @@ export default function ActiveCallsPage() {
     activeCalls, answerCall, declineCall,
     makeCall, hangUp, toggleMute,
     outboundStatus, outboundTo, outboundName, isMuted, callDuration,
-  } = useTwilioVoice();
+  } = useTwilioVoiceContext();
 
   // Live active calls
   const { data: calls = [], isLoading: liveLoading } = useQuery<ActiveCall[]>({

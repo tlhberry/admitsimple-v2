@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
+import { TwilioVoiceProvider } from "@/contexts/TwilioVoiceContext";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -22,15 +23,17 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      <main className="md:pl-64 min-h-screen pb-20 md:pb-0 transition-all">
-        <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
-          {children}
-        </div>
-      </main>
-      {/* Real-time incoming call notification — rendered over everything */}
-      <IncomingCallBanner />
-    </div>
+    <TwilioVoiceProvider>
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <main className="md:pl-64 min-h-screen pb-20 md:pb-0 transition-all">
+          <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
+            {children}
+          </div>
+        </main>
+        {/* Real-time incoming call notification — rendered over everything */}
+        <IncomingCallBanner />
+      </div>
+    </TwilioVoiceProvider>
   );
 }
