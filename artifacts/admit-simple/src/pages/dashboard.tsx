@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useRef, useEffect, useCallback } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Loader2, Plus, Phone, MessageSquare, ChevronRight, UserPlus, Zap, Calendar } from "lucide-react";
+import { Loader2, Plus, Phone, MessageSquare, ChevronRight, UserPlus, Zap, Calendar, Search, X, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -46,6 +46,185 @@ function statusLabel(status: string): string {
     admitted: "Admitted",
   };
   return map[status] ?? status;
+}
+
+// ── AI Search ─────────────────────────────────────────────────────────────────
+const STATUS_COLOR: Record<string, string> = {
+  new: "bg-sky-500/20 text-sky-400",
+  contacted: "bg-violet-500/20 text-violet-400",
+  "Insurance Verification": "bg-amber-500/20 text-amber-400",
+  "Pre-Assessment": "bg-orange-500/20 text-orange-400",
+  "Scheduled to Admit": "bg-emerald-500/20 text-emerald-400",
+  Admitted: "bg-green-500/20 text-green-400",
+  "Did Not Admit": "bg-rose-500/20 text-rose-400",
+  "Non-Viable": "bg-rose-500/20 text-rose-400",
+  Discharged: "bg-muted text-muted-foreground",
+};
+const STATUS_LABEL: Record<string, string> = {
+  new: "New",
+  contacted: "Contacted",
+  "Insurance Verification": "VOB",
+  "Pre-Assessment": "Pre-Screen",
+  "Scheduled to Admit": "Scheduled",
+  Admitted: "Admitted",
+  "Did Not Admit": "Did Not Admit",
+  "Non-Viable": "Non-Viable",
+  Discharged: "Discharged",
+};
+
+function AISearch() {
+  const [, navigate] = useLocation();
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+  const [filters, setFilters] = useState<any>(null);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wrapRef  = useRef<HTMLDivElement>(null);
+
+  const runSearch = useCallback(async (q: string) => {
+    if (!q.trim()) { setResults([]); setFilters(null); setOpen(false); return; }
+    setLoading(true);
+    setOpen(true);
+    try {
+      const r = await fetch("/api/search", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+      const data = await r.json();
+      setResults(data.results ?? []);
+      setFilters(data.filters ?? null);
+      setActiveIdx(-1);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { runSearch(query); }
+    if (e.key === "Escape") { setOpen(false); inputRef.current?.blur(); }
+    if (e.key === "ArrowDown") { setActiveIdx(i => Math.min(i + 1, results.length - 1)); }
+    if (e.key === "ArrowUp")   { setActiveIdx(i => Math.max(i - 1, -1)); }
+  };
+
+  const handleSelect = (r: any) => {
+    setOpen(false);
+    setQuery("");
+    navigate(r.patientId ? `/patients/${r.patientId}` : `/inquiries/${r.id}`);
+  };
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative flex-1 max-w-xl">
+      <div className={cn(
+        "flex items-center gap-2 px-3 py-2 rounded-xl border bg-muted/60 transition-all",
+        open ? "border-primary/50 ring-2 ring-primary/15" : "border-border hover:border-border/80"
+      )}>
+        {loading
+          ? <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+          : <Sparkles className="w-4 h-4 text-primary/70 shrink-0" />
+        }
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={handleKey}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder='Search — "John Smith", "Aetna", "ready to admit", "Texas"…'
+          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
+        />
+        {query && (
+          <button
+            onClick={() => { setQuery(""); setResults([]); setOpen(false); }}
+            className="shrink-0 text-muted-foreground/50 hover:text-foreground"
+          ><X className="w-3.5 h-3.5" /></button>
+        )}
+        <button
+          onClick={() => runSearch(query)}
+          className="shrink-0 flex items-center gap-1 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium rounded-lg transition-colors"
+        >
+          <Search className="w-3 h-3" /> Search
+        </button>
+      </div>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-[420px] overflow-y-auto">
+          {loading && (
+            <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span>AI searching…</span>
+            </div>
+          )}
+          {!loading && results.length === 0 && (
+            <div className="px-4 py-4 text-sm text-muted-foreground text-center">No results found</div>
+          )}
+          {!loading && results.length > 0 && (
+            <>
+              {filters && Object.keys(filters).length > 0 && (
+                <div className="px-4 pt-2.5 pb-1 flex flex-wrap gap-1.5">
+                  {Object.entries(filters).map(([k, v]) => (
+                    <span key={k} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      {k}: {Array.isArray(v) ? v.join(", ") : String(v)}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="py-1">
+                {results.map((r, i) => (
+                  <button
+                    key={r.id}
+                    onClick={() => handleSelect(r)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                      i === activeIdx ? "bg-muted" : "hover:bg-muted/60"
+                    )}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+                      {r.firstName[0]}{r.lastName[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{r.firstName} {r.lastName}</span>
+                        <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full", STATUS_COLOR[r.status] ?? "bg-muted text-muted-foreground")}>
+                          {STATUS_LABEL[r.status] ?? r.status}
+                        </span>
+                        {r.patientId && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400">Patient</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                        {r.phone && <span>{r.phone}</span>}
+                        {r.insuranceProvider && <span>· {r.insuranceProvider}</span>}
+                        {r.levelOfCare && <span>· {r.levelOfCare}</span>}
+                        {r.state && <span>· {r.state}</span>}
+                      </div>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+                  </button>
+                ))}
+              </div>
+              <div className="px-4 py-2 border-t border-border/50 text-[10px] text-muted-foreground/50 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> AI-powered · Press Enter to search · Esc to close
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Section wrapper ────────────────────────────────────────────────────────────
@@ -139,14 +318,10 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="flex items-center justify-between px-1 mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Command Center</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Live admissions feed</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* + New Inquiry */}
+      {/* Header — AI Search + Action Buttons */}
+      <div className="flex items-center gap-3 px-1 mb-4">
+        <AISearch />
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm shadow-md shadow-primary/20 transition-all active:scale-[0.97]"
@@ -154,7 +329,6 @@ export default function Dashboard() {
             <Plus className="w-4 h-4" />
             New
           </button>
-          {/* + Referral Source */}
           <button
             onClick={() => setShowReferral(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border hover:bg-muted text-foreground rounded-xl font-semibold text-sm transition-all active:scale-[0.97]"
@@ -163,7 +337,6 @@ export default function Dashboard() {
             <UserPlus className="w-4 h-4 text-primary" />
             <span className="hidden sm:inline">Referral</span>
           </button>
-          {/* + Activity (compact) */}
           <button
             onClick={() => setShowActivity(true)}
             className="flex items-center gap-1 px-2.5 py-2 bg-card border border-border hover:bg-muted text-muted-foreground rounded-xl text-sm transition-all active:scale-[0.97]"

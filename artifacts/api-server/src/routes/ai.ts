@@ -942,4 +942,142 @@ router.post("/ai/tasks/regenerate", async (req, res) => {
   }
 });
 
+// ─── AI Global Search ──────────────────────────────────────────────────────────
+router.post("/search", async (req, res) => {
+  try {
+    const { query } = req.body as { query: string };
+    if (!query?.trim()) { res.json({ results: [], intent: null }); return; }
+
+    // Step 1: Ask Claude to extract structured filters from the natural language query
+    const filterResp = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 500,
+      system: `You are a search assistant for an addiction treatment admissions CRM. 
+Extract search filters from the user query and return ONLY valid JSON (no markdown).
+Fields you can extract:
+- nameQuery: string (first or last name fragment to search)
+- phone: string (phone number fragment)
+- email: string
+- status: array of strings from ["new","contacted","Insurance Verification","Pre-Assessment","Scheduled to Admit","Admitted","Did Not Admit","Non-Viable","Discharged"]
+- insuranceProvider: string (insurance company name)
+- state: string (2-letter state code or full state name)
+- levelOfCare: string from ["Detox","RTC","PHP","IOP","OP"]
+- priority: string from ["high","medium","low"]
+- referralSource: string
+- diagnosis: string (substance/primary diagnosis fragment)
+- assignedToMe: boolean
+- isPatient: boolean (true if searching admitted patients)
+Examples:
+"john smith" → {"nameQuery":"john smith"}
+"missed calls" → {"status":["new","contacted"]}
+"aetna insurance" → {"insuranceProvider":"aetna"}
+"ready to admit" → {"status":["Scheduled to Admit"]}
+"texas patients" → {"state":"TX"}
+"high priority" → {"priority":"high"}
+"detox" → {"levelOfCare":"Detox"}
+"admitted" → {"status":["Admitted"],"isPatient":true}`,
+      messages: [{ role: "user", content: query }],
+    });
+
+    let filters: Record<string, any> = {};
+    try {
+      const raw = (filterResp.content[0] as any).text.trim();
+      filters = JSON.parse(raw);
+    } catch {
+      filters = { nameQuery: query };
+    }
+
+    // Step 2: Build dynamic WHERE conditions
+    const conditions: any[] = [];
+
+    if (filters.nameQuery) {
+      const parts = String(filters.nameQuery).trim().split(/\s+/);
+      const nameConds = parts.flatMap((p: string) => [
+        sql`lower(i.first_name) like ${"%" + p.toLowerCase() + "%"}`,
+        sql`lower(i.last_name) like ${"%" + p.toLowerCase() + "%"}`,
+      ]);
+      conditions.push(sql`(${sql.join(nameConds, sql` OR `)})`);
+    }
+    if (filters.phone) {
+      conditions.push(sql`i.phone like ${"%" + filters.phone + "%"}`);
+    }
+    if (filters.email) {
+      conditions.push(sql`lower(i.email) like ${"%" + String(filters.email).toLowerCase() + "%"}`);
+    }
+    if (filters.status?.length) {
+      const vals = (filters.status as string[]).map(s => sql`${s}`);
+      conditions.push(sql`i.status IN (${sql.join(vals, sql`, `)})`);
+    }
+    if (filters.insuranceProvider) {
+      conditions.push(sql`lower(i.insurance_provider) like ${"%" + String(filters.insuranceProvider).toLowerCase() + "%"}`);
+    }
+    if (filters.state) {
+      const st = String(filters.state).trim();
+      conditions.push(sql`(lower(i.state) = ${st.toLowerCase()} OR lower(i.state) like ${"%" + st.toLowerCase() + "%"})`);
+    }
+    if (filters.levelOfCare) {
+      conditions.push(sql`lower(i.level_of_care) = ${String(filters.levelOfCare).toLowerCase()}`);
+    }
+    if (filters.priority) {
+      conditions.push(sql`i.priority = ${filters.priority}`);
+    }
+    if (filters.referralSource) {
+      conditions.push(sql`lower(i.referral_source) like ${"%" + String(filters.referralSource).toLowerCase() + "%"}`);
+    }
+    if (filters.diagnosis) {
+      const d = "%" + String(filters.diagnosis).toLowerCase() + "%";
+      conditions.push(sql`(lower(i.primary_diagnosis) like ${d} OR lower(i.substance_history) like ${d})`);
+    }
+    if (filters.assignedToMe && (req as any).session?.userId) {
+      conditions.push(sql`i.assigned_to = ${(req as any).session.userId}`);
+    }
+
+    // Fallback: if no conditions built, do a broad text search
+    if (conditions.length === 0) {
+      const q = "%" + query.toLowerCase() + "%";
+      conditions.push(sql`(
+        lower(i.first_name) like ${q} OR lower(i.last_name) like ${q} OR
+        lower(i.phone) like ${q} OR lower(i.email) like ${q} OR
+        lower(i.insurance_provider) like ${q} OR lower(i.referral_source) like ${q}
+      )`);
+    }
+
+    const whereClause = sql.join(conditions, sql` AND `);
+
+    const rows = await db.execute(sql`
+      SELECT
+        i.id, i.first_name, i.last_name, i.phone, i.email,
+        i.status, i.priority, i.level_of_care, i.insurance_provider,
+        i.state, i.referral_source, i.created_at, i.assigned_to,
+        p.id as patient_id
+      FROM inquiries i
+      LEFT JOIN patients p ON p.inquiry_id = i.id
+      WHERE ${whereClause}
+      ORDER BY i.updated_at DESC NULLS LAST
+      LIMIT 12
+    `);
+
+    const results = (rows as any[]).map(r => ({
+      id: r.id,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      phone: r.phone,
+      email: r.email,
+      status: r.status,
+      priority: r.priority,
+      levelOfCare: r.level_of_care,
+      insuranceProvider: r.insurance_provider,
+      state: r.state,
+      referralSource: r.referral_source,
+      createdAt: r.created_at,
+      patientId: r.patient_id ?? null,
+    }));
+
+    res.json({ results, filters });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+
 export default router;
