@@ -28,7 +28,10 @@ const INITIALS_COLORS = [
 export default function BDReports() {
   const { data: metrics = [], isLoading } = useQuery<RepMetric[]>({
     queryKey: ["/api/bd-reports"],
-    queryFn: () => fetch("/api/bd-reports", { credentials: "include" }).then(r => r.json()),
+    queryFn: () => fetch("/api/bd-reports", { credentials: "include" }).then(r => {
+      if (!r.ok) throw new Error(`API error ${r.status}`);
+      return r.json();
+    }),
     refetchInterval: 30000,
   });
 

@@ -14,7 +14,6 @@ import Pipeline from "@/pages/pipeline/index";
 import AiInsights from "@/pages/ai-insights/index";
 import Patients from "@/pages/patients/index";
 import PatientDetail from "@/pages/patients/detail";
-import Referrals from "@/pages/referrals/index";
 import Analytics from "@/pages/analytics/index";
 import Reports from "@/pages/reports/index";
 import Settings from "@/pages/settings/index";
@@ -47,7 +46,6 @@ function Router() {
       <Route path="/patients" component={Patients} />
       <Route path="/patients/:id" component={PatientDetail} />
       <Route path="/pipeline" component={Pipeline} />
-      <Route path="/referrals" component={Referrals} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/reports" component={Reports} />
       <Route path="/ai-insights" component={AiInsights} />

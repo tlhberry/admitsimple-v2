@@ -28,7 +28,10 @@ const ACTIVITY_COLORS: Record<string, string> = {
 };
 
 const apiFetch = (url: string) =>
-  fetch(url, { credentials: "include" }).then(r => r.json());
+  fetch(url, { credentials: "include" }).then(r => {
+    if (!r.ok) throw new Error(`API error ${r.status}`);
+    return r.json();
+  });
 
 export default function BDActivityFeed() {
   const [filterType, setFilterType] = useState("all");

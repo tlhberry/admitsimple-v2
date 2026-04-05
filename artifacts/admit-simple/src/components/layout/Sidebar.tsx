@@ -8,7 +8,6 @@ import {
   GitBranch, 
   BarChart2, 
   TrendingUp, 
-  Handshake, 
   Brain, 
   Settings,
   LogOut,
@@ -84,7 +83,6 @@ export function Sidebar() {
       items: [
         { icon: BarChart2,  label: "Reports",     href: "/reports" },
         { icon: TrendingUp, label: "Analytics",   href: "/analytics" },
-        { icon: Handshake,  label: "Referrals",   href: "/referrals" },
         { icon: Brain,      label: "AI Insights", href: "/ai-insights" },
       ],
     },

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { patients, users, bdActivityLogs, inquiries, referralSources } from "@workspace/db/schema";
+import { patients, users, bdActivityLogs, inquiries } from "@workspace/db/schema";
 import { eq, and, gte, count, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 
