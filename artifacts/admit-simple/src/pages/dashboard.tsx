@@ -318,31 +318,31 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* Header — AI Search + Action Buttons */}
-      <div className="flex items-center gap-3 px-1 mb-4">
+      {/* Header — two rows: search on top, buttons below */}
+      <div className="px-1 mb-4 space-y-2.5">
+        {/* Row 1: full-width AI search */}
         <AISearch />
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Row 2: action buttons */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm shadow-md shadow-primary/20 transition-all active:scale-[0.97]"
           >
-            <Plus className="w-4 h-4" />
-            New
+            <Plus className="w-4 h-4" /> New Inquiry
           </button>
           <button
             onClick={() => setShowReferral(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border hover:bg-muted text-foreground rounded-xl font-semibold text-sm transition-all active:scale-[0.97]"
             title="Add Referral Source"
           >
-            <UserPlus className="w-4 h-4 text-primary" />
-            <span className="hidden sm:inline">Referral</span>
+            <UserPlus className="w-4 h-4 text-primary" /> Referral
           </button>
           <button
             onClick={() => setShowActivity(true)}
-            className="flex items-center gap-1 px-2.5 py-2 bg-card border border-border hover:bg-muted text-muted-foreground rounded-xl text-sm transition-all active:scale-[0.97]"
+            className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border hover:bg-muted text-muted-foreground rounded-xl text-sm transition-all active:scale-[0.97]"
             title="Log Activity"
           >
-            <Zap className="w-4 h-4 text-amber-400" />
+            <Zap className="w-4 h-4 text-amber-400" /> Activity
           </button>
         </div>
       </div>
