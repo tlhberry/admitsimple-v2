@@ -1004,7 +1004,7 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
                 value={form.password}
                 onChange={setF("password")}
                 type={showPw ? "text" : "password"}
-                placeholder="Min 6 characters"
+                placeholder="Min 8 chars, 1 uppercase, 1 number"
                 className={cn(fieldCls, "pr-10")}
               />
               <button
@@ -1121,7 +1121,7 @@ function ResetPasswordModal({ user, onClose, onReset }: { user: any; onClose: ()
   useEffect(() => { if (!user) setPassword(""); }, [user]);
 
   const handleReset = async () => {
-    if (password.length < 6) { toast({ title: "Password must be at least 6 characters", variant: "destructive" }); return; }
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) { toast({ title: "Password must be 8+ chars with 1 uppercase and 1 number", variant: "destructive" }); return; }
     setSaving(true);
     try {
       const resp = await fetch(`/api/users/${user.id}/reset-password`, {

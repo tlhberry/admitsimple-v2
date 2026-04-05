@@ -7,8 +7,8 @@ import { Loader2 } from "lucide-react";
 import logoImg from "@assets/ChatGPT_Image_Mar_29,_2026,_08_28_12_AM_1774787305208.png";
 
 export default function Login() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const { login, isLoggingIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +56,7 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
-                <a href="#" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">Forgot?</a>
+                <span className="text-xs text-muted-foreground">Contact your administrator to reset</span>
               </div>
               <Input
                 id="password"

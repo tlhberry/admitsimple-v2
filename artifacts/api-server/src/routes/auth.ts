@@ -77,4 +77,61 @@ router.get("/auth/me", (req, res) => {
   res.json({ id: sess.userId, username: sess.username, name: sess.name, email: sess.email, role: sess.role, initials: sess.initials });
 });
 
+// ── Change own password (requires current password) ──────────────────────────
+const changePwLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many password change attempts. Please wait 15 minutes." },
+  keyGenerator: (req) => getClientIp(req as any),
+});
+
+router.post("/auth/change-password", changePwLimiter, async (req, res) => {
+  const sess = req.session as any;
+  const ip = getClientIp(req as any);
+  if (!sess?.userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: "Current password and new password are required" });
+      return;
+    }
+    // Validate new password complexity
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "New password must be at least 8 characters" });
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      res.status(400).json({ error: "New password must contain at least one uppercase letter" });
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      res.status(400).json({ error: "New password must contain at least one number" });
+      return;
+    }
+    const [user] = await db.select().from(users).where(eq(users.id, sess.userId)).limit(1);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) {
+      await logAudit({ userId: user.id, action: "PASSWORD_CHANGE_FAILED", details: "Incorrect current password", ipAddress: ip });
+      res.status(401).json({ error: "Current password is incorrect" });
+      return;
+    }
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await db.update(users).set({ password: hashed }).where(eq(users.id, user.id));
+    await logAudit({ userId: user.id, action: "PASSWORD_CHANGED", details: "User changed own password", ipAddress: ip });
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

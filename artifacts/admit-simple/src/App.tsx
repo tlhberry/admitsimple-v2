@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { TwilioVoiceProvider } from "@/contexts/TwilioVoiceContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -73,11 +74,13 @@ function App() {
             <Route path="/chatbot-demo" component={ChatbotDemo} />
             {/* All other routes require authentication */}
             <Route>
-              <AuthProvider>
-                <TwilioVoiceProvider>
-                  <Router />
-                </TwilioVoiceProvider>
-              </AuthProvider>
+              <ErrorBoundary>
+                <AuthProvider>
+                  <TwilioVoiceProvider>
+                    <Router />
+                  </TwilioVoiceProvider>
+                </AuthProvider>
+              </ErrorBoundary>
             </Route>
           </Switch>
         </WouterRouter>
