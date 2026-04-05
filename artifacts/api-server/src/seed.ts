@@ -8,6 +8,15 @@ export async function seedDatabase(): Promise<void> {
   logger.info("Checking if seed is needed...");
 
   const [userCount] = await db.select({ count: count() }).from(users);
+
+  // Always sync admin password from env var if provided (allows password reset via redeploy)
+  const envAdminPassword = process.env.ADMIN_PASSWORD;
+  if (envAdminPassword && Number(userCount.count) > 0) {
+    const hash = await bcrypt.hash(envAdminPassword, 12);
+    await db.update(users).set({ password: hash }).where(eq(users.username, "admin"));
+    logger.info("Admin password synced from ADMIN_PASSWORD env var.");
+  }
+
   if (Number(userCount.count) > 0) {
     logger.info("Database already seeded, skipping.");
     return;
