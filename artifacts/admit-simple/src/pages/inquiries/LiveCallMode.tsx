@@ -551,7 +551,7 @@ export function LiveCallMode({ id }: { id: number }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const timer = useCallTimer();
-  const { activeCalls, answerCall } = useTwilioVoiceContext();
+  const { activeCalls, answerCall, acceptFirstRinging } = useTwilioVoiceContext();
 
   const inq = inquiry as any;
   const currentUserId = (user as any)?.id;
@@ -591,16 +591,15 @@ export function LiveCallMode({ id }: { id: number }) {
     doCheck();
   }, [inq, id, currentUserId, claimAttempted]);
 
-  // Auto-accept the ringing Twilio call when we have a ctmCallId match
+  // Auto-accept any ringing Twilio call when entering live mode.
+  // The browser receives a child call SID (different from ctmCallId on the inquiry),
+  // so we accept the first available call rather than matching by SID.
   const autoAcceptedRef = useRef(false);
   useEffect(() => {
-    if (autoAcceptedRef.current || !inq?.ctmCallId) return;
-    const call = activeCalls.get(inq.ctmCallId);
-    if (call) {
-      autoAcceptedRef.current = true;
-      call.accept();
-    }
-  }, [inq?.ctmCallId, activeCalls]);
+    if (autoAcceptedRef.current || activeCalls.size === 0) return;
+    autoAcceptedRef.current = true;
+    acceptFirstRinging();
+  }, [activeCalls]);
 
   // Listen for call_claimed events
   useLiveEvents({

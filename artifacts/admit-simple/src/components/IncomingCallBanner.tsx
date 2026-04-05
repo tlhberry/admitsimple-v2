@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Phone, X, UserCheck, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useTwilioVoiceContext } from "@/contexts/TwilioVoiceContext";
 
 interface IncomingCall {
   inquiryId: number;
@@ -118,6 +119,7 @@ function MobileCallBanner({ call, currentUserId, onDismiss, onOpen, onClaimed }:
 }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { acceptFirstRinging } = useTwilioVoiceContext();
   const [visible, setVisible] = useState(false);
   const [claiming, setClaiming] = useState(false);
 
@@ -136,6 +138,7 @@ function MobileCallBanner({ call, currentUserId, onDismiss, onOpen, onClaimed }:
       });
       const data = await res.json();
       if (res.ok) {
+        acceptFirstRinging();
         onClaimed();
         navigate(`/inquiries/${call.inquiryId}?mode=live`);
       } else if (res.status === 409) {
@@ -239,6 +242,7 @@ function DesktopCallCard({ call, currentUserId, onDismiss, onOpen, onClaimed }: 
 }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { acceptFirstRinging } = useTwilioVoiceContext();
   const [visible, setVisible] = useState(false);
   const [claiming, setClaiming] = useState(false);
 
@@ -254,6 +258,7 @@ function DesktopCallCard({ call, currentUserId, onDismiss, onOpen, onClaimed }: 
       });
       const data = await res.json();
       if (res.ok) {
+        acceptFirstRinging();
         onClaimed();
         navigate(`/inquiries/${call.inquiryId}?mode=live`);
       } else if (res.status === 409) {

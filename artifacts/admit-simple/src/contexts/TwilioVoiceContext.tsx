@@ -6,6 +6,7 @@ interface TwilioVoiceContextValue {
   setupError: string | null;
   activeCalls: Map<string, Call>;
   answerCall: (callSid: string) => void;
+  acceptFirstRinging: () => void;
   declineCall: (callSid: string) => void;
   makeCall: (to: string, name: string) => Promise<void>;
   hangUp: () => void;
@@ -102,6 +103,13 @@ export function TwilioVoiceProvider({ children }: { children: ReactNode }) {
     if (call) call.accept();
   }
 
+  function acceptFirstRinging() {
+    for (const call of activeCalls.values()) {
+      call.accept();
+      return;
+    }
+  }
+
   function declineCall(callSid: string) {
     const call = activeCalls.get(callSid);
     if (call) call.reject();
@@ -175,7 +183,7 @@ export function TwilioVoiceProvider({ children }: { children: ReactNode }) {
   return (
     <TwilioVoiceContext.Provider value={{
       isReady, setupError, activeCalls,
-      answerCall, declineCall,
+      answerCall, acceptFirstRinging, declineCall,
       makeCall, hangUp, toggleMute,
       outboundCall, outboundTo, outboundName, outboundStatus, isMuted, callDuration,
     }}>
