@@ -32,7 +32,9 @@ export default function Pipeline() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const justDragged = useRef(false);
-  const [columns, setColumns] = useState<PipelineColumn[]>([]);
+  // localColumns tracks drag-and-drop optimistic updates; null means "not overridden yet"
+  const [localColumns, setLocalColumns] = useState<PipelineColumn[] | null>(null);
+  // Sync localColumns when fresh server data arrives (resets any stale local state)
   const [showCreate, setShowCreate] = useState(false);
 
   const handleContact = async (e: React.MouseEvent, item: any, type: "phone_call" | "sms") => {
@@ -58,9 +60,15 @@ export default function Pipeline() {
     });
   };
 
+  // Sync from server data; also reset local state after a successful refetch
   useEffect(() => {
-    if (data) setColumns(data);
+    if (data) setLocalColumns(data);
   }, [data]);
+
+  // Derive the active column list: prefer local (drag-optimistic) state,
+  // but fall back to server data directly so the board renders immediately
+  // on the first successful fetch (before the effect above has a chance to run).
+  const columns: PipelineColumn[] = localColumns ?? data ?? [];
 
   const onDragEnd = async (result: any) => {
     if (!result.destination) return;
@@ -80,7 +88,7 @@ export default function Pipeline() {
     const newCols = [...columns];
     newCols[sourceColIndex] = { ...sourceCol, inquiries: sourceItems };
     newCols[destColIndex]   = { ...destCol,   inquiries: destItems };
-    setColumns(newCols);
+    setLocalColumns(newCols);
 
     justDragged.current = true;
     setTimeout(() => { justDragged.current = false; }, 200);
