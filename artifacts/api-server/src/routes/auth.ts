@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { logAudit, getClientIp } from "../lib/audit";
@@ -26,7 +26,10 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       res.status(400).json({ error: "Username and password required" });
       return;
     }
-    const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    // Accept login by username OR email
+    const [user] = await db.select().from(users).where(
+      or(eq(users.username, username), eq(users.email, username))
+    ).limit(1);
     if (!user) {
       await logAudit({ action: "LOGIN_FAILED", details: `Unknown username: ${username}`, ipAddress: ip });
       res.status(401).json({ error: "Invalid credentials" });

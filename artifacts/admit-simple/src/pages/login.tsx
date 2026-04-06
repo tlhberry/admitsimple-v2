@@ -44,13 +44,13 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-foreground">Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium text-foreground">Username or Email</Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="h-11 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary transition-colors"
-                placeholder="Enter your username"
+                placeholder="Username or email address"
               />
             </div>
             <div className="space-y-2">
