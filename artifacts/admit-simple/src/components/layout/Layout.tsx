@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
+import { AiStageSuggestionsBanner } from "@/components/AiStageSuggestionsBanner";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -31,6 +32,8 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
       {/* Real-time incoming call notification — rendered over everything */}
       <IncomingCallBanner />
+      {/* AI stage advancement suggestions */}
+      <AiStageSuggestionsBanner />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
 import { logAudit } from "../lib/logAudit";
 import { broadcastSSE, sendSSEToUser } from "../lib/sse";
+import { runAiStageCheck } from "./aiStageSuggestions";
 import archiver from "archiver";
 
 const router = Router();
@@ -274,6 +275,14 @@ router.put("/inquiries/:id", async (req, res) => {
       .where(eq(inquiries.id, id));
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
     res.json(rows[0]);
+
+    // Fire AI stage check in background after meaningful updates (non-blocking)
+    const meaningfulChange = data.notes !== undefined || data.status !== undefined ||
+      data.insuranceProvider !== undefined || data.primaryDiagnosis !== undefined ||
+      data.substanceHistory !== undefined || data.preAssessmentCompleted !== undefined;
+    if (meaningfulChange) {
+      setImmediate(() => runAiStageCheck(id, req.log));
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

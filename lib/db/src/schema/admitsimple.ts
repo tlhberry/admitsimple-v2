@@ -429,6 +429,21 @@ export const insertDischargeSchema = createInsertSchema(discharges).omit({ id: t
 export type Discharge = typeof discharges.$inferSelect;
 export type InsertDischarge = z.infer<typeof insertDischargeSchema>;
 
+// ─── AI Stage Suggestions ─────────────────────────────────────────────────────
+export const aiStageSuggestions = pgTable("ai_stage_suggestions", {
+  id: serial("id").primaryKey(),
+  inquiryId: integer("inquiry_id").notNull().references(() => inquiries.id),
+  currentStage: varchar("current_stage", { length: 100 }).notNull(),
+  suggestedStage: varchar("suggested_stage", { length: 100 }).notNull(),
+  reasoning: text("reasoning"),
+  confidence: varchar("confidence", { length: 20 }), // low, medium, high
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, accepted, dismissed
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+});
+export type AiStageSuggestion = typeof aiStageSuggestions.$inferSelect;
+
 export const chatbotSessions = pgTable("chatbot_sessions", {
   sessionId: varchar("session_id", { length: 100 }).primaryKey(),
   messages: jsonb("messages").default([]),
