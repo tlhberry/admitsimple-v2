@@ -14,7 +14,7 @@ import {
   Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check,
   RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff, UserPlus, Mail,
   Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
-  MessageSquare, Globe, Bot,
+  MessageSquare, Globe, Bot, LogOut,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -64,7 +64,7 @@ function passwordStrength(pw: string) {
 }
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
   const { data, isLoading } = useListSettings({ category: undefined });
   const [activeTab, setActiveTab] = useState(() => {
@@ -211,6 +211,15 @@ export default function Settings() {
               {tab.label}
             </button>
           ))}
+          <div className="pt-2 border-t border-border mt-2">
+            <button
+              onClick={() => logout()}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
         </div>
 
         <div className="lg:col-span-3 space-y-4">
