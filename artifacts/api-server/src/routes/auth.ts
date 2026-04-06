@@ -50,6 +50,12 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     sess.email = user.email;
     sess.role = user.role;
     sess.initials = user.initials;
+    // Explicitly save the session before responding to avoid a race condition
+    // where subsequent requests arrive at the server before the async Postgres
+    // write completes (particularly problematic in production).
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
     await logAudit({ userId: user.id, action: "LOGIN_SUCCESS", ipAddress: ip });
     res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, createdAt: user.createdAt });
   } catch (err) {

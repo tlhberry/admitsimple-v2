@@ -23,6 +23,11 @@ const ALLOWED_ORIGINS = [
 
 const app: Express = express();
 
+// ── Trust the Replit / reverse-proxy TLS termination ─────────────────────────
+// Without this, req.secure is always false behind the proxy, which prevents
+// the session cookie (secure:true in production) from ever being set.
+app.set("trust proxy", 1);
+
 // ── Security headers ────────────────────────────────────────────────────────
 app.use(
   helmet({
