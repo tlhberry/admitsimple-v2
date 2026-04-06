@@ -172,12 +172,12 @@ export default function Settings() {
     { id: "facility",      label: "Facility",      icon: Building },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "ai",            label: "AI Settings",   icon: Brain },
-    { id: "integrations",  label: "Integrations",  icon: Phone },
     ...(isAdmin ? [
-      { id: "chatbot",    label: "Chatbot",      icon: Bot },
-      { id: "admissions", label: "Admissions",   icon: UserPlus },
-      { id: "users",      label: "Users",        icon: Users },
-      { id: "import",     label: "Import",       icon: Upload },
+      { id: "integrations", label: "Integrations", icon: Phone },
+      { id: "chatbot",      label: "Chatbot",      icon: Bot },
+      { id: "admissions",   label: "Admissions",   icon: UserPlus },
+      { id: "users",        label: "Users",        icon: Users },
+      { id: "import",       label: "Import",       icon: Upload },
     ] : []),
   ];
 
