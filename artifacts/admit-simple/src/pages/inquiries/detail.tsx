@@ -10,7 +10,7 @@ import { SMSInbox } from "@/components/SMSInbox";
 import {
   ArrowLeft, UserPlus, FileText, Brain, Phone, Mail, Calendar, Activity, MessageSquare,
   Loader2, Sparkles, ClipboardCheck, CheckCircle2, Search, Pencil, X, Check,
-  ShieldCheck, XCircle, SendHorizontal, AlertTriangle, Play, ArrowRight,
+  ShieldCheck, XCircle, SendHorizontal, AlertTriangle, Play, ArrowRight, ChevronDown,
 } from "lucide-react";
 import { getStatusColor, formatDate, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -86,12 +86,74 @@ function AuditLogCard({ inquiryId, parsedAt, vobData, onTabChange }: {
     queryFn: () => fetch(`/api/inquiries/${inquiryId}/audit-log`, { credentials: "include" }).then(r => r.json()),
     refetchInterval: 15000,
   });
+  const [expanded, setExpanded] = useState(false);
+  const visibleLog = expanded ? log : log.slice(0, 1);
+
+  const renderEntry = (entry: any) => {
+    let details: Record<string, any> | null = null;
+    try { details = entry.details ? JSON.parse(entry.details) : null; } catch {}
+    return (
+      <div key={entry.id} className="flex gap-3 pl-1">
+        <div className="flex-shrink-0 w-3.5 flex items-start justify-center mt-1.5">
+          <div className={`w-2 h-2 rounded-full ${auditDotColor(entry.action)}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-xs font-medium text-foreground leading-tight">{entry.action}</p>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {entry.userName && (
+                <div
+                  className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-bold border border-primary/20"
+                  title={entry.userName}
+                >
+                  {getInitials(entry.userName)}
+                </div>
+              )}
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{timeAgo(entry.createdAt)}</span>
+            </div>
+          </div>
+          {details && Object.keys(details).length > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {Object.entries(details)
+                .filter(([k]) => !["reason", "notes", "type"].includes(k))
+                .slice(0, 3)
+                .map(([field, val]: any) => (
+                  <p key={field} className="text-[10px] text-muted-foreground leading-tight">
+                    <span className="font-medium">{field}:</span>{" "}
+                    {val?.from != null && (
+                      <><span className="line-through opacity-50">{String(val.from).slice(0, 20)}</span>{" → "}</>
+                    )}
+                    <span className="text-foreground/70">
+                      {val?.to != null ? String(val.to).slice(0, 20) : val != null ? String(val).slice(0, 30) : "—"}
+                    </span>
+                  </p>
+                ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className="rounded-2xl border-border">
-      <CardHeader className="py-4 border-b border-border">
-        <CardTitle className="text-sm text-foreground">Change History</CardTitle>
-      </CardHeader>
+      <button
+        onClick={() => log.length > 0 && setExpanded(e => !e)}
+        className="w-full text-left"
+        disabled={log.length === 0}
+      >
+        <CardHeader className="py-3.5 border-b border-border">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm text-foreground">Change History</CardTitle>
+            {log.length > 1 && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {!expanded && <span>{log.length} entries</span>}
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", expanded && "rotate-180")} />
+              </div>
+            )}
+          </div>
+        </CardHeader>
+      </button>
       <CardContent className="p-4">
         <div className="pt-0">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity Log</p>
@@ -103,54 +165,30 @@ function AuditLogCard({ inquiryId, parsedAt, vobData, onTabChange }: {
             <div className="relative">
               <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border/60" />
               <div className="space-y-3">
-                {log.map((entry: any) => {
-                  let details: Record<string, any> | null = null;
-                  try { details = entry.details ? JSON.parse(entry.details) : null; } catch {}
-                  return (
-                    <div key={entry.id} className="flex gap-3 pl-1">
-                      <div className="flex-shrink-0 w-3.5 flex items-start justify-center mt-1.5">
-                        <div className={`w-2 h-2 rounded-full ${auditDotColor(entry.action)}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs font-medium text-foreground leading-tight">{entry.action}</p>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {entry.userName && (
-                              <div
-                                className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-bold border border-primary/20"
-                                title={entry.userName}
-                              >
-                                {getInitials(entry.userName)}
-                              </div>
-                            )}
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">{timeAgo(entry.createdAt)}</span>
-                          </div>
-                        </div>
-                        {details && Object.keys(details).length > 0 && (
-                          <div className="mt-1 space-y-0.5">
-                            {Object.entries(details)
-                              .filter(([k]) => !["reason", "notes", "type"].includes(k))
-                              .slice(0, 3)
-                              .map(([field, val]: any) => (
-                                <p key={field} className="text-[10px] text-muted-foreground leading-tight">
-                                  <span className="font-medium">{field}:</span>{" "}
-                                  {val?.from != null && (
-                                    <><span className="line-through opacity-50">{String(val.from).slice(0, 20)}</span>{" → "}</>
-                                  )}
-                                  <span className="text-foreground/70">
-                                    {val?.to != null ? String(val.to).slice(0, 20) : val != null ? String(val).slice(0, 30) : "—"}
-                                  </span>
-                                </p>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {visibleLog.map(renderEntry)}
               </div>
             </div>
           )}
+
+          {!expanded && log.length > 1 && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors py-1.5 rounded-lg hover:bg-muted/40"
+            >
+              <ChevronDown className="w-3 h-3" />
+              Show {log.length - 1} more {log.length - 1 === 1 ? "entry" : "entries"}
+            </button>
+          )}
+          {expanded && log.length > 1 && (
+            <button
+              onClick={() => setExpanded(false)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors py-1.5 rounded-lg hover:bg-muted/40"
+            >
+              <ChevronDown className="w-3 h-3 rotate-180" />
+              Show less
+            </button>
+          )}
+
           {parsedAt && (
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-xs text-primary bg-primary/10 p-2 rounded-lg">
               <Sparkles className="w-3.5 h-3.5" /> AI Parsed Intake
