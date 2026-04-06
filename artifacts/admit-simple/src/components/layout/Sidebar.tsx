@@ -37,11 +37,16 @@ export function Sidebar() {
   // Live call count badge
   const { data: activeCalls = [] } = useQuery<any[]>({
     queryKey: ["/api/calls/active"],
-    queryFn: () => fetch("/api/calls/active", { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/calls/active", { credentials: "include" });
+      if (!r.ok) throw new Error(`calls/active: ${r.status}`);
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    },
     refetchInterval: 10000,
     staleTime: 5000,
   });
-  const liveCallCount = activeCalls.length;
+  const liveCallCount = Array.isArray(activeCalls) ? activeCalls.length : 0;
 
   // Unread SMS badge
   const { data: unreadData } = useQuery<{ count: number }>({
