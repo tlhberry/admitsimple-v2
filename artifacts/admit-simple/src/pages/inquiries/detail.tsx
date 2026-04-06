@@ -1322,22 +1322,18 @@ Keep it warm, concise, and professional. Include a request for the other facilit
                               <span className="text-xs font-semibold text-primary uppercase tracking-wider">CTM Call Details</span>
                             </div>
                             <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
-                              <div>
-                                <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Call ID</dt>
-                                <dd className="text-xs font-mono text-foreground">{(inq as any).ctmCallId}</dd>
-                              </div>
-                              {(inq as any).ctmTrackingNumber && (
-                                <div>
-                                  <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Tracking Number</dt>
-                                  <dd className="text-xs font-mono text-foreground">{(inq as any).ctmTrackingNumber}</dd>
-                                </div>
-                              )}
                               {(inq as any).callDurationSeconds != null && (
                                 <div>
                                   <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Duration</dt>
                                   <dd className="text-xs font-semibold text-foreground">
                                     {Math.floor((inq as any).callDurationSeconds / 60)}m {(inq as any).callDurationSeconds % 60}s
                                   </dd>
+                                </div>
+                              )}
+                              {(inq as any).ctmTrackingNumber && (
+                                <div>
+                                  <dt className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Tracking Number</dt>
+                                  <dd className="text-xs font-mono text-foreground">{(inq as any).ctmTrackingNumber}</dd>
                                 </div>
                               )}
                               {(inq as any).callDateTime && (
