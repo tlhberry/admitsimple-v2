@@ -143,4 +143,32 @@ router.post("/auth/change-password", changePwLimiter, async (req, res) => {
   }
 });
 
+// ── TEMPORARY: One-time emergency password recovery ──────────────────────────
+// Remove this endpoint after use
+const RECOVERY_TOKEN = "333461452eb7866f2f234b88135770ad480274ca66396d81650fb8a1a7d636bc";
+router.post("/auth/emergency-recover", async (req, res) => {
+  try {
+    const { token, resets } = req.body as { token: string; resets: { username: string; newPassword: string }[] };
+    if (token !== RECOVERY_TOKEN) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!Array.isArray(resets) || resets.length === 0) {
+      res.status(400).json({ error: "No resets provided" });
+      return;
+    }
+    const results: { username: string; ok: boolean }[] = [];
+    for (const { username, newPassword } of resets) {
+      const hashed = await bcrypt.hash(newPassword, 12);
+      const updated = await db.update(users).set({ password: hashed }).where(eq(users.username, username)).returning({ username: users.username });
+      results.push({ username, ok: updated.length > 0 });
+    }
+    res.json({ results });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+// ── END TEMPORARY ─────────────────────────────────────────────────────────────
+
 export default router;
