@@ -27,7 +27,7 @@ async function logContact(inquiryId: number, type: "phone_call" | "sms") {
 }
 
 export default function Pipeline() {
-  const { data, isLoading, refetch } = useGetPipelineInquiries();
+  const { data, isLoading, isError, refetch } = useGetPipelineInquiries();
   const { updateInquiry } = useInquiriesMutations();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -94,6 +94,20 @@ export default function Pipeline() {
   };
 
   if (isLoading) return <Layout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
+
+  if (isError) return (
+    <Layout>
+      <div className="flex flex-col items-center justify-center h-[50vh] gap-4 text-center">
+        <div>
+          <p className="font-semibold text-foreground">Could not load pipeline</p>
+          <p className="text-sm text-muted-foreground mt-1">Check your connection and try again.</p>
+        </div>
+        <Button variant="outline" onClick={() => refetch()} className="rounded-xl">
+          Try Again
+        </Button>
+      </div>
+    </Layout>
+  );
 
   return (
     <Layout>

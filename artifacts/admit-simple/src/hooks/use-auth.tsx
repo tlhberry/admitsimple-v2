@@ -23,7 +23,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const { data: user, isLoading, isError } = useGetMe({
     query: {
-      retry: false, // Don't retry on 401
+      retry: (failureCount, error: any) => {
+        // Never retry on 401 (not authenticated) — retry once on network errors
+        if (error?.status === 401) return false;
+        return failureCount < 1;
+      },
+      retryDelay: 800,
       staleTime: 1000 * 60 * 5, // 5 mins
     }
   });
