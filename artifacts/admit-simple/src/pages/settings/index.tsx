@@ -109,6 +109,12 @@ export default function Settings() {
   const [replacingTwilioKeys, setReplacingTwilioKeys] = useState(false);
   const [newTwilioSid, setNewTwilioSid] = useState("");
   const [newTwilioSecret, setNewTwilioSecret] = useState("");
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [showPwCurrent, setShowPwCurrent] = useState(false);
+  const [showPwNew, setShowPwNew] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
 
   // Derived: are Twilio keys already saved in DB?
   const twilioSidSaved   = !!values["twilio_api_key_sid"];
@@ -172,6 +178,7 @@ export default function Settings() {
     { id: "facility",      label: "Facility",      icon: Building },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "ai",            label: "AI Settings",   icon: Brain },
+    { id: "password",      label: "Change Password", icon: KeyRound },
     ...(isAdmin ? [
       { id: "integrations", label: "Integrations", icon: Phone },
       { id: "chatbot",      label: "Chatbot",      icon: Bot },
@@ -312,6 +319,92 @@ export default function Settings() {
               </CardContent>
             </Card>
           )}
+
+          {activeTab === "password" && (() => {
+            const pwReqs = [
+              { label: "At least 8 characters", met: pwNew.length >= 8 },
+              { label: "One uppercase letter",   met: /[A-Z]/.test(pwNew) },
+              { label: "One number",             met: /[0-9]/.test(pwNew) },
+            ];
+            const pwAllMet = pwReqs.every(r => r.met);
+            const handlePwSave = async () => {
+              if (!pwCurrent) { toast({ title: "Please enter your current password", variant: "destructive" }); return; }
+              if (!pwAllMet)  { toast({ title: "New password does not meet requirements", variant: "destructive" }); return; }
+              if (pwNew !== pwConfirm) { toast({ title: "Passwords do not match", variant: "destructive" }); return; }
+              setSavingPw(true);
+              try {
+                const resp = await fetch("/api/auth/change-password", {
+                  method: "POST", credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || "Failed to change password");
+                toast({ title: "Password changed successfully" });
+                setPwCurrent(""); setPwNew(""); setPwConfirm("");
+              } catch (e: any) {
+                toast({ title: e.message || "Failed to change password", variant: "destructive" });
+              } finally { setSavingPw(false); }
+            };
+            return (
+              <Card className="rounded-2xl border-border">
+                <CardHeader className="border-b border-border pb-4">
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <KeyRound className="w-4 h-4 text-primary" /> Change Password
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Update your account password. You'll need to enter your current password first.</p>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-5 max-w-sm">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">Current Password</Label>
+                    <div className="relative">
+                      <Input type={showPwCurrent ? "text" : "password"} value={pwCurrent} onChange={e => setPwCurrent(e.target.value)}
+                        placeholder="Your current password" className={fieldCls + " pr-10"} />
+                      <button type="button" onClick={() => setShowPwCurrent(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPwCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">New Password</Label>
+                    <div className="relative">
+                      <Input type={showPwNew ? "text" : "password"} value={pwNew} onChange={e => setPwNew(e.target.value)}
+                        placeholder="New password" className={fieldCls + " pr-10"} />
+                      <button type="button" onClick={() => setShowPwNew(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPwNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {pwNew && (
+                      <ul className="space-y-1 mt-2">
+                        {pwReqs.map(r => (
+                          <li key={r.label} className={`flex items-center gap-1.5 text-xs ${r.met ? "text-green-400" : "text-muted-foreground"}`}>
+                            <Check className={`w-3 h-3 ${r.met ? "opacity-100" : "opacity-30"}`} />
+                            {r.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">Confirm New Password</Label>
+                    <Input type="password" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)}
+                      placeholder="Confirm new password"
+                      className={`${fieldCls} ${pwConfirm && pwNew !== pwConfirm ? "border-destructive" : ""}`} />
+                    {pwConfirm && pwNew !== pwConfirm && (
+                      <p className="text-xs text-destructive">Passwords do not match</p>
+                    )}
+                  </div>
+                  <Button onClick={handlePwSave} disabled={savingPw || !pwAllMet || pwNew !== pwConfirm || !pwCurrent}
+                    className="rounded-xl gap-2 w-full">
+                    {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    {savingPw ? "Saving..." : "Change Password"}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {activeTab === "integrations" && (
             <Card className="rounded-2xl border-border">

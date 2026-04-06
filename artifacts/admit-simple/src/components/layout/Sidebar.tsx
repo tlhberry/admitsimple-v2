@@ -1,5 +1,4 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { 
   Home, 
@@ -14,16 +13,13 @@ import {
   Building2,
   Activity,
   Phone,
-  KeyRound,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLiveEvents } from "@/hooks/use-live-events";
-import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 
 export function Sidebar() {
   const [location] = useLocation();
-  const [changePwOpen, setChangePwOpen] = useState(false);
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
   const isBdRole = user?.role === "bd";
@@ -179,13 +175,6 @@ export function Sidebar() {
               <p className="text-sm font-medium text-white truncate">{user?.name}</p>
               <p className="text-xs text-sidebar-foreground/60 truncate capitalize">{user?.role === "bd" ? "BD Rep" : user?.role === "admissions" ? "Admissions Rep" : user?.role}</p>
             </div>
-            <button
-              onClick={() => setChangePwOpen(true)}
-              className="p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground hover:text-white"
-              title="Change password"
-            >
-              <KeyRound className="w-4 h-4" />
-            </button>
             <button 
               onClick={() => logout()}
               className="p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground hover:text-white"
@@ -195,7 +184,6 @@ export function Sidebar() {
             </button>
           </div>
         </div>
-        <ChangePasswordModal open={changePwOpen} onClose={() => setChangePwOpen(false)} />
       </div>
 
       {/* Mobile Bottom Nav — 2 stacked rows */}
