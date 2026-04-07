@@ -69,7 +69,7 @@ export default function Settings() {
   const { data, isLoading } = useListSettings({ category: undefined });
   const [activeTab, setActiveTab] = useState(() => {
     const p = new URLSearchParams(window.location.search);
-    return p.get("tab") ?? "facility";
+    return p.get("tab") ?? (isAdmin ? "facility" : "notifications");
   });
   const [values, setValues] = useState<SettingMap>({});
   const queryClient = useQueryClient();
@@ -175,11 +175,11 @@ export default function Settings() {
   };
 
   const tabs = [
-    { id: "facility",      label: "Facility",      icon: Building },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "ai",            label: "AI Settings",   icon: Brain },
     { id: "password",      label: "Change Password", icon: KeyRound },
     ...(isAdmin ? [
+      { id: "facility",     label: "Facility",     icon: Building },
       { id: "integrations", label: "Integrations", icon: Phone },
       { id: "chatbot",      label: "Chatbot",      icon: Bot },
       { id: "admissions",   label: "Admissions",   icon: UserPlus },
