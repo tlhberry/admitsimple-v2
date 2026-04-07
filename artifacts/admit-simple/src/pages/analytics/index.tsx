@@ -88,21 +88,23 @@ export default function Analytics() {
 
           {/* Date Range Selector */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 bg-muted/60 border border-border rounded-xl p-1">
-              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground ml-1.5 shrink-0" />
-              {PRESETS.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => setPreset(p.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    preset === p.value
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-muted/60 border border-border rounded-xl p-1 flex-1">
+                {PRESETS.map(p => (
+                  <button
+                    key={p.value}
+                    onClick={() => setPreset(p.value)}
+                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-center ${
+                      preset === p.value
+                        ? "bg-primary text-white shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
             {preset === "Custom" && (
               <div className="flex items-center gap-2 text-xs">
