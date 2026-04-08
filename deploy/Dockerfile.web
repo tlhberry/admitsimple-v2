@@ -22,6 +22,7 @@ COPY artifacts/admit-simple/public ./artifacts/admit-simple/public
 COPY lib/api-zod/src ./lib/api-zod/src
 COPY lib/api-zod/tsconfig.json ./lib/api-zod/
 COPY lib/api-client-react/src ./lib/api-client-react/src
+COPY lib/api-client-react/tsconfig.json ./lib/api-client-react/
 COPY tsconfig.json ./
 COPY tsconfig.base.json ./
 
