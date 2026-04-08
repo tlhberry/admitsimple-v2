@@ -6,3 +6,9 @@ id = "BBsLbgpyrJvkxINOu1WWs"
 uri = "file://docs/baa-guide.md"
 type = "text"
 title = "HIPAA BAA Guide — Vendor How-Tos + Client Template"
+
+[[outputs]]
+id = "o41ghHdC5Jo1hk60KO1r9"
+uri = "file://docs/deployment-guide.md"
+type = "text"
+title = "AWS Deployment Guide — Replace Old EC2 Instance"
