@@ -107,6 +107,7 @@ jobs:
             aws ecs update-service \
               --cluster "admitsimple-${CLIENT_NAME}-cluster" \
               --service "admitsimple-${CLIENT_NAME}-service" \
+              --task-definition "admitsimple-${CLIENT_NAME}-app" \
               --force-new-deployment \
               --region ${{ env.AWS_REGION }} || true
 
