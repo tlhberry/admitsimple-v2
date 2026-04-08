@@ -12,3 +12,9 @@ id = "o41ghHdC5Jo1hk60KO1r9"
 uri = "file://docs/deployment-guide.md"
 type = "text"
 title = "AWS Deployment Guide — Replace Old EC2 Instance"
+
+[[outputs]]
+id = "Ij7JdiR15NqSouplDfPqP"
+uri = "file://docs/claude-deploy-prompt.md"
+type = "text"
+title = "Claude Deploy Prompt — Copy & Paste This"
