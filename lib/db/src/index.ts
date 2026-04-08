@@ -10,7 +10,11 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const isRds = process.env.DATABASE_URL?.includes("amazonaws.com");
+export const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isRds ? { rejectUnauthorized: false } : undefined,
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
