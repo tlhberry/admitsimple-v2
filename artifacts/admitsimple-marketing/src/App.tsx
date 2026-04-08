@@ -10,10 +10,18 @@ import TermsOfService from "@/pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
+function LoginRedirect() {
+  if (typeof window !== "undefined") {
+    window.location.replace("/app/login");
+  }
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={LoginRedirect} />
       <Route path="/contact" component={Contact} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
