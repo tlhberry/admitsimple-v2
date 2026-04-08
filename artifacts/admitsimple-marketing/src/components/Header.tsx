@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logo from "@assets/AdmitSimple_logo_with_tagline_1775683157850.png";
+import logo from "@assets/AdmitSimple_logo_with_tagline_design_1775683998872.png";
 
 export default function Header() {
   return (
