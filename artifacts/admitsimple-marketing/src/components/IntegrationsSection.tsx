@@ -1,6 +1,6 @@
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 
-const LIVE_INTEGRATIONS = [
+const INTEGRATIONS = [
   {
     name: "Twilio",
     desc: "SMS inbox + inbound voice calls",
@@ -46,58 +46,6 @@ const LIVE_INTEGRATIONS = [
   },
 ];
 
-const COMING_SOON = [
-  {
-    name: "Kipu EMR",
-    desc: "Push admitted patients to EMR",
-    color: "#2563EB",
-    initials: "Ki",
-  },
-  {
-    name: "Google Analytics",
-    desc: "Track lead source attribution",
-    color: "#F59E0B",
-    initials: "GA",
-  },
-  {
-    name: "Zapier",
-    desc: "Connect any tool via automation",
-    color: "#FF4A00",
-    initials: "Zp",
-  },
-  {
-    name: "Meta Ads",
-    desc: "Sync lead forms from Facebook/Instagram",
-    color: "#1877F2",
-    initials: "M",
-  },
-  {
-    name: "Google Ads",
-    desc: "Track call conversions from paid search",
-    color: "#4285F4",
-    initials: "G",
-  },
-  {
-    name: "Mailchimp",
-    desc: "Alumni re-engagement campaigns",
-    color: "#FFE01B",
-    initials: "Mc",
-    dark: true,
-  },
-  {
-    name: "DocuSign",
-    desc: "E-sign consent & financial agreements",
-    color: "#1B2B54",
-    initials: "DS",
-  },
-  {
-    name: "Availity",
-    desc: "Real-time insurance eligibility checks",
-    color: "#00875A",
-    initials: "Av",
-  },
-];
-
 export default function IntegrationsSection() {
   return (
     <section id="integrations" className="py-24 bg-[#f8fafc]">
@@ -110,76 +58,33 @@ export default function IntegrationsSection() {
             Works with your stack
           </h2>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            AdmitSimple connects the tools your team already uses. Live integrations are built and working today. Coming soon integrations are on our roadmap.
+            AdmitSimple is built on the tools your team trusts — connected, configured, and ready on day one.
           </p>
         </div>
 
-        {/* Live integrations */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <CheckCircle className="w-5 h-5 text-emerald-500" />
-            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Live Today</h3>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {LIVE_INTEGRATIONS.map((item) => (
-              <div
-                key={item.name}
-                className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-[#5BC8DC]/40 hover:shadow-md transition-all group"
-              >
-                <div className="mb-4">{item.logo}</div>
-                <h4 className="font-bold text-gray-900 mb-1">{item.name}</h4>
-                <p className="text-sm text-gray-500 leading-snug">{item.desc}</p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Live
-                </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {INTEGRATIONS.map((item) => (
+            <div
+              key={item.name}
+              className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-[#5BC8DC]/40 hover:shadow-md transition-all"
+            >
+              <div className="mb-4">{item.logo}</div>
+              <h4 className="font-bold text-gray-900 mb-1">{item.name}</h4>
+              <p className="text-sm text-gray-500 leading-snug">{item.desc}</p>
+              <div className="mt-4 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+                <CheckCircle className="w-3.5 h-3.5" />
+                Live
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
-        {/* Coming soon */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <Clock className="w-5 h-5 text-amber-500" />
-            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Coming Soon</h3>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {COMING_SOON.map((item) => (
-              <div
-                key={item.name}
-                className="bg-white border border-gray-100 rounded-2xl p-6 opacity-75 hover:opacity-90 transition-opacity"
-              >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-sm font-bold"
-                  style={{
-                    backgroundColor: item.color,
-                    color: item.dark ? "#1a1a1a" : "white",
-                  }}
-                >
-                  {item.initials}
-                </div>
-                <h4 className="font-bold text-gray-700 mb-1">{item.name}</h4>
-                <p className="text-sm text-gray-400 leading-snug">{item.desc}</p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs text-amber-500 font-semibold">
-                  <Clock className="w-3.5 h-3.5" />
-                  Coming Soon
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="mt-14 text-center">
+        <div className="mt-12 text-center">
           <p className="text-gray-500 text-sm">
-            Need an integration that's not listed?{" "}
+            Need a specific integration?{" "}
             <a href="/contact" className="text-[#5BC8DC] font-semibold hover:underline">
-              Tell us what you use
-            </a>{" "}
-            and we'll evaluate it for the roadmap.
+              Let us know
+            </a>
           </p>
         </div>
       </div>
