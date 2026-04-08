@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import logo from "@assets/image_1775685707868.png";
+import logo from "@assets/image_1775685931239.png";
 
 export default function PrivacyPolicy() {
   return (
@@ -16,7 +16,7 @@ export default function PrivacyPolicy() {
         <header className="bg-[#2d3748] border-b border-white/10">
           <div className="container mx-auto px-4 md:px-6 pr-6 py-3 flex items-center justify-between">
             <Link href="/">
-              <img src={logo} alt="AdmitSimple" className="h-9 w-auto" style={{ mixBlendMode: "screen" }} />
+              <img src={logo} alt="AdmitSimple" className="h-9 w-auto" />
             </Link>
             <Link href="/" className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors">
               <ArrowLeft className="w-4 h-4" />
