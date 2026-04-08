@@ -155,7 +155,7 @@ resource "aws_secretsmanager_secret" "app" {
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id = aws_secretsmanager_secret.app.id
   secret_string = jsonencode({
-    DATABASE_URL              = "postgres://admitsimple:${var.db_password}@${aws_db_instance.postgres.address}:5432/admitsimple"
+    DATABASE_URL              = "postgres://admitsimple:${var.db_password}@${aws_db_instance.postgres.address}:5432/admitsimple?sslmode=require"
     SESSION_SECRET            = var.session_secret
     ADMIN_PASSWORD            = var.admin_password
     TWILIO_ACCOUNT_SID        = var.twilio_account_sid
@@ -359,9 +359,7 @@ resource "aws_ecs_service" "app" {
     container_port   = 80
   }
 
-  lifecycle {
-    ignore_changes = [task_definition]
-  }
+
 }
 
 # ─── S3 FOR LOGS (HIPAA AUDIT TRAIL) ─────────────────────────────────────────
