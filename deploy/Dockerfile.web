@@ -25,6 +25,8 @@ COPY lib/api-client-react/src ./lib/api-client-react/src
 COPY lib/api-client-react/tsconfig.json ./lib/api-client-react/
 COPY tsconfig.json ./
 COPY tsconfig.base.json ./
+# attached_assets is aliased as @assets in vite.config.ts and imported by login.tsx etc.
+COPY attached_assets/ ./attached_assets/
 
 # Build-time env vars required by vite.config.ts (PORT is dev-only, BASE_PATH sets the web root)
 ENV PORT=3000
