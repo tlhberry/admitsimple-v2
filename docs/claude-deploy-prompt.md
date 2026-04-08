@@ -1,278 +1,245 @@
-# PASTE THIS ENTIRE PROMPT INTO CLAUDE
-# Claude needs access to: GitHub account, AWS console
+# PASTE THIS INTO CLAUDE
+# Before you paste this — do NOT give Claude access to any existing GitHub repo yet.
+# The new repo gets created in the steps below.
 
 ---
 
-You are deploying a production web application called **AdmitSimple** to AWS. Work through every step below in order without stopping. Do not ask unnecessary questions — only ask me for credentials or values you cannot generate yourself.
+You are deploying AdmitSimple to AWS. Execute every step in order. Only pause to ask me for credentials you cannot generate yourself. Do not stop until HTTPS is live and I can log in.
+
+**CRITICAL BEFORE YOU DO ANYTHING:**
+The production-ready version of this app lives inside a **Replit workspace** — not on GitHub yet. Any GitHub repo you may already have access to is the OLD version. Ignore any existing GitHub repos entirely. Your first job is to get me to push the code from Replit to a brand new GitHub repository. Do not look at any code, do not make any infrastructure decisions, until I give you the URL of the new repo in Step 2.
 
 ---
 
-## IMPORTANT CONTEXT — READ FIRST
+## STEP 1 — COLLECT CREDENTIALS
 
-The code for this app lives inside a **Replit project**, not on GitHub yet. Replit has a built-in GitHub connect feature. Your first job is to push the code from Replit to a new GitHub repository, then proceed with the full AWS deployment. The app already has all the infrastructure code written and ready — Terraform, Dockerfiles, GitHub Actions CI/CD, deployment scripts. You do not need to write any infrastructure code.
+Ask me for all of these at once right now, then do not ask again:
 
----
-
-## STEP 1 — ASK ME FOR THESE THINGS BEFORE STARTING
-
-Ask me for all of these up front, then proceed without interrupting me again:
-
-1. **Replit GitHub connection** — I will connect Replit to GitHub myself following your instructions below. Tell me to do it now.
-2. **New GitHub repo name** — suggest `admitsimple` (private repo)
-3. **AWS credentials** — I'll need to create an IAM user. Walk me through it.
-4. **Domain name** — the URL the app will run at (e.g. `app.admitsimple.com`)
-5. **Admin password** — what I want the admin login password to be
-6. **Anthropic API key** — for AI features (can be added in app Settings after launch if I don't have it ready)
-7. **Twilio credentials** — Account SID, Auth Token, Phone Number (can skip for now and add later)
+1. Domain name (e.g. `app.admitsimple.com`)
+2. Admin login password (what I want to use to log in)
+3. Anthropic API key (starts with `sk-ant-` — or say "skip" and I'll add it in Settings later)
+4. Twilio Account SID, Auth Token, and Phone Number (or say "skip" to set up calling later)
 
 ---
 
-## STEP 2 — PUSH REPLIT CODE TO GITHUB
+## STEP 2 — PUSH REPLIT CODE TO GITHUB (DO THIS BEFORE ANYTHING ELSE)
 
-Tell me to do the following inside Replit right now (I will do it while you wait):
+Tell me to do the following inside Replit right now. Wait for me to finish before moving on:
 
-1. In Replit, click the **Git icon** in the left sidebar
-2. Click **"Connect to GitHub"** and authorize Replit to access my GitHub account
-3. Create a **new private repository** named `admitsimple`
-4. Click **"Push"** — Replit will push all the code to GitHub automatically
-5. Tell me to confirm when it's done, then paste the GitHub repo URL
+> "Go into your Replit project. On the left sidebar click the **Git** icon (looks like a branch). Click **Connect to GitHub**. Authorize Replit. When it asks for a repo name, type `admitsimple` and set it to **Private**. Then click **Push**. When it finishes, paste the GitHub repo URL here."
 
-Once I give you the repo URL, verify the following files exist in it before continuing. If any are missing, stop and tell me:
-- `deploy/Dockerfile.api`
-- `deploy/Dockerfile.web`
-- `deploy/terraform/main.tf`
-- `deploy/terraform/variables.tf`
-- `deploy/terraform/outputs.tf`
-- `deploy/scripts/new-client.sh`
-- `deploy/scripts/update-all-clients.sh`
-- `.github/workflows/deploy.yml`
-- `deploy/nginx.conf`
-- `deploy/docker-compose.yml`
+Wait for me to paste the URL. Then open that repo and verify **all** of these files are present. If any single one is missing, stop immediately and tell me exactly which ones are missing:
+
+```
+deploy/Dockerfile.api
+deploy/Dockerfile.web
+deploy/terraform/main.tf
+deploy/terraform/variables.tf
+deploy/terraform/outputs.tf
+deploy/scripts/new-client.sh
+deploy/scripts/update-all-clients.sh
+deploy/nginx.conf
+.github/workflows/deploy.yml
+```
+
+Once you confirm all files exist, continue.
 
 ---
 
-## STEP 3 — CREATE IAM DEPLOY USER IN AWS
+## STEP 3 — CREATE AWS IAM DEPLOY USER
 
-Walk me through this in the AWS console:
+Walk me through this step by step in the AWS console:
 
-1. Go to **IAM → Users → Create user**
+1. IAM → Users → Create user
 2. Username: `admitsimple-deploy`
-3. Do NOT enable console access
+3. No console access
 4. Attach policy: **AdministratorAccess**
-5. After creating: go to **Security credentials → Create access key**
-6. Select **"Application running outside AWS"**
-7. Save both the **Access Key ID** and **Secret Access Key** — paste them to you
+5. Security credentials → Create access key → "Application running outside AWS"
+6. Tell me to paste both keys to you
 
 ---
 
 ## STEP 4 — CREATE ECR REPOSITORY
 
-Walk me through this in the AWS console:
-
-1. Go to **ECR → Repositories → Create repository**
-2. Visibility: **Private**
-3. Name: `admitsimple`
-4. Enable **Scan on push**
-5. Encryption: **AES-256**
-6. Create it and copy the full **repository URI**
-   (looks like: `123456789.dkr.ecr.us-east-1.amazonaws.com/admitsimple`)
+Walk me through:
+1. ECR → Create repository → Private
+2. Name: `admitsimple`
+3. Scan on push: ON
+4. Encryption: AES-256
+5. Tell me to paste the full URI to you (format: `123456789.dkr.ecr.us-east-1.amazonaws.com/admitsimple`)
 
 ---
 
-## STEP 5 — CREATE TERRAFORM STATE BUCKET IN S3
+## STEP 5 — CREATE TERRAFORM STATE S3 BUCKET
 
-Walk me through this in the AWS console:
-
-1. Go to **S3 → Create bucket**
+Walk me through:
+1. S3 → Create bucket
 2. Name: `admitsimple-terraform-state`
 3. Region: `us-east-1`
-4. Block all public access: **ON**
-5. Versioning: **Enable**
-6. Server-side encryption: **Enable (SSE-S3)**
-7. Create it
+4. Block all public access: ON
+5. Versioning: Enable
+6. Encryption: SSE-S3
 
 ---
 
 ## STEP 6 — ADD GITHUB SECRETS
 
-Walk me through this on GitHub:
-
-1. Go to the `admitsimple` repo → **Settings → Secrets and variables → Actions**
-2. Click **New repository secret** and add these two:
-
-| Name | Value |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | The access key from Step 3 |
-| `AWS_SECRET_ACCESS_KEY` | The secret key from Step 3 |
+Walk me through on GitHub (new `admitsimple` repo):
+1. Settings → Secrets and variables → Actions → New repository secret
+2. Add `AWS_ACCESS_KEY_ID` → paste value from Step 3
+3. Add `AWS_SECRET_ACCESS_KEY` → paste value from Step 3
 
 ---
 
 ## STEP 7 — CREATE THE CLIENT CONFIG FILE
 
-In the GitHub repo, create a new file at this exact path:
-`deploy/clients/MY-CLIENT-NAME.tfvars`
+Tell me to create this file directly in the GitHub web UI at this exact path:
+`deploy/clients/main.tfvars`
 
-Replace `MY-CLIENT-NAME` with a short lowercase slug (e.g. `main` or `sunrise-recovery` — under 20 chars, lowercase, dashes only).
+(Use GitHub web UI → Add file → Create new file. This bypasses .gitignore.)
 
-Use this exact format and fill in every value:
+Generate the two secrets now and include them in the file:
+- session_secret → `openssl rand -base64 48`
+- db_password → `openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20`
+
+Write the complete file contents for me to paste, with every value filled in using what I gave you in Step 1 and the ECR URI from Step 4:
 
 ```hcl
-client_name          = "MY-CLIENT-NAME"
-domain               = "DOMAIN-I-PROVIDED"
+client_name          = "main"
+domain               = "[DOMAIN FROM STEP 1]"
 aws_region           = "us-east-1"
-admin_password       = "ADMIN-PASSWORD-I-PROVIDED"
-session_secret       = "GENERATE: run [openssl rand -base64 48] and paste result"
-db_password          = "GENERATE: run [openssl rand -base64 24 | tr -dc a-zA-Z0-9 | head -c 20] and paste result"
-twilio_account_sid   = "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-twilio_auth_token    = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-twilio_phone_number  = "+16025551234"
+admin_password       = "[ADMIN PASSWORD FROM STEP 1]"
+session_secret       = "[GENERATED]"
+db_password          = "[GENERATED]"
+twilio_account_sid   = "[FROM STEP 1 OR EMPTY STRING]"
+twilio_auth_token    = "[FROM STEP 1 OR EMPTY STRING]"
+twilio_phone_number  = "[FROM STEP 1 OR EMPTY STRING]"
 twilio_twiml_app_sid = ""
 anthropic_base_url   = "https://api.anthropic.com"
-anthropic_api_key    = "sk-ant-xxxxxxxxxx"
-ecr_repository_url   = "ECR-URI-FROM-STEP-4"
+anthropic_api_key    = "[FROM STEP 1 OR EMPTY STRING]"
+ecr_repository_url   = "[ECR URI FROM STEP 4]"
 image_tag            = "latest"
 ```
 
-Generate the two random secrets using any terminal or online tool:
-- **session_secret**: `openssl rand -base64 48`
-- **db_password**: `openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20`
-
-Commit this file directly on GitHub (Edit → Commit changes).
-
-**Note:** The `deploy/clients/` folder is in `.gitignore`. To commit it anyway, use GitHub's web UI to create the file directly — the web UI bypasses `.gitignore`.
+Tell me to paste it in, commit directly to main, then confirm when done.
 
 ---
 
-## STEP 8 — TRIGGER THE DEPLOYMENT
+## STEP 8 — WATCH THE DEPLOYMENT
 
-Once the `deploy/clients/MY-CLIENT-NAME.tfvars` file is committed:
+After the commit, tell me to:
+1. Go to GitHub → Actions tab
+2. Watch the **"Build & Deploy AdmitSimple"** workflow that started automatically
 
-1. Go to the GitHub repo → **Actions** tab
-2. You should see the **"Build & Deploy AdmitSimple"** workflow starting automatically
-3. Watch it run — it has two jobs:
-   - **Build Docker Images** (~5 min) — builds and pushes containers to ECR
-   - **Deploy to Clients** (~10 min) — runs Terraform, creates all AWS infrastructure, starts the app
+Walk me through what each stage means as it runs:
+- **Build Docker Images** (~5 min) — packages the app into containers, pushes to ECR
+- **Deploy to Clients** (~10 min) — Terraform creates VPC, ECS cluster, RDS database, load balancer, SSL cert in AWS
+- **ECS update** (~3 min) — live app starts running
 
-4. Wait for both jobs to show green checkmarks
-5. If anything fails, paste the error output to me
-
----
-
-## STEP 9 — GET THE ALB DNS NAME
-
-After the workflow succeeds:
-
-1. Go to **AWS → EC2 → Load Balancers**
-2. Find the load balancer named `admitsimple-MY-CLIENT-NAME-alb`
-3. Copy its **DNS name** (looks like `admitsimple-abc123.us-east-1.elb.amazonaws.com`)
-4. Also go to **AWS → ACM (Certificate Manager)** and check the certificate for the domain
-5. If it shows **Pending validation**, copy the CNAME record shown — we need to add it to DNS
+Tell me to paste any error output if it fails. Otherwise wait for green checkmarks on both jobs.
 
 ---
 
-## STEP 10 — CONFIGURE DNS
+## STEP 9 — GET THE ALB DNS AND SSL INFO
 
-At the domain registrar (GoDaddy, Cloudflare, Route 53, Namecheap, etc.) — walk me through adding:
+Walk me through:
+1. AWS → EC2 → Load Balancers → find `admitsimple-main-alb`
+2. Copy the **DNS name** (e.g. `admitsimple-abc123.us-east-1.elb.amazonaws.com`)
+3. AWS → ACM → find certificate for my domain → if status is "Pending validation", copy the CNAME name and value
 
-**Record 1 — points domain to the app:**
-- Type: `CNAME`
-- Name: the subdomain part only (e.g. `app` if domain is `app.admitsimple.com`, or `@` for root)
-- Value: the ALB DNS name from Step 9
+Tell me to paste both to you.
+
+---
+
+## STEP 10 — SET UP DNS
+
+Tell me which registrar to go to (GoDaddy, Cloudflare, Namecheap, Route 53 — ask me if you don't know).
+
+Tell me exactly what to add:
+
+**Record 1 — points the domain to the app:**
+- Type: CNAME
+- Name: [the subdomain — e.g. `app`, or `@` if using root domain]
+- Value: [ALB DNS from Step 9]
 - TTL: 300
 
-**Record 2 — SSL certificate validation (if ACM showed Pending):**
-- Type: `CNAME`
-- Name: the long `_abc123.yourdomain.com` string ACM gave
-- Value: the `_xyz.acm-validations.aws` string ACM gave
+**Record 2 — proves I own the domain so SSL can issue (only if ACM showed Pending):**
+- Type: CNAME
+- Name: [the `_abc123...` string from ACM]
+- Value: [the `_xyz...acm-validations.aws` string from ACM]
 - TTL: 300
 
-After adding records, check propagation every 5 minutes:
-```
-nslookup YOURDOMAIN
-```
-DNS + SSL validation can take 5–30 minutes. Continue to next steps while waiting.
+After I add them, check every few minutes with `nslookup [DOMAIN]`. SSL validation takes up to 30 min. Continue to Step 11 while waiting.
 
 ---
 
 ## STEP 11 — TERMINATE THE OLD EC2 INSTANCE
 
-In the AWS console:
-1. Go to **EC2 → Instances**
-2. Find the instance named **"Admissions CRM"** (instance ID: `i-0d0ef6e34932c7b49`)
-3. Select it → **Instance State → Terminate instance**
-4. Go to **EC2 → Elastic IPs** — if one is not associated with anything, release it to stop charges
+Walk me through:
+1. EC2 → Instances → find "Admissions CRM" (i-0d0ef6e34932c7b49)
+2. Instance State → Terminate instance
+3. EC2 → Elastic IPs → release any unattached IPs to stop charges
 
 ---
 
-## STEP 12 — CONFIGURE TWILIO WEBHOOKS
+## STEP 12 — TWILIO WEBHOOKS
 
-In the Twilio console (console.twilio.com):
+Walk me through in Twilio console (console.twilio.com):
 
-**Set incoming call webhook:**
-1. Phone Numbers → Manage → Active Numbers → click the number
-2. Voice & Fax section:
-   - "When a call comes in": `https://YOURDOMAIN/api/webhooks/twilio/inbound-call`
-   - Method: POST
-3. Save
+**Incoming calls:**
+- Phone Numbers → Active Numbers → click the number
+- Voice section → When a call comes in: `https://[DOMAIN]/api/webhooks/twilio/inbound-call` → POST → Save
 
-**Set incoming SMS webhook:**
-1. Same phone number page → Messaging section
-   - "When a message comes in": `https://YOURDOMAIN/api/webhooks/twilio/sms`
-   - Method: POST
-2. Save
+**Incoming SMS:**
+- Same page → Messaging section → When a message comes in: `https://[DOMAIN]/api/webhooks/twilio/sms` → POST → Save
 
-**Create TwiML App for browser calling:**
-1. Develop → Voice → TwiML Apps → Create new TwiML App
-2. Friendly name: `AdmitSimple`
-3. Voice Request URL: `https://YOURDOMAIN/api/webhooks/twilio/voice`
-4. Method: POST
-5. Save and copy the **App SID** (starts with `AP`)
+**Browser calling (TwiML App):**
+- Develop → Voice → TwiML Apps → Create new TwiML App
+- Friendly name: AdmitSimple
+- Voice Request URL: `https://[DOMAIN]/api/webhooks/twilio/voice` → POST
+- Save → copy the App SID (starts with AP)
 
-**Add TwiML App SID to the deployment:**
-1. On GitHub, edit `deploy/clients/MY-CLIENT-NAME.tfvars`
-2. Set `twilio_twiml_app_sid = "APxxxxxxxxxxxxxxxxxx"`
-3. Commit — GitHub Actions will auto-redeploy with the new value
+Then tell me to add the App SID: edit `deploy/clients/main.tfvars` on GitHub, set `twilio_twiml_app_sid = "AP..."`, commit. CI/CD auto-redeploys.
 
 ---
 
-## STEP 13 — VERIFY EVERYTHING IS WORKING
+## STEP 13 — FINAL VERIFICATION
 
-Run through this checklist. Confirm each item out loud to me:
+Walk me through checking each of these. Do not mark complete until all pass:
 
-- [ ] `https://YOURDOMAIN` loads the login page with a green padlock (valid SSL)
-- [ ] Login with username `admin` and the password I set works
-- [ ] Dashboard loads with no errors
-- [ ] **Settings → Facility** — enter facility name and save successfully
-- [ ] **Settings → AI Settings** — enter Anthropic API key and save
-- [ ] Create a test inquiry — "New Inquiry" button, fill in a name and phone number, save
-- [ ] The new inquiry appears on the Pipeline / Kanban board
-- [ ] AWS → CloudWatch → Log groups → `/ecs/admitsimple-MY-CLIENT-NAME` — logs are flowing
-- [ ] AWS → CloudTrail → Event history — events are being recorded (HIPAA audit log)
-- [ ] Call the Twilio phone number — the inbound call alert appears in the app
-- [ ] Send an SMS to the Twilio number — it appears in the SMS inbox
+- [ ] `https://[DOMAIN]` loads with green padlock
+- [ ] Login: username `admin`, the password I set → lands on dashboard
+- [ ] Settings → Facility → type a name → Save works
+- [ ] Settings → AI Settings → Anthropic key → Save works
+- [ ] New Inquiry → fill name + phone → Save → appears on Pipeline board
+- [ ] AWS → CloudWatch → Log groups → `/ecs/admitsimple-main` → logs are streaming
+- [ ] AWS → CloudTrail → Event history → events are recording
+- [ ] Call the Twilio number → inbound call alert appears in app
+- [ ] Text the Twilio number → message appears in SMS inbox
 
 ---
 
-## AFTER LAUNCH — ONGOING USAGE
+## HOW TO ADD NEW CLIENTS AFTER LAUNCH
 
-**Pushing app updates:**
-All future updates are automatic. Any time code changes are pushed to the `main` branch on GitHub, the CI/CD pipeline rebuilds and redeploys everything. Zero downtime, all clients updated within ~15 minutes.
+For each new treatment center:
+1. Create `deploy/clients/[CLIENT-SLUG].tfvars` on GitHub web UI — copy `main.tfvars`, change domain, passwords, Twilio number
+2. Commit → GitHub Actions auto-deploys a fully isolated AWS stack (own VPC, own database, own ECS cluster)
+3. Add their DNS CNAME record
+4. Set up their Twilio webhooks
+5. Give them their login URL and admin password
+Total time per new client: ~15 minutes
 
-**Adding a new client (SaaS multi-tenant model):**
-1. Create `deploy/clients/NEW-CLIENT.tfvars` with their details on GitHub (web UI)
-2. Commit it — GitHub Actions deploys a completely isolated AWS stack for them automatically
-3. Add their CNAME DNS record pointing to their new ALB
-4. Set up Twilio webhooks for their phone number
-5. Done — ~15 minutes total per new client
+## HOW TO SELL THE FULL APP (CLIENT OWNS THEIR AWS)
 
-**Selling the app outright (perpetual license — client owns their AWS):**
-1. Client creates their own AWS account
-2. They create an IAM user and give you the access key temporarily
-3. Run `new-client.sh` configured with their credentials — everything deploys into their account
-4. They delete the temporary IAM key when done
-5. Their app runs entirely on their own AWS, billed to their card
-6. To push future updates to them: they give you temp credentials again, run `update-all-clients.sh`
+1. Client creates an AWS account and gives you a temporary IAM access key
+2. `aws configure` with their key, run `deploy/scripts/new-client.sh`
+3. Everything deploys into their account, billed to their card
+4. They delete the temp key when done
+
+## HOW TO PUSH APP UPDATES
+
+Push to GitHub main branch → GitHub Actions handles everything → all clients updated in ~15 min, zero downtime.
 
 ---
 
-Begin now with Step 1. Ask me for everything you need, then do not stop until Step 13 is fully complete and checked off.
+Begin with Step 1. Collect credentials, then execute every step without stopping.

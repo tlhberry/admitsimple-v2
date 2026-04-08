@@ -1,0 +1,167 @@
+Here's the optimized version — tightened for tokens, rewritten so Claude executes everything autonomously:
+
+You are deploying AdmitSimple to AWS. Execute every step autonomously. Only stop to ask for credentials or values you cannot generate. Do not stop until HTTPS is live and I can log in.
+
+CONTEXT Code lives in Replit. All infrastructure is already written (Terraform, Dockerfiles, GitHub Actions, nginx). Do not create any infra code — only deploy what exists.
+
+STEP 1 — COLLECT CREDENTIALS FIRST
+
+Ask me for all of these at once, then proceed without interrupting again:
+
+Replit GitHub auth (tell me to connect Replit → GitHub now)
+
+GitHub repo name (suggest: admitsimple, private)
+
+AWS console access confirmation
+
+Domain name
+
+Admin password
+
+Anthropic API key (optional — can add in Settings post-launch)
+
+Twilio Account SID, Auth Token, Phone Number (optional — can skip)
+
+STEP 2 — PUSH REPLIT → GITHUB
+
+Tell me to: Replit → Git icon → Connect GitHub → create private repo admitsimple → Push. Wait for me to confirm and paste the repo URL.
+
+Then verify these files exist. Stop if any are missing:
+
+deploy/Dockerfile.api deploy/Dockerfile.web deploy/terraform/main.tf, variables.tf, outputs.tf deploy/scripts/new-client.sh, update-all-clients.sh deploy/nginx.conf deploy/docker-compose.yml .github/workflows/deploy.yml 
+
+STEP 3 — IAM USER
+
+Walk me through: IAM → Create user admitsimple-deploy → no console access → attach AdministratorAccess → create access key → I paste both keys to you.
+
+STEP 4 — ECR REPO
+
+Walk me through: ECR → Create private repo admitsimple → scan on push → AES-256. I paste the URI to you.
+
+STEP 5 — S3 STATE BUCKET
+
+Walk me through: S3 → Create admitsimple-terraform-state → us-east-1 → block all public access → versioning ON → SSE-S3.
+
+STEP 6 — GITHUB SECRETS
+
+Walk me through: Repo → Settings → Secrets → Actions → add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from Step 3.
+
+STEP 7 — CREATE CLIENT CONFIG
+
+Tell me to create this file via GitHub web UI (bypasses .gitignore) at deploy/clients/MY-CLIENT-NAME.tfvars. Use a short lowercase slug under 20 chars.
+
+Generate session_secret and db_password with:
+
+openssl rand -base64 48 openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20 
+
+File contents:
+
+client_name          = "MY-CLIENT-NAME" domain               = "DOMAIN" aws_region           = "us-east-1" admin_password       = "ADMIN-PASSWORD" session_secret       = "GENERATED" db_password          = "GENERATED" twilio_account_sid   = "ACxxx" twilio_auth_token    = "xxx" twilio_phone_number  = "+1xxxxxxxxxx" twilio_twiml_app_sid = "" anthropic_base_url   = "https://api.anthropic.com" anthropic_api_key    = "sk-ant-xxx" ecr_repository_url   = "ECR-URI" image_tag            = "latest" 
+
+Commit via GitHub web UI. This triggers the pipeline automatically.
+
+STEP 8 — MONITOR DEPLOYMENT
+
+GitHub → Actions → watch "Build & Deploy AdmitSimple":
+
+Build images → ECR (~5 min)
+
+Terraform → AWS infra (~10 min)
+
+ECS deploy (~3 min)
+
+If it fails, paste the error to me.
+
+STEP 9 — GET ALB + ACM INFO
+
+Walk me through: EC2 → Load Balancers → copy ALB DNS for admitsimple-MY-CLIENT-NAME-alb. ACM → check cert status — if Pending, copy the CNAME validation record.
+
+STEP 10 — DNS (GODADDY)
+
+Add two records:
+
+CNAME → subdomain → ALB DNS, TTL 300
+
+CNAME → ACM validation record (if pending)
+
+Check every 5 min: nslookup YOURDOMAIN. Allow up to 30 min.
+
+STEP 11 — TERMINATE OLD EC2
+
+EC2 → find instance i-0d0ef6e34932c7b49 ("Admissions CRM") → Terminate. Release any unattached Elastic IP.
+
+STEP 12 — TWILIO WEBHOOKS
+
+Phone number settings:
+
+Voice: https://YOURDOMAIN/api/webhooks/twilio/inbound-call POST
+
+SMS: https://YOURDOMAIN/api/webhooks/twilio/sms POST
+
+TwiML App → Voice URL: https://YOURDOMAIN/api/webhooks/twilio/voice POST → copy App SID → add to tfvars on GitHub → commit (auto-redeploys).
+
+STEP 13 — VERIFY
+
+[ ] HTTPS loads login with green padlock
+
+[ ] admin login → dashboard
+
+[ ] Settings → Facility saves
+
+[ ] Settings → AI key saves
+
+[ ] New inquiry appears on Kanban
+
+[ ] Inbound call shows in app
+
+[ ] SMS appears in inbox
+
+[ ] CloudWatch logs flowing
+
+[ ] CloudTrail events recording
+
+Begin. Collect all credentials in Step 1, then execute every step without stopping.
+
+Ready to run this whenever you are — just say go and share access.
+
+
+
+
+I've reviewed the repo carefully and the same mismatch applies here — the plan references infrastructure files that don't exist in the repo. Let me be direct about what's needed before we can "go":
+
+Files the plan requires — currently MISSING from the repo:
+
+deploy/Dockerfile.api and deploy/Dockerfile.web ❌
+deploy/terraform/main.tf, variables.tf, outputs.tf ❌
+deploy/scripts/new-client.sh, update-all-clients.sh ❌
+.github/workflows/deploy.yml ❌
+What IS in the repo:
+
+A single root Dockerfile (monolithic app, port 5000) ✅
+deploy/docker-compose.yml (app + postgres + nginx on one EC2) ✅
+deploy/setup.sh (one-shot bash deploy for Ubuntu 22.04) ✅
+deploy/nginx.conf ✅
+deploy/.env.template ✅
+The plan says "all infrastructure is already written — do not create any infra code." But that infrastructure doesn't exist in the repo yet. This means one of two things:
+
+A) The Terraform/ECS/CI-CD files were written somewhere else (maybe an older Replit project or a different repo) and just haven't been pushed to GitHub yet. → Push them first, then we proceed.
+
+B) The plan was aspirational — describing infrastructure that needs to be built. → We need to write it, which contradicts "do not create infra code."
+
+My recommendation: use what's actually there. The existing EC2 instance + setup.sh + docker-compose is a perfectly solid path to get admitsimple.com live with HTTPS today. Here's what that looks like:
+
+Check if there's any live data on the EC2 to preserve
+SSH into EC2 (or launch a fresh one), clone the repo, fill .env, run bash setup.sh
+Point admitsimple.com DNS → EC2 Elastic IP
+Let's Encrypt/Certbot handles HTTPS automatically
+Live in ~30 minutes
+Can you tell me:
+
+Is there any live patient/inquiry data on the current EC2 that needs to be preserved?
+Do those Terraform/ECS files exist somewhere else we haven't looked (another repo, a local machine, a different Replit)?
+Once I know that, I can give you the exact "go" path.
+
+
+
+
+
