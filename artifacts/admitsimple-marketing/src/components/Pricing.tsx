@@ -76,7 +76,7 @@ export default function Pricing() {
             
             <div className="mb-8 relative z-10">
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold">$25,000</span>
+                <span className="text-4xl font-bold">$15,000</span>
                 <span className="text-white/60">one-time</span>
               </div>
               <p className="text-sm text-white/60 mt-2">No recurring software fees</p>
