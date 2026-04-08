@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, ArrowLeft } from "lucide-react";
-import logo from "@assets/image_1775685389437.png";
+import logo from "@assets/image_1775685707868.png";
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);

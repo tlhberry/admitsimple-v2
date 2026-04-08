@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import logo from "@assets/image_1775685389437.png";
+import logo from "@assets/image_1775685707868.png";
 
 export default function TermsOfService() {
   return (
