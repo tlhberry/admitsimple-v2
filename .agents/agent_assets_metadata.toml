@@ -1,5 +1,22 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "9aq-Hw_4-tzf7U6aLpuBU"
+uri = "file://artifacts/admitsimple-marketing/public/images/dashboard-hero.png"
+type = "image"
+title = "Clinical CRM Dashboard Mockup"
+
+[[generated]]
+id = "2TX0Ygq-YOefM9v1F0b56"
+uri = "file://artifacts/admitsimple-marketing/public/images/ai-analysis.png"
+type = "image"
+title = "AI Patient Analysis Mockup"
+
+[[generated]]
+id = "mG5ifoprYK5chvYXKY0Xo"
+uri = "file://artifacts/admitsimple-marketing/public/images/pipeline.png"
+type = "image"
+title = "Admissions Pipeline Mockup"
 
 [[outputs]]
 id = "BBsLbgpyrJvkxINOu1WWs"
