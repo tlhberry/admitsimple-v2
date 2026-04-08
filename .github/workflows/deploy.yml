@@ -1,0 +1,115 @@
+name: Build & Deploy AdmitSimple
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      client:
+        description: 'Deploy to specific client only (leave blank for all)'
+        required: false
+        default: ''
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: admitsimple
+
+jobs:
+  build-and-push:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+      ecr_url: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: meta
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build & push API image
+        run: |
+          docker build -f deploy/Dockerfile.api \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:api-${{ steps.meta.outputs.tag }} \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:api-latest \
+            .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:api-${{ steps.meta.outputs.tag }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:api-latest
+
+      - name: Build & push Web image
+        run: |
+          docker build -f deploy/Dockerfile.web \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:web-${{ steps.meta.outputs.tag }} \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:web-latest \
+            .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:web-${{ steps.meta.outputs.tag }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:web-latest
+
+  deploy-clients:
+    name: Deploy to Clients
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Deploy to clients
+        run: |
+          TARGET_CLIENT="${{ github.event.inputs.client }}"
+
+          for VARS_FILE in deploy/clients/*.tfvars; do
+            CLIENT_NAME=$(basename "$VARS_FILE" .tfvars)
+
+            if [ -n "$TARGET_CLIENT" ] && [ "$CLIENT_NAME" != "$TARGET_CLIENT" ]; then
+              echo "Skipping $CLIENT_NAME"
+              continue
+            fi
+
+            echo "▶ Deploying $CLIENT_NAME..."
+
+            cd deploy/terraform
+            terraform init -reconfigure \
+              -backend-config="bucket=admitsimple-terraform-state" \
+              -backend-config="key=clients/$CLIENT_NAME/terraform.tfstate" \
+              -backend-config="region=${{ env.AWS_REGION }}"
+
+            terraform apply \
+              -var-file="../../$VARS_FILE" \
+              -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
+              -var="ecr_repository_url=${{ needs.build-and-push.outputs.ecr_url }}" \
+              -auto-approve
+
+            aws ecs update-service \
+              --cluster "admitsimple-${CLIENT_NAME}-cluster" \
+              --service "admitsimple-${CLIENT_NAME}-service" \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }} || true
+
+            echo "✅ $CLIENT_NAME deployed"
+            cd ../..
+          done

@@ -1,0 +1,44 @@
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+FROM base AS builder
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY artifacts/api-server/build.mjs ./artifacts/api-server/
+COPY lib/db/package.json ./lib/db/
+COPY lib/api-zod/package.json ./lib/api-zod/
+COPY lib/api-spec/package.json ./lib/api-spec/
+COPY lib/api-client-react/package.json ./lib/api-client-react/
+
+RUN pnpm install --frozen-lockfile
+
+COPY artifacts/api-server/src ./artifacts/api-server/src
+COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/
+COPY lib/db/src ./lib/db/src
+COPY lib/db/tsconfig.json ./lib/db/
+COPY lib/api-zod/src ./lib/api-zod/src
+COPY lib/api-zod/tsconfig.json ./lib/api-zod/
+COPY tsconfig.json ./
+
+RUN pnpm --filter @workspace/api-server run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+USER nodejs
+
+EXPOSE 3001
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
