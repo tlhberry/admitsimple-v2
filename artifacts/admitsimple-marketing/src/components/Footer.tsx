@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import logo from "@assets/image_1775685931239.png";
+import logo from "@assets/ChatGPT_Image_Apr_8,_2026,_06_01_28_PM_1775686437346.png";
 
 export default function Footer() {
   return (
@@ -11,7 +11,7 @@ export default function Footer() {
               src={logo}
               alt="AdmitSimple"
               className="h-10 w-auto mb-5"
-             
+              style={{ mixBlendMode: "screen" }}
             />
             <p className="text-white/60 max-w-xs text-sm">
               The HIPAA-compliant Admissions CRM for addiction treatment centers, powered by Claude.

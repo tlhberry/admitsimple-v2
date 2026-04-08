@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logo from "@assets/image_1775685931239.png";
+import logo from "@assets/ChatGPT_Image_Apr_8,_2026,_06_01_28_PM_1775686437346.png";
 
 export default function Header() {
   return (
@@ -11,7 +11,7 @@ export default function Header() {
             src={logo}
             alt="AdmitSimple"
             className="h-9 md:h-11 w-auto"
-           
+            style={{ mixBlendMode: "screen" }}
           />
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/80">
