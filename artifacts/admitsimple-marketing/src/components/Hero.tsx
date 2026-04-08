@@ -17,7 +17,7 @@ const cards = [
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[100dvh] flex items-center justify-center pt-20 bg-[#2d3748] text-white">
+    <section className="relative min-h-[100dvh] flex items-center justify-center pt-32 bg-[#2d3748] text-white">
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#5BC8DC]/8 rounded-full blur-[120px] pointer-events-none" />
 

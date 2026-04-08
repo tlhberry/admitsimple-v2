@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-2">
-            <img src={logo} alt="AdmitSimple" className="h-16 w-auto mb-4" />
+            <img src={logo} alt="AdmitSimple" className="h-32 w-auto mb-4" />
             <p className="text-white/60 max-w-xs text-sm">
               The HIPAA-compliant Admissions CRM for addiction treatment centers, powered by Claude.
             </p>

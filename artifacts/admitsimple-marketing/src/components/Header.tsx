@@ -5,9 +5,9 @@ import logo from "@assets/AdmitSimple_logo_with_tagline_design_1775683998872.png
 export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#2d3748]/95 backdrop-blur border-b border-white/10">
-      <div className="container mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
+      <div className="container mx-auto px-4 md:px-6 h-32 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <img src={logo} alt="AdmitSimple" className="h-14 md:h-16 w-auto" />
+          <img src={logo} alt="AdmitSimple" className="h-28 md:h-32 w-auto" />
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/80">
           <a href="#pipeline" className="hover:text-primary transition-colors">Pipeline</a>
