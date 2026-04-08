@@ -101,6 +101,33 @@ export default function Settings() {
   const toggle = (key: string) => setValues(v => ({ ...v, [key]: v[key] === "true" ? "false" : "true" }));
 
   const [copied, setCopied] = useState(false);
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [newAnthropicKey, setNewAnthropicKey] = useState("");
+  const [replacingAnthropicKey, setReplacingAnthropicKey] = useState(false);
+  const [savingAnthropicKey, setSavingAnthropicKey] = useState(false);
+  const anthropicKeySaved = !!values["anthropic_api_key"];
+
+  const handleSaveAnthropicKey = async () => {
+    if (!newAnthropicKey.trim()) return;
+    setSavingAnthropicKey(true);
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: [{ key: "anthropic_api_key", value: newAnthropicKey.trim() }] }),
+      });
+      setValues(v => ({ ...v, anthropic_api_key: newAnthropicKey.trim() }));
+      setNewAnthropicKey("");
+      setReplacingAnthropicKey(false);
+      setShowAnthropicKey(false);
+      toast({ title: "API key saved" });
+    } catch {
+      toast({ title: "Failed to save API key", variant: "destructive" });
+    } finally {
+      setSavingAnthropicKey(false);
+    }
+  };
   const [showApiSecret, setShowApiSecret] = useState(false);
   const [showTwilioGuide, setShowTwilioGuide] = useState(false);
   const [showCtmFields, setShowCtmFields] = useState(false);
@@ -304,6 +331,70 @@ export default function Settings() {
                     <span className="text-muted-foreground">AI features use only aggregated, de-identified data. PHI is never transmitted to external AI providers.</span>
                   </p>
                 </div>
+
+                {isAdmin && (
+                  <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Anthropic API Key</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Required for all AI features. Get yours at <span className="text-primary">console.anthropic.com</span></p>
+                      </div>
+                      {anthropicKeySaved && !replacingAnthropicKey && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Key saved
+                          </span>
+                          <button
+                            onClick={() => setReplacingAnthropicKey(true)}
+                            className="text-xs text-muted-foreground hover:text-foreground underline"
+                          >
+                            Replace
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {(!anthropicKeySaved || replacingAnthropicKey) && (
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Input
+                            type={showAnthropicKey ? "text" : "password"}
+                            value={newAnthropicKey}
+                            onChange={e => setNewAnthropicKey(e.target.value)}
+                            placeholder="sk-ant-api03-..."
+                            className="mt-1.5 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10 font-mono text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowAnthropicKey(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground mt-0.5"
+                          >
+                            {showAnthropicKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSaveAnthropicKey}
+                            disabled={!newAnthropicKey.trim() || savingAnthropicKey}
+                            className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            {savingAnthropicKey ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                            Save API Key
+                          </button>
+                          {replacingAnthropicKey && (
+                            <button
+                              onClick={() => { setReplacingAnthropicKey(false); setNewAnthropicKey(""); }}
+                              className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:text-foreground"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {[
                   { key: "ai_auto_summarize",         label: "Auto-Summarize Inquiries",          desc: "Automatically generate AI summaries for new inquiries" },
                   { key: "ai_pipeline_suggestions",   label: "Pipeline Optimization Suggestions", desc: "Get AI recommendations for moving inquiries through the pipeline" },

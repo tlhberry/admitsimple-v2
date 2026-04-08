@@ -1,5 +1,5 @@
 import { Router } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient } from "../lib/anthropicClient";
 import twilio from "twilio";
 import { db } from "@workspace/db";
 import { inquiries, activities, settings, chatbotSessions } from "@workspace/db/schema";
@@ -8,11 +8,6 @@ import { broadcastSSE } from "../lib/sse";
 import { requireAuth } from "../lib/requireAuth";
 
 const router = Router();
-
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
 
 const DEFAULT_BRAIN = `You are a compassionate admissions coordinator for an addiction treatment center. You guide potential clients through the insurance verification process with warmth, empathy, and care. You are non-judgmental and supportive. You understand that reaching out takes courage. Keep your tone conversational and never clinical. Always be encouraging.`;
 
@@ -65,6 +60,7 @@ router.post("/chatbot/message", async (req, res) => {
     if (!messages?.length) return res.status(400).json({ error: "messages required" });
 
     const brain = (await loadSetting("chatbot_brain")) || DEFAULT_BRAIN;
+    const anthropic = await getAnthropicClient();
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 300,

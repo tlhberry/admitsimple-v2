@@ -5,15 +5,10 @@ import {
 } from "@workspace/db/schema";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient } from "../lib/anthropicClient";
 
 const router = Router();
 router.use(requireAuth);
-
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -376,6 +371,7 @@ Please provide:
 4. Key opportunities or risks to be aware of
 5. Recommended contact frequency for this account type`;
 
+    const anthropic = await getAnthropicClient();
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 1024,

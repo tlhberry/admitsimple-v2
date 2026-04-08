@@ -4,15 +4,10 @@ import { inquiries, aiStageSuggestions, pipelineStages, users, activities } from
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { broadcastSSE } from "../lib/sse";
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient } from "../lib/anthropicClient";
 
 const router = Router();
 router.use(requireAuth);
-
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
 
 // ─── Get pending AI stage suggestions ──────────────────────────────────────────
 router.get("/ai-suggestions", async (req, res) => {
@@ -153,6 +148,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside the JSON):
   "reasoning": "1-2 sentence explanation of why or why not"
 }`;
 
+    const anthropic = await getAnthropicClient();
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 300,

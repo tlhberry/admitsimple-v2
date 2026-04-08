@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import multer from "multer";
 import * as XLSX from "xlsx";
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient } from "../lib/anthropicClient";
 import { logAudit } from "../lib/logAudit";
 
 const router = Router();
@@ -38,11 +38,6 @@ const upload = multer({
       cb(new Error("Only CSV, XLS, and XLSX files are supported"));
     }
   },
-});
-
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -111,6 +106,7 @@ Return ONLY a valid JSON object mapping target field names to the column header 
 }`;
 
   try {
+    const anthropic = await getAnthropicClient();
     const response = await anthropic.messages.create({
       model: "claude-3-5-haiku-20241022",
       max_tokens: 500,
