@@ -32,7 +32,7 @@ export default function Footer() {
               <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
               <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-              <li><a href="https://admitsimple.com/login" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Client Log In</a></li>
+              <li><a href="/login" className="hover:text-primary transition-colors">Client Log In</a></li>
             </ul>
           </div>
         </div>
