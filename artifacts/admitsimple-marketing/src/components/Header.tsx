@@ -7,8 +7,8 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#2d3748]/95 backdrop-blur border-b border-white/10">
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="overflow-hidden flex items-center justify-center" style={{ width: 300, height: 56 }}>
-            <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(2.2)", transformOrigin: "45% center", width: 300 }} />
+          <div className="overflow-hidden flex items-center justify-center" style={{ width: 150, height: 28 }}>
+            <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(1.1)", transformOrigin: "45% center", width: 150 }} />
           </div>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/80">
