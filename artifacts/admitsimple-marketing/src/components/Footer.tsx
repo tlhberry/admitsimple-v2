@@ -1,4 +1,4 @@
-import logo from "@assets/AdmitSimple_logo_with_tagline_design_1775684035806.png";
+import logo from "@assets/admit_logo_no_padding_1775684615367.png";
 
 export default function Footer() {
   return (
@@ -6,7 +6,9 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-2">
-            <img src={logo} alt="AdmitSimple" className="h-32 w-auto mb-4" />
+            <div className="overflow-hidden flex items-center justify-center mb-4" style={{ width: 300, height: 56 }}>
+              <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(2.2)", transformOrigin: "45% center", width: 300 }} />
+            </div>
             <p className="text-white/60 max-w-xs text-sm">
               The HIPAA-compliant Admissions CRM for addiction treatment centers, powered by Claude.
             </p>

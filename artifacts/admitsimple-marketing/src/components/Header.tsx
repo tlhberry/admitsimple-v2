@@ -1,13 +1,15 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logo from "@assets/AdmitSimple_logo_with_tagline_design_1775683998872.png";
+import logo from "@assets/admit_logo_no_padding_1775684615367.png";
 
 export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#2d3748]/95 backdrop-blur border-b border-white/10">
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <img src={logo} alt="AdmitSimple" className="h-28 md:h-32 w-auto" />
+          <div className="overflow-hidden flex items-center justify-center" style={{ width: 300, height: 56 }}>
+            <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(2.2)", transformOrigin: "45% center", width: 300 }} />
+          </div>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/80">
           <a href="#pipeline" className="hover:text-primary transition-colors">Pipeline</a>
