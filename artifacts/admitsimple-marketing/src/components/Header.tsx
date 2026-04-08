@@ -1,15 +1,18 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logo from "@assets/admit_logo_no_padding_1775684615367.png";
+import logo from "@assets/image_1775685389437.png";
 
 export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#2d3748]/95 backdrop-blur border-b border-white/10">
-      <div className="container mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="overflow-hidden flex items-center justify-center" style={{ width: 190, height: 36 }}>
-            <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(1.4)", transformOrigin: "45% center", width: 190 }} />
-          </div>
+      <div className="container mx-auto px-4 md:px-6 pr-6 md:pr-8 py-3 flex items-center justify-between gap-4">
+        <Link href="/" className="flex-shrink-0">
+          <img
+            src={logo}
+            alt="AdmitSimple"
+            className="h-9 md:h-11 w-auto"
+            style={{ mixBlendMode: "screen" }}
+          />
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/80">
           <a href="#pipeline" className="hover:text-primary transition-colors">Pipeline</a>
@@ -17,11 +20,11 @@ export default function Header() {
           <a href="#security" className="hover:text-primary transition-colors">Security</a>
           <a href="#pricing" className="hover:text-primary transition-colors">Pricing</a>
         </nav>
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent font-medium">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button asChild variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent font-medium text-sm h-9 px-3 md:px-4">
             <a href="/login">Log In</a>
           </Button>
-          <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20">
+          <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 text-sm h-9 px-3 md:px-4">
             <a href="#demo">Request a Demo</a>
           </Button>
         </div>

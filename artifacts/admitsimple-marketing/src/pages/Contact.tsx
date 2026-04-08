@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, ArrowLeft } from "lucide-react";
-import logo from "@assets/admit_logo_no_padding_1775684615367.png";
+import logo from "@assets/image_1775685389437.png";
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
@@ -36,11 +36,9 @@ export default function Contact() {
 
       <div className="min-h-screen bg-[#f8fafc]">
         <header className="bg-[#2d3748] border-b border-white/10">
-          <div className="container mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+          <div className="container mx-auto px-4 md:px-6 pr-6 py-3 flex items-center justify-between">
             <Link href="/">
-              <div className="overflow-hidden flex items-center justify-center" style={{ width: 190, height: 36 }}>
-                <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(1.4)", transformOrigin: "45% center", width: 190 }} />
-              </div>
+              <img src={logo} alt="AdmitSimple" className="h-9 w-auto" style={{ mixBlendMode: "screen" }} />
             </Link>
             <Link href="/" className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors">
               <ArrowLeft className="w-4 h-4" />

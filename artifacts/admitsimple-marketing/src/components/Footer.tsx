@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import logo from "@assets/admit_logo_no_padding_1775684615367.png";
+import logo from "@assets/image_1775685389437.png";
 
 export default function Footer() {
   return (
@@ -7,9 +7,12 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-2">
-            <div className="overflow-hidden flex items-center justify-center mb-4" style={{ width: 190, height: 36, marginLeft: 0, justifyContent: "flex-start" }}>
-              <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(1.4)", transformOrigin: "45% center", width: 190 }} />
-            </div>
+            <img
+              src={logo}
+              alt="AdmitSimple"
+              className="h-10 w-auto mb-5"
+              style={{ mixBlendMode: "screen" }}
+            />
             <p className="text-white/60 max-w-xs text-sm">
               The HIPAA-compliant Admissions CRM for addiction treatment centers, powered by Claude.
             </p>
