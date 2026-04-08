@@ -189,11 +189,6 @@ resource "aws_lb" "main" {
 
   enable_deletion_protection = true
 
-  access_logs {
-    bucket  = aws_s3_bucket.logs.bucket
-    prefix  = "alb"
-    enabled = true
-  }
 }
 
 resource "aws_lb_target_group" "web" {
