@@ -39,7 +39,7 @@ export default function Login() {
         <div className="bg-card border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
           <div className="px-8 pt-8 pb-2">
             <h2 className="text-xl font-bold text-foreground">Sign in to your account</h2>
-            <p className="text-sm text-muted-foreground mt-1">HIPAA-Conscious Admissions CRM</p>
+            <p className="text-sm text-muted-foreground mt-1">HIPAA-Compliant Admissions CRM</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-5">
