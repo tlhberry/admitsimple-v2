@@ -26,8 +26,8 @@ const aiFeatures = [
 
 const analysisLines = [
   { label: "Diagnosis", value: "Opioid Use Disorder, severe", confidence: 98 },
-  { label: "Insurance", value: "Blue Cross PPO — Active", confidence: 94 },
-  { label: "Risk Level", value: "High — immediate intake recommended", confidence: 91 },
+  { label: "Insurance", value: "Blue Cross PPO: Active", confidence: 94 },
+  { label: "Risk Level", value: "High: immediate intake recommended", confidence: 91 },
   { label: "Suggested Stage", value: "Pre-Assessment", confidence: 97 },
 ];
 
@@ -95,7 +95,7 @@ export default function AiSection() {
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-[11px] text-white/30 font-mono">Claude Analysis — Marcus T.</span>
+                <span className="ml-3 text-[11px] text-white/30 font-mono">Claude Analysis: Marcus T.</span>
                 <div className="ml-auto flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#5BC8DC] animate-pulse" />
                   <span className="text-[10px] text-[#5BC8DC]">Processing</span>
@@ -109,7 +109,7 @@ export default function AiSection() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Marcus T., 34</p>
-                  <p className="text-[11px] text-white/40">Referral received — PDF uploaded 2 min ago</p>
+                  <p className="text-[11px] text-white/40">Referral received, PDF uploaded 2 min ago</p>
                 </div>
                 <div className="ml-auto text-[10px] bg-orange-500/20 text-orange-300 px-2 py-1 rounded-full font-medium">High Priority</div>
               </div>

@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import PipelineSection from "@/components/PipelineSection";
 import AiSection from "@/components/AiSection";
+import ClaudeDataSafety from "@/components/ClaudeDataSafety";
 import Security from "@/components/Security";
 import Pricing from "@/components/Pricing";
 import CtaSection from "@/components/CtaSection";
@@ -17,6 +18,7 @@ export default function Home() {
         <Features />
         <PipelineSection />
         <AiSection />
+        <ClaudeDataSafety />
         <Security />
         <Pricing />
         <CtaSection />

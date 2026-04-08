@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import logo from "@assets/admit_logo_no_padding_1775684615367.png";
 
 export default function Footer() {
@@ -6,7 +7,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-2">
-            <div className="overflow-hidden flex items-center justify-center mb-4" style={{ width: 190, height: 36 }}>
+            <div className="overflow-hidden flex items-center justify-center mb-4" style={{ width: 190, height: 36, marginLeft: 0, justifyContent: "flex-start" }}>
               <img src={logo} alt="AdmitSimple" style={{ mixBlendMode: "screen", transform: "scale(1.4)", transformOrigin: "45% center", width: 190 }} />
             </div>
             <p className="text-white/60 max-w-xs text-sm">
@@ -25,10 +26,9 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4 text-white">Company</h4>
             <ul className="space-y-2 text-sm text-white/60">
-              <li><a href="#" className="hover:text-primary transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Terms of Service</a></li>
+              <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+              <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

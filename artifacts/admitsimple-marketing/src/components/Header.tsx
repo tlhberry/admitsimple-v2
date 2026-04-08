@@ -17,7 +17,10 @@ export default function Header() {
           <a href="#security" className="hover:text-primary transition-colors">Security</a>
           <a href="#pricing" className="hover:text-primary transition-colors">Pricing</a>
         </nav>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Button asChild variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent font-medium">
+            <a href="/login">Log In</a>
+          </Button>
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20">
             <a href="#demo">Request a Demo</a>
           </Button>

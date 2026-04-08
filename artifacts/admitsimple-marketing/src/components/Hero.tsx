@@ -41,7 +41,7 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/65 mb-8 leading-relaxed max-w-xl">
-            Stop paying markups on AI. AdmitSimple gives your treatment center an 8-stage clinical admissions pipeline with direct Anthropic integration. Pay Claude directly — no middlemen.
+            Stop paying markups on AI. AdmitSimple gives your treatment center an 8-stage clinical admissions pipeline with direct Anthropic integration. Pay Claude directly, no middlemen.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -91,7 +91,7 @@ export default function Hero() {
               <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-              <span className="ml-3 text-[11px] text-white/30 font-mono">AdmitSimple — Admissions Pipeline</span>
+              <span className="ml-3 text-[11px] text-white/30 font-mono">AdmitSimple: Admissions Pipeline</span>
             </div>
 
             {/* Pipeline columns */}

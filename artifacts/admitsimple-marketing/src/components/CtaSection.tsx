@@ -7,9 +7,16 @@ import { Textarea } from "@/components/ui/textarea";
 export default function CtaSection() {
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Static demo - just show success state
+    const form = e.currentTarget;
+    const name = (form.querySelector("#name") as HTMLInputElement).value;
+    const facility = (form.querySelector("#facility") as HTMLInputElement).value;
+    const email = (form.querySelector("#email") as HTMLInputElement).value;
+    const phone = (form.querySelector("#phone") as HTMLInputElement).value;
+    const notes = (form.querySelector("#notes") as HTMLTextAreaElement).value;
+    const body = `Name: ${name}\nFacility: ${facility}\nEmail: ${email}\nPhone: ${phone}\n\nNotes:\n${notes}`;
+    window.location.href = `mailto:austin@admitsimple.com?subject=Demo Request from ${name} at ${facility}&body=${encodeURIComponent(body)}`;
     setSubmitted(true);
   };
 
@@ -27,21 +34,24 @@ export default function CtaSection() {
                 </p>
                 <div className="space-y-4 text-sm text-white/80">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">✓</div>
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
                     <span>Full platform demonstration</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">✓</div>
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
                     <span>Discussion of your specific workflow</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">✓</div>
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
                     <span>Pricing and deployment options</span>
                   </div>
                 </div>
+                <p className="mt-8 text-xs text-white/40">
+                  Or email us directly at austin@admitsimple.com
+                </p>
               </div>
             </div>
-            
+
             <div className="p-10 md:p-12 bg-white">
               {submitted ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
@@ -50,8 +60,8 @@ export default function CtaSection() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Request Received</h3>
-                  <p className="text-gray-600">We'll be in touch shortly to schedule your demo.</p>
+                  <h3 className="text-2xl font-bold text-gray-900">Request Sent</h3>
+                  <p className="text-gray-600 text-sm">Your email client should have opened with your details. We will be in touch shortly.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +82,7 @@ export default function CtaSection() {
                     <Input id="phone" type="tel" required placeholder="(555) 000-0000" className="bg-gray-50 border-gray-200" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Anything specific you'd like to see?</Label>
+                    <Label htmlFor="notes">Anything specific you would like to see?</Label>
                     <Textarea id="notes" placeholder="We are currently using..." className="bg-gray-50 border-gray-200 resize-none" rows={3} />
                   </div>
                   <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold">

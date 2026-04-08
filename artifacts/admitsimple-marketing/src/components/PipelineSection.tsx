@@ -54,7 +54,7 @@ export default function PipelineSection() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="font-semibold text-gray-900 text-sm">{stage.name}</span>
-                      <span className="text-gray-400 text-xs ml-2">— {stage.desc}</span>
+                      <span className="text-gray-400 text-xs ml-2">: {stage.desc}</span>
                     </div>
                   </div>
                 );
@@ -77,7 +77,7 @@ export default function PipelineSection() {
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-[11px] text-white/40 font-mono">Admissions Pipeline — Kanban View</span>
+                <span className="ml-3 text-[11px] text-white/40 font-mono">Admissions Pipeline: Kanban View</span>
               </div>
 
               {/* Kanban board */}
