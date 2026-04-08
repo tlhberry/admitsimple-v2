@@ -1,0 +1,29 @@
+
+
+What the plan assumes the repo has:
+
+deploy/Dockerfile.api + deploy/Dockerfile.web (two containers: API + React/nginx)
+deploy/terraform/ (Terraform for ECS, ECR, ALB, ACM)
+.github/workflows/deploy.yml (CI/CD pipeline)
+deploy/scripts/new-client.sh, update-all-clients.sh
+A multi-tenant "clients/" tfvars pattern
+
+What's actually in the repo:
+
+A single Dockerfile at the root (one monolithic Node app on port 5000)
+deploy/docker-compose.yml — runs app + postgres + nginx as Docker Compose on a single EC2 server
+deploy/setup.sh — a bash setup.sh one-shot script for Ubuntu 22.04
+deploy/nginx.conf — nginx reverse proxy with Let's Encrypt/Certbot
+deploy/.env.template — environment vars
+No Terraform, no ECS, no ECR, no GitHub Actions CI/CD
+
+
+What this means: The repo is set up for a simpler self-hosted deployment on the existing EC2 instance (Ubuntu 22.04), not ECS/Fargate with Terraform. The deployment plan you shared was written for a different infrastructure than what's in the repo.
+Two options — your call:
+Option A — Deploy using what's actually in the repo (recommended, faster)
+Keep the existing EC2 instance (or reuse it), SSH in, clone the repo, fill in the .env, run bash setup.sh, point admitsimple.com DNS to the EC2 IP, and Let's Encrypt handles HTTPS. Done in ~20 minutes.
+Option B — Build the ECS/Terraform/CI-CD infrastructure from scratch
+This requires creating all the missing files (Terraform, Dockerfiles for split containers, GitHub Actions workflow) — significant new infrastructure code. The plan says "Do not create new infrastructure code," so this contradicts that instruction.
+My recommendation is Option A — it matches what's in the repo, it's what setup.sh was built for, and it gets you live fastest.
+Before I do anything destructive (terminating EC2): Does the existing "Admissions CRM" EC2 instance have any live data (patient records, inquiries, etc.) we need to preserve? Or is it a previous test deployment we can wipe?
+Which option do you want, and is there data on that EC2 to preserve?
