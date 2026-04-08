@@ -1,4 +1,4 @@
-import logo from "@assets/AdmitSimple_logo_with_tagline_1775683157850.png";
+import logo from "@assets/AdmitSimple_logo_with_tagline_design_1775684035806.png";
 
 export default function Footer() {
   return (
