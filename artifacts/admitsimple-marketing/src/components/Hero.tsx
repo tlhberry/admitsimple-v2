@@ -31,7 +31,7 @@ export default function Hero() {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-[#5BC8DC] mb-6">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>HIPAA-Compliant by Architecture</span>
+            <span>HIPAA-Compliant</span>
           </div>
 
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.08] tracking-tight mb-6">
