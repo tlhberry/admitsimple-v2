@@ -3,7 +3,9 @@ import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import PipelineSection from "@/components/PipelineSection";
 import AiSection from "@/components/AiSection";
+import InboundCallSection from "@/components/InboundCallSection";
 import ClaudeDataSafety from "@/components/ClaudeDataSafety";
+import IntegrationsSection from "@/components/IntegrationsSection";
 import Security from "@/components/Security";
 import Pricing from "@/components/Pricing";
 import CtaSection from "@/components/CtaSection";
@@ -18,7 +20,9 @@ export default function Home() {
         <Features />
         <PipelineSection />
         <AiSection />
+        <InboundCallSection />
         <ClaudeDataSafety />
+        <IntegrationsSection />
         <Security />
         <Pricing />
         <CtaSection />
