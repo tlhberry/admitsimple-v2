@@ -19,6 +19,7 @@ const ALLOWED_ORIGINS = [
   /\.repl\.co$/,
   /\.replit\.app$/,
   /\.worf\.replit\.dev$/,
+  /^https?:\/\/(www\.)?admitsimple\.com$/,
 ];
 
 const app: Express = express();
