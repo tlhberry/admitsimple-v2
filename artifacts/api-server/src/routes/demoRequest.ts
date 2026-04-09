@@ -15,7 +15,7 @@ router.post("/demo-request", async (req, res) => {
     const apiKey = process.env.SENDGRID_API_KEY;
     if (apiKey) {
       sgMail.setApiKey(apiKey);
-      await sgMail.send({
+      const [response] = await sgMail.send({
         to: "austin@admitsimple.com",
         from: "austin@admitsimple.com",
         subject: `Demo Request: ${name} at ${facility}`,
@@ -41,6 +41,7 @@ router.post("/demo-request", async (req, res) => {
           </table>
         `,
       });
+      logger.info({ statusCode: response.statusCode }, "SendGrid response");
     } else {
       logger.warn("SENDGRID_API_KEY not set — skipping email notification");
     }
