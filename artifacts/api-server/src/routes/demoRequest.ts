@@ -16,8 +16,8 @@ router.post("/demo-request", async (req, res) => {
     if (apiKey) {
       sgMail.setApiKey(apiKey);
       const [response] = await sgMail.send({
-        to: "austin@admitsimple.com",
-        from: "austin@admitsimple.com",
+        to: "austin.berry@protonmail.com",
+        from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
         subject: `Demo Request: ${name} at ${facility}`,
         text: [
           `New demo request from admitsimple.com`,
