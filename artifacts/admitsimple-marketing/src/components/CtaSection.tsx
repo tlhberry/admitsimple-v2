@@ -6,18 +6,33 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function CtaSection() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
     const form = e.currentTarget;
     const name = (form.querySelector("#name") as HTMLInputElement).value;
     const facility = (form.querySelector("#facility") as HTMLInputElement).value;
     const email = (form.querySelector("#email") as HTMLInputElement).value;
     const phone = (form.querySelector("#phone") as HTMLInputElement).value;
     const notes = (form.querySelector("#notes") as HTMLTextAreaElement).value;
-    const body = `Name: ${name}\nFacility: ${facility}\nEmail: ${email}\nPhone: ${phone}\n\nNotes:\n${notes}`;
-    window.location.href = `mailto:austin@admitsimple.com?subject=Demo Request from ${name} at ${facility}&body=${encodeURIComponent(body)}`;
-    setSubmitted(true);
+
+    try {
+      const res = await fetch("/api/demo-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, facility, email, phone, notes }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please email us at austin@admitsimple.com.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,8 +75,8 @@ export default function CtaSection() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Request Sent</h3>
-                  <p className="text-gray-600 text-sm">Your email client should have opened with your details. We will be in touch shortly.</p>
+                  <h3 className="text-2xl font-bold text-gray-900">Request Received!</h3>
+                  <p className="text-gray-600 text-sm">We'll reach out to schedule your demo shortly.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -85,8 +100,13 @@ export default function CtaSection() {
                     <Label htmlFor="notes">Anything specific you would like to see?</Label>
                     <Textarea id="notes" placeholder="We are currently using..." className="bg-gray-50 border-gray-200 resize-none" rows={3} />
                   </div>
-                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold">
-                    Request Demo
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
+                  >
+                    {loading ? "Sending..." : "Request Demo"}
                   </Button>
                 </form>
               )}
