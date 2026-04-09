@@ -27,8 +27,9 @@ import demoRequestRouter from "./demoRequest";
 
 const router: IRouter = Router();
 
-router.use(chatbotRouter);  // chatbot/message, chatbot/submit (public)
-router.use(smsRouter);      // sms/send, sms/threads, webhooks/twilio/sms
+router.use(chatbotRouter);    // chatbot/message, chatbot/submit (public)
+router.use(demoRequestRouter); // demo-request (public)
+router.use(smsRouter);        // sms/send, sms/threads, webhooks/twilio/sms
 router.use(webhooksRouter);
 router.use(healthRouter);
 router.use(authRouter);
@@ -51,6 +52,5 @@ router.use(eventsRouter);
 router.use(adminRouter);
 router.use(dischargesRouter);
 router.use(aiStageSuggestionsRouter);
-router.use(demoRequestRouter);
 
 export default router;
