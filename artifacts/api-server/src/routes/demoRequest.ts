@@ -1,5 +1,5 @@
 import { Router } from "express";
-import twilio from "twilio";
+import sgMail from "@sendgrid/mail";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -12,32 +12,42 @@ router.post("/demo-request", async (req, res) => {
   }
 
   try {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-    const toNumber = "+17133035724";
-
-    if (accountSid && authToken && fromNumber) {
-      const client = twilio(accountSid, authToken);
-      const body = [
-        `New Demo Request from AdmitSimple`,
-        `Name: ${name}`,
-        `Facility: ${facility}`,
-        `Email: ${email}`,
-        `Phone: ${phone}`,
-        notes ? `Notes: ${notes}` : null,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      await client.messages.create({ body, from: fromNumber, to: toNumber });
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (apiKey) {
+      sgMail.setApiKey(apiKey);
+      await sgMail.send({
+        to: "austin@admitsimple.com",
+        from: "austin@admitsimple.com",
+        subject: `Demo Request: ${name} at ${facility}`,
+        text: [
+          `New demo request from admitsimple.com`,
+          ``,
+          `Name:     ${name}`,
+          `Facility: ${facility}`,
+          `Email:    ${email}`,
+          `Phone:    ${phone}`,
+          notes ? `Notes:    ${notes}` : null,
+        ]
+          .filter((l) => l !== null)
+          .join("\n"),
+        html: `
+          <h2 style="color:#5BC8DC;">New Demo Request</h2>
+          <table style="font-family:sans-serif;font-size:15px;border-collapse:collapse;">
+            <tr><td style="padding:6px 16px 6px 0;color:#666;font-weight:600;">Name</td><td>${name}</td></tr>
+            <tr><td style="padding:6px 16px 6px 0;color:#666;font-weight:600;">Facility</td><td>${facility}</td></tr>
+            <tr><td style="padding:6px 16px 6px 0;color:#666;font-weight:600;">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>
+            <tr><td style="padding:6px 16px 6px 0;color:#666;font-weight:600;">Phone</td><td><a href="tel:${phone}">${phone}</a></td></tr>
+            ${notes ? `<tr><td style="padding:6px 16px 6px 0;color:#666;font-weight:600;vertical-align:top;">Notes</td><td>${notes}</td></tr>` : ""}
+          </table>
+        `,
+      });
     } else {
-      logger.warn("Twilio env vars not set — skipping SMS notification");
+      logger.warn("SENDGRID_API_KEY not set — skipping email notification");
     }
 
     return res.json({ success: true });
   } catch (err) {
-    logger.error({ err }, "Failed to send demo request SMS");
+    logger.error({ err }, "Failed to send demo request email");
     return res.status(500).json({ error: "Failed to send request" });
   }
 });
