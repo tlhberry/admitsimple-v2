@@ -10,7 +10,7 @@ export default function Header() {
           <img
             src={logo}
             alt="AdmitSimple"
-            className="h-7 md:h-8 w-auto"
+            className="h-20 md:h-24 w-auto"
             style={{ mixBlendMode: "screen" }}
           />
         </Link>
