@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logo from "@assets/Gemini_Generated_Image_vx6hb5vx6hb5vx6h_1775863503290.png";
+import logo from "@assets/Untitled_1775863851436.png";
 
 export default function Header() {
   return (
@@ -11,6 +11,7 @@ export default function Header() {
             src={logo}
             alt="AdmitSimple"
             className="h-7 md:h-8 w-auto"
+            style={{ mixBlendMode: "screen" }}
           />
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/80">

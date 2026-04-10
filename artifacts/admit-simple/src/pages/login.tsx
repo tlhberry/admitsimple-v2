@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import logoImg from "@assets/Gemini_Generated_Image_vx6hb5vx6hb5vx6h_1775863503290.png";
+import logoImg from "@assets/Untitled_1775863851436.png";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -35,6 +35,7 @@ export default function Login() {
             src={logoImg}
             alt="AdmitSimple"
             className="h-16 w-auto object-contain max-w-xs"
+            style={{ mixBlendMode: "screen" }}
           />
         </div>
 

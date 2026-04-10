@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { sceneTransitions } from '@/lib/video';
-import logoImg from '@assets/Gemini_Generated_Image_vx6hb5vx6hb5vx6h_1775863503290.png';
+import logoImg from '@assets/Untitled_1775863851436.png';
 
 export function Scene6() {
   const [phase, setPhase] = useState(0);

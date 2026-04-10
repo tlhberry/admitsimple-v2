@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, ArrowLeft } from "lucide-react";
-import logo from "@assets/Gemini_Generated_Image_vx6hb5vx6hb5vx6h_1775863503290.png";
+import logo from "@assets/Untitled_1775863851436.png";
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
@@ -38,7 +38,7 @@ export default function Contact() {
         <header className="bg-[#2d3748] border-b border-white/10">
           <div className="container mx-auto px-4 md:px-6 pr-6 py-3 flex items-center justify-between">
             <Link href="/">
-              <img src={logo} alt="AdmitSimple" className="h-9 w-auto" />
+              <img src={logo} alt="AdmitSimple" className="h-9 w-auto" style={{ mixBlendMode: "screen" }} />
             </Link>
             <Link href="/" className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors">
               <ArrowLeft className="w-4 h-4" />
