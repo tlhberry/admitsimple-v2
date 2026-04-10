@@ -13,7 +13,11 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login({ data: { username, password } });
+    try {
+      await login({ data: { username: username.trim().toLowerCase(), password } });
+    } catch {
+      // Error is handled by the mutation's onError toast — suppress unhandled rejection
+    }
   };
 
   return (
