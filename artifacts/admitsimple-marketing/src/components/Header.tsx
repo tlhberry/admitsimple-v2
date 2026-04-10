@@ -10,7 +10,7 @@ export default function Header() {
           <img
             src={logo}
             alt="AdmitSimple"
-            className="h-16 md:h-28 w-auto"
+            className="h-28 md:h-32 w-auto"
             style={{ mixBlendMode: "screen" }}
           />
         </Link>
@@ -25,7 +25,7 @@ export default function Header() {
             <a href="/login">Log In</a>
           </Button>
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 text-sm h-9 px-3 md:px-4">
-            <a href="#demo">Request a Demo</a>
+            <a href="#demo">Demo</a>
           </Button>
         </div>
       </div>
