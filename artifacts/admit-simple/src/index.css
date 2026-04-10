@@ -66,8 +66,8 @@
   --popover-foreground: 210 20% 90%;
   --popover-border: 220 18% 29%;
 
-  /* Claude orange brand accent */
-  --primary: 19 72% 57%;           /* #E07340 Claude orange */
+  /* Cyan brand accent from the logo underline */
+  --primary: 190 65% 61%;          /* #5BC8DC */
   --primary-foreground: 220 18% 15%;
 
   --secondary: 220 18% 29%;
@@ -76,31 +76,31 @@
   --muted: 220 18% 15%;            /* #1C2232 darker surface */
   --muted-foreground: 220 15% 54%; /* #7A8399 muted text */
 
-  --accent: 19 72% 18%;            /* subtle orange tint bg */
-  --accent-foreground: 19 72% 82%;
+  --accent: 190 65% 20%;           /* subtle cyan tint bg */
+  --accent-foreground: 190 65% 80%;
 
   --destructive: 348 83% 55%;
   --destructive-foreground: 0 0% 100%;
 
   --border: 220 18% 29%;           /* #3A4358 */
   --input: 220 18% 24%;
-  --ring: 19 72% 57%;
+  --ring: 190 65% 61%;
 
   /* Sidebar — deepest dark */
   --sidebar: 220 22% 14%;          /* #1A2130 */
   --sidebar-foreground: 220 15% 60%;
   --sidebar-border: 220 18% 22%;
-  --sidebar-primary: 19 72% 18%;   /* orange tinted active bg */
-  --sidebar-primary-foreground: 19 72% 88%;
+  --sidebar-primary: 190 65% 20%;  /* cyan tinted active bg */
+  --sidebar-primary-foreground: 190 65% 85%;
   --sidebar-accent: 220 22% 20%;
   --sidebar-accent-foreground: 210 20% 90%;
-  --sidebar-ring: 19 72% 57%;
+  --sidebar-ring: 190 65% 61%;
 
   --radius: 0.5rem;
 
   /* Status Colors — adjusted for dark */
   --status-new-bg: 217 50% 20%;
-  --status-new-text: 19 72% 57%;
+  --status-new-text: 190 65% 61%;
   --status-contacted-bg: 28 60% 18%;
   --status-contacted-text: 25 95% 70%;
   --status-qualified-bg: 142 40% 18%;
