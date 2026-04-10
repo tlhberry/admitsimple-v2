@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/admitsimple-demo-video/"
+title = "AdmitSimple Demo Video"
+version = "1.0.0"
+id = "artifacts/admitsimple-demo-video"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/admitsimple-demo-video/" ]
+localPort = 24085
+
+[services.development]
+run = "pnpm --filter @workspace/admitsimple-demo-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/admitsimple-demo-video", "run", "build" ]
+publicDir = "artifacts/admitsimple-demo-video/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24085"
+BASE_PATH = "/admitsimple-demo-video/"

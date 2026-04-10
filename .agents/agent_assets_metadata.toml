@@ -18,6 +18,36 @@ uri = "file://artifacts/admitsimple-marketing/public/images/pipeline.png"
 type = "image"
 title = "Admissions Pipeline Mockup"
 
+[[generated]]
+id = "MNw4ebPlgxUkrkD-Uf2Lw"
+uri = "file://public/images/clinic-bg.png"
+type = "image"
+title = "modern clinic reception"
+
+[[generated]]
+id = "6ThKLuRNzw7JZyPg1f3G2"
+uri = "file://public/images/shield.png"
+type = "image"
+title = "abstract secure data shield"
+
+[[generated]]
+id = "T22NAI8B-7xH4xa7WAKLK"
+uri = "file://artifacts/admitsimple-demo-video/public/images/pipeline-ui.png"
+type = "image"
+title = "clinical dashboard pipeline UI"
+
+[[generated]]
+id = "PWaZ0FliA1xaotKv7rN_4"
+uri = "file://artifacts/admitsimple-demo-video/public/images/referral-doc.png"
+type = "image"
+title = "referral document pdf"
+
+[[generated]]
+id = "3IWG5I15CvEyqXpqp3Odq"
+uri = "file://artifacts/admitsimple-demo-video/public/images/hipaa-lock.png"
+type = "image"
+title = "hipaa server lock"
+
 [[outputs]]
 id = "BBsLbgpyrJvkxINOu1WWs"
 uri = "file://docs/baa-guide.md"
