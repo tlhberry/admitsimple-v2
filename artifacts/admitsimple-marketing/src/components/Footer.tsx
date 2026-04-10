@@ -10,7 +10,7 @@ export default function Footer() {
             <img
               src={logo}
               alt="AdmitSimple"
-              className="h-10 w-auto mb-5"
+              className="h-32 w-auto mb-5"
               style={{ mixBlendMode: "screen" }}
             />
             <p className="text-white/60 max-w-xs text-sm">
