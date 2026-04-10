@@ -34,7 +34,7 @@ export default function Login() {
           <img
             src={logoImg}
             alt="AdmitSimple"
-            className="h-16 w-auto object-contain max-w-xs"
+            className="h-48 w-auto object-contain max-w-sm"
             style={{ mixBlendMode: "screen" }}
           />
         </div>
