@@ -1,30 +1,48 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useListReports, useDeleteReport, useGenerateAiReport } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Loader2, FileText, Sparkles, Trash2, Brain, Download, Search,
+  Loader2, FileText, Sparkles, Trash2, Brain, Download,
   TableIcon, ExternalLink, AlertCircle,
-  BookmarkPlus, CheckCircle2, RefreshCw,
+  BookmarkPlus, CheckCircle2, RefreshCw, Send, User, BarChart2,
 } from "lucide-react";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import {
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 type Timeframe = "week" | "month" | "year" | "custom";
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  result?: {
+    columns: string[];
+    rows: any[][];
+    summary: string;
+    rowCount: number;
+    sql: string;
+    chartSuggestion: { type: "bar" | "line"; xKey: string; yKey: string } | null;
+  };
+  error?: string;
+}
 
 // ── Admissions Insights — vertical performance feed ──────────────
 function AdmissionsInsights() {
   const [, navigate] = useLocation();
   const [timeframe, setTimeframe] = useState<Timeframe>("week");
   const [customStart, setCustomStart] = useState("");
-  const [customEnd,   setCustomEnd]   = useState("");
+  const [customEnd, setCustomEnd] = useState("");
 
   const perfUrl = (() => {
     const p = new URLSearchParams({ timeframe });
@@ -49,19 +67,17 @@ function AdmissionsInsights() {
     timeframe === "year" ? "This Year" : "Custom Range"
   );
 
-  const period = data?.period  ?? { leads: 0, admits: 0, conversion: 0 };
-  const refs   = (data?.referralSources ?? []) as { source: string; leads: number; admits: number; conversion: number }[];
+  const period = data?.period ?? { leads: 0, admits: 0, conversion: 0 };
+  const refs = (data?.referralSources ?? []) as { source: string; leads: number; admits: number; conversion: number }[];
   const payors = (data?.topPayors ?? []) as { provider: string; leads: number; admits: number; conversion: number }[];
-  const perf   = data?.topPerformers ?? { admissionsRep: null, leadRep: null, bdRep: null };
-  const calls  = data?.calls  ?? { missedToday: 0, totalToday: 0, missedWeek: 0, totalWeek: 0, answerRate: 100 };
-  const speed  = data?.speed  ?? { avgHoursToAdmit: null, sampleSize: 0 };
-  const pipe   = data?.pipeline ?? { active: 0, vobPending: 0, readyToAdmit: 0 };
+  const perf = data?.topPerformers ?? { admissionsRep: null, leadRep: null, bdRep: null };
+  const calls = data?.calls ?? { missedToday: 0, totalToday: 0, missedWeek: 0, totalWeek: 0, answerRate: 100 };
+  const speed = data?.speed ?? { avgHoursToAdmit: null, sampleSize: 0 };
+  const pipe = data?.pipeline ?? { active: 0, vobPending: 0, readyToAdmit: 0 };
 
   const formatSpeed = (h: number | null) => h === null ? "No data" : h < 48 ? `${h} hrs` : `${Math.round(h / 24)} days`;
 
-  function Section({
-    title, badge, onClick, children,
-  }: { title: string; badge?: string; onClick?: () => void; children: ReactNode }) {
+  function Section({ title, badge, onClick, children }: { title: string; badge?: string; onClick?: () => void; children: ReactNode }) {
     return (
       <div
         onClick={onClick}
@@ -81,7 +97,6 @@ function AdmissionsInsights() {
 
   return (
     <div className="divide-y divide-border/0">
-      {/* 0 — Timeframe picker */}
       <div className="px-5 py-3 border-b border-border/60">
         <div className="flex items-center gap-1.5 flex-wrap">
           {(["week", "month", "year", "custom"] as Timeframe[]).map(tf => (
@@ -100,25 +115,16 @@ function AdmissionsInsights() {
           ))}
           {timeframe === "custom" && (
             <div className="flex items-center gap-1.5 mt-1.5 w-full flex-wrap">
-              <input
-                type="date"
-                value={customStart}
-                onChange={e => setCustomStart(e.target.value)}
-                className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
+              <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+                className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
               <span className="text-xs text-muted-foreground">to</span>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={e => setCustomEnd(e.target.value)}
-                className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
+              <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                className="bg-muted border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
             </div>
           )}
         </div>
       </div>
 
-      {/* 1 — Period stats */}
       <Section title={periodLabel}>
         {isLoading ? (
           <div className="flex items-center gap-2">
@@ -143,7 +149,6 @@ function AdmissionsInsights() {
         )}
       </Section>
 
-      {/* 2 — Referral Sources */}
       <Section title={`Top Referral Sources (${periodLabel})`} badge="Sources" onClick={() => navigate("/referrals")}>
         <div className="space-y-2">
           {refs.length === 0 ? (
@@ -160,7 +165,6 @@ function AdmissionsInsights() {
         </div>
       </Section>
 
-      {/* 2b — Top Payors */}
       <Section title={`Top Payors (${periodLabel})`}>
         <div className="space-y-2">
           {payors.length === 0 ? (
@@ -168,10 +172,7 @@ function AdmissionsInsights() {
           ) : payors.slice(0, 6).map((p, i) => (
             <div key={i} className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0 pr-3">
-                <span className={cn(
-                  "w-1.5 h-1.5 rounded-full shrink-0",
-                  p.provider === "Self-Pay" ? "bg-amber-400" : "bg-primary",
-                )} />
+                <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.provider === "Self-Pay" ? "bg-amber-400" : "bg-primary")} />
                 <span className="text-sm text-foreground truncate">{p.provider}</span>
               </div>
               <span className="text-xs font-semibold text-muted-foreground shrink-0 tabular-nums">
@@ -183,31 +184,24 @@ function AdmissionsInsights() {
         </div>
       </Section>
 
-      {/* 3 — Top Performers */}
       <Section title={`Top Performers (${periodLabel})`} badge="Reps" onClick={() => navigate("/inquiries?tab=admitted")}>
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-muted-foreground">Closer</span>
             <span className="text-sm font-bold text-foreground">
-              {perf.admissionsRep
-                ? `${perf.admissionsRep.name} — ${perf.admissionsRep.admits} admits`
-                : "No data"}
+              {perf.admissionsRep ? `${perf.admissionsRep.name} — ${perf.admissionsRep.admits} admits` : "No data"}
             </span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-muted-foreground">Top Credit</span>
             <span className="text-sm font-bold text-foreground">
-              {perf.bdRep
-                ? `${perf.bdRep.name} — ${perf.bdRep.leads} admits`
-                : perf.leadRep
-                  ? `${perf.leadRep.name} — ${perf.leadRep.leads} leads`
-                  : "No data"}
+              {perf.bdRep ? `${perf.bdRep.name} — ${perf.bdRep.leads} admits`
+                : perf.leadRep ? `${perf.leadRep.name} — ${perf.leadRep.leads} leads` : "No data"}
             </span>
           </div>
         </div>
       </Section>
 
-      {/* 4 — Call Performance */}
       <Section title="Calls" badge="Calls" onClick={() => navigate("/calls/active")}>
         <div className="flex gap-6">
           <div>
@@ -225,7 +219,6 @@ function AdmissionsInsights() {
         </div>
       </Section>
 
-      {/* 5 — Speed */}
       <Section title="Speed to Admit">
         <div>
           <div className="text-3xl font-extrabold text-primary tabular-nums">{formatSpeed(speed.avgHoursToAdmit)}</div>
@@ -235,7 +228,6 @@ function AdmissionsInsights() {
         </div>
       </Section>
 
-      {/* 6 — Pipeline */}
       <Section title="Pipeline" badge="Pipeline" onClick={() => navigate("/pipeline")}>
         <div className="flex gap-6">
           <div>
@@ -265,28 +257,19 @@ function SavedReportCard({ report, onDelete }: { report: any; onDelete: () => vo
   const { data, isLoading, isError, refetch, isFetching } = useQuery<any>({
     queryKey: ["/api/saved-reports", report.id, "run"],
     queryFn: async () => {
-      const resp = await fetch(`/api/saved-reports/${report.id}/run`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Query failed");
-      }
+      const resp = await fetch(`/api/saved-reports/${report.id}/run`, { method: "POST", credentials: "include" });
+      if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || "Query failed"); }
       return resp.json();
     },
     staleTime: 60000,
-    refetchInterval: 300000, // refresh every 5 min
+    refetchInterval: 300000,
     retry: 1,
   });
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const resp = await fetch(`/api/saved-reports/${report.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const resp = await fetch(`/api/saved-reports/${report.id}`, { method: "DELETE", credentials: "include" });
       if (!resp.ok) throw new Error("Delete failed");
       onDelete();
       toast({ title: `"${report.name}" deleted` });
@@ -310,25 +293,16 @@ function SavedReportCard({ report, onDelete }: { report: any; onDelete: () => vo
           <p className="text-xs text-muted-foreground">Saved {formatDate(report.createdAt)}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-            title="Refresh"
-          >
+          <button onClick={() => refetch()} disabled={isFetching}
+            className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors" title="Refresh">
             <RefreshCw className={cn("w-3.5 h-3.5", isFetching && "animate-spin")} />
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-            title="Delete"
-          >
+          <button onClick={handleDelete} disabled={isDeleting}
+            className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Delete">
             {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       </CardHeader>
-
       <div className="flex-1 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground text-sm">
@@ -359,18 +333,13 @@ function SavedReportCard({ report, onDelete }: { report: any; onDelete: () => vo
                   const inquiryId = inquiryIdIdx >= 0 ? row[inquiryIdIdx] : null;
                   const isClickable = inquiryId != null;
                   return (
-                    <tr
-                      key={i}
-                      onClick={() => isClickable && navigate(`/inquiries/${inquiryId}`)}
-                      className={`transition-colors group ${isClickable ? "cursor-pointer hover:bg-primary/8" : "hover:bg-muted/20"}`}
-                    >
+                    <tr key={i} onClick={() => isClickable && navigate(`/inquiries/${inquiryId}`)}
+                      className={`transition-colors group ${isClickable ? "cursor-pointer hover:bg-primary/8" : "hover:bg-muted/20"}`}>
                       {row.map((cell, j) => {
                         if (columns[j] === "inquiry_id") return null;
                         return (
                           <td key={j} className="px-4 py-2.5 text-foreground whitespace-nowrap text-xs">
-                            {cell === null || cell === undefined
-                              ? <span className="text-muted-foreground">—</span>
-                              : String(cell)}
+                            {cell === null || cell === undefined ? <span className="text-muted-foreground">—</span> : String(cell)}
                           </td>
                         );
                       })}
@@ -385,14 +354,417 @@ function SavedReportCard({ report, onDelete }: { report: any; onDelete: () => vo
               </tbody>
             </table>
             {rows.length > 20 && (
-              <p className="text-xs text-muted-foreground text-center py-2 border-t border-border">
-                Showing 20 of {rows.length} rows
-              </p>
+              <p className="text-xs text-muted-foreground text-center py-2 border-t border-border">Showing 20 of {rows.length} rows</p>
             )}
           </div>
         )}
       </div>
     </Card>
+  );
+}
+
+// ── Inline result table inside chat bubble ──────────────────────────
+function ChatResultTable({ result, onNavigate }: {
+  result: NonNullable<ChatMessage["result"]>;
+  onNavigate: (id: number) => void;
+}) {
+  const { columns, rows } = result;
+  const hasInquiryId = columns.includes("inquiry_id");
+  const visibleCols = columns.filter(c => c !== "inquiry_id");
+
+  // Format cell values
+  const fmt = (val: any): string => {
+    if (val === null || val === undefined) return "—";
+    const s = String(val);
+    // ISO date → readable
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+      try { return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); } catch { return s; }
+    }
+    return s;
+  };
+
+  return (
+    <div className="mt-3 rounded-xl overflow-hidden border border-border/60">
+      <div className="overflow-x-auto max-h-72">
+        <table className="w-full text-left">
+          <thead className="bg-muted/60 border-b border-border/60 sticky top-0">
+            <tr>
+              {visibleCols.map(col => (
+                <th key={col} className="px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                  {col.replace(/_/g, " ")}
+                </th>
+              ))}
+              {hasInquiryId && <th className="px-2 py-2 w-6" />}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {rows.slice(0, 50).map((row, i) => {
+              const inquiryIdIdx = columns.indexOf("inquiry_id");
+              const inquiryId = inquiryIdIdx >= 0 ? row[inquiryIdIdx] : null;
+              const clickable = inquiryId != null;
+              return (
+                <tr
+                  key={i}
+                  onClick={() => clickable && onNavigate(Number(inquiryId))}
+                  className={cn(
+                    "transition-colors group",
+                    clickable ? "cursor-pointer hover:bg-primary/10" : "hover:bg-muted/10",
+                  )}
+                >
+                  {row.map((cell, j) => {
+                    if (columns[j] === "inquiry_id") return null;
+                    const isName = columns[j].includes("name") || columns[j].includes("first") || columns[j].includes("last");
+                    return (
+                      <td key={j} className="px-3 py-2.5 whitespace-nowrap text-xs">
+                        {clickable && isName ? (
+                          <span className="font-semibold text-primary group-hover:underline underline-offset-2">
+                            {fmt(cell)}
+                          </span>
+                        ) : (
+                          <span className="text-foreground">{fmt(cell)}</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  {clickable && (
+                    <td className="px-2 py-2.5 w-6">
+                      <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {rows.length > 50 && (
+          <p className="text-xs text-muted-foreground text-center py-2 border-t border-border/40">
+            Showing 50 of {rows.length} rows
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Inline chart inside chat bubble ──────────────────────────────────
+function ChatResultChart({ result }: { result: NonNullable<ChatMessage["result"]> }) {
+  const { columns, rows, chartSuggestion } = result;
+  if (!chartSuggestion || rows.length === 0) return null;
+
+  const xIdx = columns.indexOf(chartSuggestion.xKey);
+  const yIdx = columns.indexOf(chartSuggestion.yKey);
+  if (xIdx < 0 || yIdx < 0) return null;
+
+  const fmt = (val: any): string => {
+    const s = String(val ?? "");
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+      try { return new Date(s).toLocaleDateString("en-US", { month: "short", year: "2-digit" }); } catch { return s; }
+    }
+    return s;
+  };
+
+  const chartData = rows.map(row => ({
+    x: fmt(row[xIdx]),
+    y: Number(row[yIdx]) || 0,
+  }));
+
+  const barColor = "#5BC8DC";
+
+  return (
+    <div className="mt-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+      <div className="flex items-center gap-1.5 mb-2">
+        <BarChart2 className="w-3.5 h-3.5 text-primary" />
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {chartSuggestion.yKey.replace(/_/g, " ")} by {chartSuggestion.xKey.replace(/_/g, " ")}
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        {chartSuggestion.type === "line" ? (
+          <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="x" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#e2e8f0" }} itemStyle={{ color: barColor }} />
+            <Line type="monotone" dataKey="y" stroke={barColor} strokeWidth={2} dot={{ fill: barColor, r: 3 }} activeDot={{ r: 5 }} />
+          </LineChart>
+        ) : (
+          <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="x" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
+            <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#e2e8f0" }} itemStyle={{ color: barColor }} />
+            <Bar dataKey="y" fill={barColor} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ── Save-report inline control ────────────────────────────────────
+function SaveControl({ result, prompt, onSaved }: {
+  result: NonNullable<ChatMessage["result"]>;
+  prompt: string;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [show, setShow] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const resp = await fetch("/api/saved-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), sqlQuery: result.sql, columns: result.columns, visualizationType: "table" }),
+      });
+      if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || "Save failed"); }
+      setSaved(true);
+      setShow(false);
+      toast({ title: `"${name.trim()}" saved` });
+      onSaved();
+    } catch (err: any) {
+      toast({ title: err.message || "Failed to save", variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  if (saved) {
+    return (
+      <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
+        <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+      </div>
+    );
+  }
+
+  if (show) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <input
+          autoFocus
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setShow(false); }}
+          placeholder="Name this report..."
+          className="h-7 px-2 rounded-lg bg-muted border border-border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 w-44"
+        />
+        <button onClick={handleSave} disabled={saving || !name.trim()}
+          className="h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+          {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+        </button>
+        <button onClick={() => setShow(false)} className="text-muted-foreground/60 hover:text-foreground text-xs">✕</button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => { setShow(true); setName(prompt.slice(0, 60)); }}
+      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+      <BookmarkPlus className="w-3.5 h-3.5" /> Save report
+    </button>
+  );
+}
+
+// ── Chat Interface ────────────────────────────────────────────────
+function ChatInterface({ onReportSaved }: { onReportSaved: () => void }) {
+  const [, navigate] = useLocation();
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      text: "Hi! I can query your admissions data and answer any question you have. Try asking things like:\n\n• **Show me all admissions this month with names**\n• **Admits by rep this week**\n• **Top referral sources last 30 days**\n• **Inquiries with no activity in 48 hours**",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => { scrollToBottom(); }, [messages, loading]);
+
+  const handleSend = async () => {
+    const prompt = input.trim();
+    if (!prompt || loading) return;
+    setInput("");
+
+    const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", text: prompt };
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+
+    try {
+      const resp = await fetch("/api/ai/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ prompt }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || "Report generation failed");
+      }
+      const data = await resp.json();
+      const assistantMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        text: data.summary || "Here are your results.",
+        result: data,
+      };
+      setMessages(prev => [...prev, assistantMsg]);
+    } catch (err: any) {
+      const errMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        text: "",
+        error: err.message || "Something went wrong. Try rephrasing your question.",
+      };
+      setMessages(prev => [...prev, errMsg]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  return (
+    <div className="flex flex-col h-[600px] rounded-2xl border border-border overflow-hidden bg-card">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/30 shrink-0">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+          <Sparkles className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <p className="font-semibold text-foreground text-sm">Ask Anything</p>
+          <p className="text-xs text-muted-foreground">Natural language queries powered by Claude</p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {messages.map(msg => (
+          <div key={msg.id} className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "justify-start")}>
+            {msg.role === "assistant" && (
+              <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+              </div>
+            )}
+            <div className={cn(
+              "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
+              msg.role === "user"
+                ? "bg-primary text-primary-foreground rounded-tr-sm"
+                : "bg-muted/60 border border-border/60 rounded-tl-sm",
+            )}>
+              {msg.error ? (
+                <div className="flex items-center gap-2 text-rose-400">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{msg.error}</span>
+                </div>
+              ) : (
+                <>
+                  <div className={cn(
+                    "prose prose-sm max-w-none",
+                    msg.role === "user"
+                      ? "prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-li:text-primary-foreground"
+                      : "prose-p:text-foreground prose-strong:text-foreground prose-li:text-muted-foreground",
+                  )}>
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+
+                  {msg.result && (
+                    <>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        <TableIcon className="w-3 h-3" />
+                        {msg.result.rowCount} row{msg.result.rowCount !== 1 ? "s" : ""}
+                        {msg.result.chartSuggestion && (
+                          <><span>·</span><BarChart2 className="w-3 h-3" /> chart</>
+                        )}
+                      </div>
+
+                      {msg.result.chartSuggestion && (
+                        <ChatResultChart result={msg.result} />
+                      )}
+
+                      {msg.result.rows.length > 0 && (
+                        <ChatResultTable
+                          result={msg.result}
+                          onNavigate={id => navigate(`/inquiries/${id}`)}
+                        />
+                      )}
+
+                      <div className="mt-2">
+                        <SaveControl
+                          result={msg.result}
+                          prompt={messages[messages.indexOf(msg) - 1]?.text ?? ""}
+                          onSaved={onReportSaved}
+                        />
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+            {msg.role === "user" && (
+              <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                <User className="w-3.5 h-3.5 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex gap-3 justify-start">
+            <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <div className="bg-muted/60 border border-border/60 rounded-2xl rounded-tl-sm px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-border px-4 py-3 shrink-0 bg-card">
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything... admits by rep this month, show me all IOP inquiries, top referral sources..."
+            rows={1}
+            className="flex-1 resize-none rounded-xl bg-muted border border-border text-foreground placeholder:text-muted-foreground px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 max-h-32 overflow-y-auto"
+            style={{ minHeight: "42px" }}
+            disabled={loading}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
+            size="icon"
+            className="w-10 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 shrink-0"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">Press Enter to send · Shift+Enter for newline</p>
+      </div>
+    </div>
   );
 }
 
@@ -406,84 +778,11 @@ export default function Reports() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
-  // Natural language report builder
-  const [nlPrompt, setNlPrompt] = useState("");
-  const [nlLoading, setNlLoading] = useState(false);
-  const [nlResult, setNlResult] = useState<{
-    columns: string[]; rows: any[][]; summary: string; rowCount: number; sql: string;
-  } | null>(null);
-  const nlResultRef = useRef<HTMLDivElement>(null);
-
-  // Save report state
-  const [showSaveInput, setShowSaveInput] = useState(false);
-  const [saveName, setSaveName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedJustNow, setSavedJustNow] = useState(false);
-
-  // Saved reports list
   const { data: savedReports, refetch: refetchSaved } = useQuery<any[]>({
     queryKey: ["/api/saved-reports"],
     queryFn: () => fetch("/api/saved-reports", { credentials: "include" }).then(r => r.json()),
     staleTime: 30000,
   });
-
-  const handleNlReport = async () => {
-    if (!nlPrompt.trim()) return;
-    setNlLoading(true);
-    setNlResult(null);
-    setShowSaveInput(false);
-    setSavedJustNow(false);
-    try {
-      const resp = await fetch("/api/ai/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ prompt: nlPrompt.trim() }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Report generation failed");
-      }
-      const data = await resp.json();
-      setNlResult(data);
-      setTimeout(() => nlResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-    } catch (err: any) {
-      toast({ title: err.message || "Failed to generate report", variant: "destructive" });
-    } finally {
-      setNlLoading(false);
-    }
-  };
-
-  const handleSaveReport = async () => {
-    if (!nlResult || !saveName.trim()) return;
-    setIsSaving(true);
-    try {
-      const resp = await fetch("/api/saved-reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          name: saveName.trim(),
-          sqlQuery: nlResult.sql,
-          columns: nlResult.columns,
-          visualizationType: "table",
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Save failed");
-      }
-      refetchSaved();
-      setSavedJustNow(true);
-      setShowSaveInput(false);
-      setSaveName("");
-      toast({ title: `"${saveName.trim()}" saved to your dashboard` });
-    } catch (err: any) {
-      toast({ title: err.message || "Failed to save report", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const generateReport = useGenerateAiReport({
     mutation: {
@@ -528,12 +827,12 @@ export default function Reports() {
   };
 
   const reportTypes = [
-    { value: "weekly_summary",     label: "Weekly Summary" },
-    { value: "monthly_report",     label: "Monthly Report" },
-    { value: "referral_analysis",  label: "Referral Analysis" },
+    { value: "weekly_summary", label: "Weekly Summary" },
+    { value: "monthly_report", label: "Monthly Report" },
+    { value: "referral_analysis", label: "Referral Analysis" },
     { value: "financial_snapshot", label: "Financial Snapshot" },
-    { value: "census_report",      label: "Census Report" },
-    { value: "conversion_analysis",label: "Conversion Analysis" },
+    { value: "census_report", label: "Census Report" },
+    { value: "conversion_analysis", label: "Conversion Analysis" },
   ];
 
   const displayContent = selected?.aiNarrative || selected?.narrative || "";
@@ -567,163 +866,10 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* ── Natural Language Report Builder ── */}
-      <Card className="rounded-2xl border-primary/20 bg-primary/5 mb-6">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
-            </div>
-            <h2 className="font-semibold text-foreground text-sm">Ask Anything</h2>
-            <span className="text-xs text-muted-foreground">— natural language report builder powered by Claude</span>
-          </div>
-          <div className="flex gap-3">
-            <Input
-              value={nlPrompt}
-              onChange={e => setNlPrompt(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !nlLoading && handleNlReport()}
-              placeholder="Ask anything... admits by rep this month, top referral sources, face to face meetings last week"
-              className="flex-1 h-11 rounded-xl bg-card border-border text-foreground placeholder:text-muted-foreground"
-              disabled={nlLoading}
-            />
-            <Button
-              onClick={handleNlReport}
-              disabled={nlLoading || !nlPrompt.trim()}
-              className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20 flex gap-2 shrink-0"
-            >
-              {nlLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              Generate
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Natural Language Results ── */}
-      {(nlLoading || nlResult) && (
-        <div ref={nlResultRef} className="mb-6">
-          {nlLoading ? (
-            <Card className="rounded-2xl border-border">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-primary space-y-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary rounded-full blur-xl opacity-20 animate-pulse" />
-                  <Brain className="w-10 h-10 relative z-10 animate-bounce" />
-                </div>
-                <p className="font-semibold text-foreground">Claude is querying the database...</p>
-                <p className="text-sm text-muted-foreground">Generating SQL and summarizing results.</p>
-              </CardContent>
-            </Card>
-          ) : nlResult && (
-            <Card className="rounded-2xl border-border overflow-hidden">
-              <CardHeader className="bg-muted/40 border-b border-border py-4 flex flex-row items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                  <TableIcon className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm">{nlResult.summary}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{nlResult.rowCount} row{nlResult.rowCount !== 1 ? "s" : ""} returned</p>
-                </div>
-                {/* Save button area */}
-                <div className="shrink-0 flex items-center gap-2">
-                  {savedJustNow ? (
-                    <div className="flex items-center gap-1.5 text-green-400 text-sm font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Saved!
-                    </div>
-                  ) : showSaveInput ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={saveName}
-                        onChange={e => setSaveName(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter") handleSaveReport();
-                          if (e.key === "Escape") setShowSaveInput(false);
-                        }}
-                        placeholder="Report name..."
-                        className="h-8 w-48 rounded-lg bg-card border-border text-foreground text-sm"
-                        autoFocus
-                      />
-                      <Button
-                        onClick={handleSaveReport}
-                        disabled={isSaving || !saveName.trim()}
-                        size="sm"
-                        className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold"
-                      >
-                        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
-                      </Button>
-                      <button
-                        onClick={() => setShowSaveInput(false)}
-                        className="text-muted-foreground/60 hover:text-foreground text-xs"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => { setShowSaveInput(true); setSaveName(nlPrompt.trim()); }}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border-primary/30 text-primary hover:bg-primary/10 text-xs font-semibold flex gap-1.5"
-                    >
-                      <BookmarkPlus className="w-3.5 h-3.5" />
-                      Save Report
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              {nlResult.rows.length === 0 ? (
-                <CardContent className="py-12 text-center text-muted-foreground text-sm">No results found.</CardContent>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-muted/60 text-muted-foreground border-b border-border">
-                      <tr>
-                        {nlResult.columns.filter(col => col !== "inquiry_id").map(col => (
-                          <th key={col} className="px-5 py-3 font-semibold whitespace-nowrap">
-                            {col.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-                          </th>
-                        ))}
-                        {nlResult.columns.includes("inquiry_id") && (
-                          <th className="px-3 py-3 w-8 text-primary/60 font-semibold text-xs">→</th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border bg-card">
-                      {nlResult.rows.map((row, i) => {
-                        const inquiryIdIdx = nlResult.columns.indexOf("inquiry_id");
-                        const inquiryId = inquiryIdIdx >= 0 ? row[inquiryIdIdx] : null;
-                        const isClickable = inquiryId != null;
-                        return (
-                          <tr
-                            key={i}
-                            onClick={() => isClickable && navigate(`/inquiries/${inquiryId}`)}
-                            className={`transition-colors group ${isClickable ? "cursor-pointer hover:bg-primary/8" : "hover:bg-muted/20"}`}
-                          >
-                            {row.map((cell, j) => {
-                              if (nlResult.columns[j] === "inquiry_id") return null;
-                              return (
-                                <td key={j} className="px-5 py-3 text-foreground whitespace-nowrap">
-                                  {cell === null || cell === undefined
-                                    ? <span className="text-muted-foreground">—</span>
-                                    : String(cell)}
-                                </td>
-                              );
-                            })}
-                            {isClickable && (
-                              <td className="px-3 py-3 w-8">
-                                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Card>
-          )}
-        </div>
-      )}
+      {/* ── Chat Interface ── */}
+      <div className="mb-6">
+        <ChatInterface onReportSaved={() => refetchSaved()} />
+      </div>
 
       {/* ── Saved Reports Section ── */}
       {savedReports && savedReports.length > 0 && (
@@ -734,11 +880,7 @@ export default function Reports() {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {savedReports.map(report => (
-              <SavedReportCard
-                key={report.id}
-                report={report}
-                onDelete={() => refetchSaved()}
-              />
+              <SavedReportCard key={report.id} report={report} onDelete={() => refetchSaved()} />
             ))}
           </div>
         </div>
@@ -757,15 +899,12 @@ export default function Reports() {
             </div>
           ) : (
             reports.map(report => (
-              <button
-                key={report.id}
-                onClick={() => setSelected(report)}
+              <button key={report.id} onClick={() => setSelected(report)}
                 className={`w-full text-left p-4 rounded-xl transition-all border ${
                   selected?.id === report.id
                     ? "bg-primary/10 border-primary/30 ring-1 ring-primary/20"
                     : "bg-card border-border hover:border-primary/20 hover:bg-muted/30"
-                }`}
-              >
+                }`}>
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -776,10 +915,8 @@ export default function Reports() {
                     </div>
                     <p className="text-xs text-muted-foreground pl-8">{formatDate(report.createdAt)}</p>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteReport.mutate({ id: report.id }); }}
-                    className="text-muted-foreground/40 hover:text-rose-400 transition-colors shrink-0"
-                  >
+                  <button onClick={(e) => { e.stopPropagation(); deleteReport.mutate({ id: report.id }); }}
+                    className="text-muted-foreground/40 hover:text-rose-400 transition-colors shrink-0">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

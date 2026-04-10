@@ -738,19 +738,37 @@ router.post("/ai/report", async (req, res) => {
     const columns: string[] = result.fields.map((f: any) => f.name);
     const rows: any[][] = result.rows.map((row: any) => columns.map(col => row[col]));
 
-    // Step 4: Generate a human summary
+    // Step 4: Generate a human summary + chart suggestion
     const summaryResponse = await anthropic.messages.create({
       model: "claude-opus-4-5",
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [{
         role: "user",
-        content: `Summarize this report in one short sentence for a business user. Be specific about the numbers.\n\n${JSON.stringify({ columns, rowCount: rows.length, sample: rows.slice(0, 5) })}`,
+        content: `You are a data analyst. Given this query result, return ONLY valid JSON (no markdown) with two fields:
+1. "summary": one short sentence describing the results for a business user. Be specific about the numbers.
+2. "chartSuggestion": null if the data is not chart-able, otherwise an object: { "type": "bar" or "line", "xKey": "<column name for x-axis>", "yKey": "<column name for y-axis>" }
+   - Use "bar" for categorical comparisons (e.g. counts by name/source/rep)
+   - Use "line" for time-series data (column containing dates/months/weeks)
+   - Only suggest a chart when there are exactly 2 meaningful columns (one category/date, one number)
+   - For individual patient/inquiry rows (has inquiry_id column), always return null for chartSuggestion
+
+Query result: ${JSON.stringify({ columns, rowCount: rows.length, sample: rows.slice(0, 10) })}`,
       }],
     });
 
-    const summary = (summaryResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "";
+    const rawSummaryText = (summaryResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
+    let summary = "";
+    let chartSuggestion: { type: "bar" | "line"; xKey: string; yKey: string } | null = null;
+    try {
+      const cleaned = rawSummaryText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
+      const parsed = JSON.parse(cleaned);
+      summary = parsed.summary ?? "";
+      chartSuggestion = parsed.chartSuggestion ?? null;
+    } catch {
+      summary = rawSummaryText;
+    }
 
-    res.json({ columns, rows, summary, rowCount: rows.length, sql: cleanSql });
+    res.json({ columns, rows, summary, rowCount: rows.length, sql: cleanSql, chartSuggestion });
   } catch (err: any) {
     req.log.error(err);
     const msg = err?.message ?? "AI report generation failed";
