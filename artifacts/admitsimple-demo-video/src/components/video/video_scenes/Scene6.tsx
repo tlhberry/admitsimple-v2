@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { sceneTransitions } from '@/lib/video';
-import logoImg from '@assets/ChatGPT_Image_Apr_8,_2026,_06_01_28_PM_1775686437346.png';
+import logoImg from '@assets/Untitled_design_1775863216400.png';
 
 export function Scene6() {
   const [phase, setPhase] = useState(0);

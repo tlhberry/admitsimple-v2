@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logo from "@assets/ChatGPT_Image_Apr_8,_2026,_06_01_28_PM_1775686437346.png";
+import logo from "@assets/Untitled_design_1775863216400.png";
 
 export default function Header() {
   return (

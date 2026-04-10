@@ -65,3 +65,9 @@ id = "Ij7JdiR15NqSouplDfPqP"
 uri = "file://docs/claude-deploy-prompt.md"
 type = "text"
 title = "Claude Deploy Prompt — Final Version"
+
+[[outputs]]
+id = "ZO_zybXD6Q3kVNCkbZk7u"
+uri = "file://artifacts/admitsimple-marketing/public/icon-512.png"
+type = "image"
+title = "AdmitSimple App Icon (512×512)"
