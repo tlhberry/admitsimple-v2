@@ -773,11 +773,6 @@ Keep it warm, concise, and professional. Include a request for the other facilit
 
   const handleMoveToNextStage = async () => {
     if (!nextStage) return;
-    // "Scheduled to Admit" → "Admitted" uses the Convert to Patient flow
-    if (resolvedStatus === "Scheduled to Admit") {
-      await handleConvert();
-      return;
-    }
     setMovingStage(true);
     try {
       await fetch(`/api/inquiries/${id}`, {
@@ -912,7 +907,7 @@ Keep it warm, concise, and professional. Include a request for the other facilit
             </Button>
           )}
           {/* Stage advance — for stages before the final admit step */}
-          {nextStage && !isTerminalStage && !isNonViable && !hasReferralOut && resolvedStatus !== "Scheduled to Admit" && (
+          {nextStage && !isTerminalStage && !isNonViable && !hasReferralOut && (
             <Button
               variant="outline"
               onClick={handleMoveToNextStage}
