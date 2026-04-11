@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { users, pipelineStages, settings, referralSources, inquiries, patients } from "@workspace/db/schema";
-import { eq, count } from "drizzle-orm";
+import { eq, count, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { logger } from "./lib/logger";
 
@@ -205,4 +205,49 @@ export async function seedDatabase(): Promise<void> {
   ]);
 
   logger.info("Database seeded successfully!");
+}
+
+export async function migratePipelineStages(): Promise<void> {
+  logger.info("Running pipeline stage migration...");
+  try {
+    // Rename old stage names → new names (idempotent: only updates if the old name exists)
+    await db.update(pipelineStages)
+      .set({ name: "Pre-Assessment", order: 4, color: "#F97316" })
+      .where(eq(pipelineStages.name, "Clinical Assessment"));
+
+    await db.update(pipelineStages)
+      .set({ name: "Scheduled to Admit", order: 5, color: "#10B981" })
+      .where(eq(pipelineStages.name, "Admissions Decision"));
+
+    // Ensure correct order for all base stages
+    const baseOrders: Record<string, number> = {
+      "New Inquiry": 1,
+      "Initial Contact": 2,
+      "Insurance Verification": 3,
+      "Pre-Assessment": 4,
+      "Scheduled to Admit": 5,
+    };
+    for (const [name, order] of Object.entries(baseOrders)) {
+      await db.update(pipelineStages).set({ order }).where(eq(pipelineStages.name, name));
+    }
+
+    // Add missing terminal/post-admit stages if they don't exist
+    const existingRows = await db.select({ name: pipelineStages.name }).from(pipelineStages);
+    const existingNames = new Set(existingRows.map((r) => r.name));
+
+    const missing = [
+      { name: "Admitted", order: 6, color: "#22C55E", description: "Patient confirmed for admission" },
+      { name: "Discharged", order: 7, color: "#6B7280", description: "Patient has been discharged" },
+      { name: "Did Not Admit", order: 8, color: "#EF4444", description: "Patient did not admit" },
+    ].filter((s) => !existingNames.has(s.name));
+
+    if (missing.length > 0) {
+      await db.insert(pipelineStages).values(missing);
+      logger.info(`Added ${missing.length} missing pipeline stage(s): ${missing.map((s) => s.name).join(", ")}`);
+    }
+
+    logger.info("Pipeline stage migration complete.");
+  } catch (err) {
+    logger.error(err, "Pipeline stage migration failed (non-fatal)");
+  }
 }
