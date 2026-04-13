@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { users, passwordResetTokens } from "@workspace/db/schema";
-import { eq, or, and, gt } from "drizzle-orm";
+import { eq, or, and, gt, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import sgMail from "@sendgrid/mail";
@@ -241,7 +241,7 @@ router.post("/auth/reset-password", async (req, res) => {
         and(
           eq(passwordResetTokens.token, token),
           gt(passwordResetTokens.expiresAt, new Date()),
-          eq(passwordResetTokens.usedAt, null as any),
+          isNull(passwordResetTokens.usedAt),
         ),
       )
       .limit(1);
