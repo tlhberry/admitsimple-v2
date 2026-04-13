@@ -12,7 +12,7 @@ export async function seedDatabase(): Promise<void> {
   // Always force-reset admin password on every startup to ensure access
   if (Number(userCount.count) > 0) {
     const hash = await bcrypt.hash("admin", 12);
-    await db.update(users).set({ password: hash, updatedAt: new Date() }).where(eq(users.username, "admin"));
+    await db.update(users).set({ password: hash }).where(eq(users.username, "admin"));
     logger.info("Admin password reset to default on startup");
     logger.info("Database already seeded, skipping.");
     return;
