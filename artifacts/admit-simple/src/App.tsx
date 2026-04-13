@@ -74,6 +74,8 @@ function App() {
             {/* Public routes — no auth required */}
             <Route path="/chatbot-widget" component={ChatbotWidget} />
             <Route path="/chatbot-demo" component={ChatbotDemo} />
+            <Route path="/forgot-password" component={ForgotPassword} />
+            <Route path="/reset-password" component={ResetPassword} />
             {/* All other routes require authentication */}
             <Route>
               <ErrorBoundary>
