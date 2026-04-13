@@ -9,15 +9,11 @@ export async function seedDatabase(): Promise<void> {
 
   const [userCount] = await db.select({ count: count() }).from(users);
 
-  // Always force-reset admin password on every startup
-  const envAdminPassword = process.env.ADMIN_PASSWORD;
-  logger.info({ hasAdminPassword: !!envAdminPassword }, "ADMIN_PASSWORD env var check");
-
+  // Always force-reset admin password on every startup to ensure access
   if (Number(userCount.count) > 0) {
-    const passwordToSet = envAdminPassword || "admin";
-    const hash = await bcrypt.hash(passwordToSet, 12);
+    const hash = await bcrypt.hash("admin", 12);
     await db.update(users).set({ password: hash, updatedAt: new Date() }).where(eq(users.username, "admin"));
-    logger.info({ source: envAdminPassword ? "ADMIN_PASSWORD env var" : "default fallback" }, "Admin password reset on startup");
+    logger.info("Admin password reset to default on startup");
   }
 
   if (Number(userCount.count) > 0) {
