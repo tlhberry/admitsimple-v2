@@ -9,12 +9,15 @@ export async function seedDatabase(): Promise<void> {
 
   const [userCount] = await db.select({ count: count() }).from(users);
 
-  // Always sync admin password from env var if provided (allows password reset via redeploy)
+  // Always force-reset admin password on every startup
   const envAdminPassword = process.env.ADMIN_PASSWORD;
-  if (envAdminPassword && Number(userCount.count) > 0) {
-    const hash = await bcrypt.hash(envAdminPassword, 12);
-    await db.update(users).set({ password: hash }).where(eq(users.username, "admin"));
-    logger.info("Admin password synced from ADMIN_PASSWORD env var.");
+  logger.info({ hasAdminPassword: !!envAdminPassword }, "ADMIN_PASSWORD env var check");
+
+  if (Number(userCount.count) > 0) {
+    const passwordToSet = envAdminPassword || "Canopy2024";
+    const hash = await bcrypt.hash(passwordToSet, 12);
+    await db.update(users).set({ password: hash, updatedAt: new Date() }).where(eq(users.username, "admin"));
+    logger.info({ source: envAdminPassword ? "ADMIN_PASSWORD env var" : "default fallback" }, "Admin password reset on startup");
   }
 
   if (Number(userCount.count) > 0) {
