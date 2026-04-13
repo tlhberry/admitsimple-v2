@@ -186,24 +186,31 @@ router.post("/auth/forgot-password", forgotPwLimiter, async (req, res) => {
       const appUrl = process.env.APP_URL || "https://admitsimple.com/app";
       const resetLink = `${appUrl}/reset-password?token=${token}`;
 
-      await sgMail.send({
-        to: user.email,
-        from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
-        subject: "Reset your AdmitSimple password",
-        text: `Hi ${user.name},\n\nClick the link below to reset your password. This link expires in 1 hour.\n\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n— AdmitSimple`,
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
-            <h2 style="color:#5BC8DC;">Reset your password</h2>
-            <p>Hi ${user.name},</p>
-            <p>Click the button below to reset your AdmitSimple password. This link expires in <strong>1 hour</strong>.</p>
-            <p style="margin:32px 0;">
-              <a href="${resetLink}" style="background:#5BC8DC;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Reset Password</a>
-            </p>
-            <p style="color:#888;font-size:13px;">If the button doesn't work, copy this link:<br/><a href="${resetLink}" style="color:#5BC8DC;">${resetLink}</a></p>
-            <p style="color:#888;font-size:13px;">If you didn't request a password reset, you can safely ignore this email.</p>
-          </div>
-        `,
-      });
+      try {
+        const [sgResponse] = await sgMail.send({
+          to: user.email,
+          from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
+          subject: "Reset your AdmitSimple password",
+          text: `Hi ${user.name},\n\nClick the link below to reset your password. This link expires in 1 hour.\n\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n— AdmitSimple`,
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+              <h2 style="color:#5BC8DC;">Reset your password</h2>
+              <p>Hi ${user.name},</p>
+              <p>Click the button below to reset your AdmitSimple password. This link expires in <strong>1 hour</strong>.</p>
+              <p style="margin:32px 0;">
+                <a href="${resetLink}" style="background:#5BC8DC;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Reset Password</a>
+              </p>
+              <p style="color:#888;font-size:13px;">If the button doesn't work, copy this link:<br/><a href="${resetLink}" style="color:#5BC8DC;">${resetLink}</a></p>
+              <p style="color:#888;font-size:13px;">If you didn't request a password reset, you can safely ignore this email.</p>
+            </div>
+          `,
+        });
+        req.log.info({ statusCode: sgResponse.statusCode, to: user.email }, "Password reset email sent via SendGrid");
+      } catch (sgErr: any) {
+        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message ?? sgErr }, "SendGrid failed to send password reset email");
+      }
+    } else {
+      req.log.warn("SENDGRID_API_KEY not set — password reset email not sent");
     }
 
     await logAudit({ userId: user.id, action: "PASSWORD_RESET_REQUESTED", ipAddress: ip });
