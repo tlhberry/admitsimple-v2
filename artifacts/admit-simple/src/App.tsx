@@ -7,6 +7,8 @@ import { TwilioVoiceProvider } from "@/contexts/TwilioVoiceContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import Login from "@/pages/login";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import InquiriesList from "@/pages/inquiries/index";
 import InquiryDetail from "@/pages/inquiries/detail";
@@ -40,6 +42,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/" component={Dashboard} />
       <Route path="/inquiries" component={InquiriesList} />
       <Route path="/inquiries/:id" component={InquiryDetail} />

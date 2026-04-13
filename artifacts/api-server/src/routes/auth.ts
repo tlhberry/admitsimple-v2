@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { users } from "@workspace/db/schema";
-import { eq, or } from "drizzle-orm";
+import { users, passwordResetTokens } from "@workspace/db/schema";
+import { eq, or, and, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import sgMail from "@sendgrid/mail";
 import rateLimit from "express-rate-limit";
 import { logAudit, getClientIp } from "../lib/audit";
 
@@ -137,6 +139,117 @@ router.post("/auth/change-password", changePwLimiter, async (req, res) => {
     await db.update(users).set({ password: hashed }).where(eq(users.id, user.id));
     await logAudit({ userId: user.id, action: "PASSWORD_CHANGED", details: "User changed own password", ipAddress: ip });
     res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Forgot password rate limiter: 5 per 15 min per IP ───────────────────────
+const forgotPwLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please wait 15 minutes and try again." },
+  keyGenerator: (req) => getClientIp(req as any),
+});
+
+router.post("/auth/forgot-password", forgotPwLimiter, async (req, res) => {
+  const ip = getClientIp(req as any);
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim())).limit(1);
+
+    // Always respond with success to prevent email enumeration
+    if (!user || user.isActive === false) {
+      res.json({ message: "If that email is on file, a reset link has been sent." });
+      return;
+    }
+
+    // Generate a secure token
+    const token = crypto.randomBytes(48).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Invalidate old tokens for this user and insert new one
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
+    await db.insert(passwordResetTokens).values({ userId: user.id, token, expiresAt });
+
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (apiKey) {
+      sgMail.setApiKey(apiKey);
+      const appUrl = process.env.APP_URL || "https://admitsimple.com/app";
+      const resetLink = `${appUrl}/reset-password?token=${token}`;
+
+      await sgMail.send({
+        to: user.email,
+        from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
+        subject: "Reset your AdmitSimple password",
+        text: `Hi ${user.name},\n\nClick the link below to reset your password. This link expires in 1 hour.\n\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n— AdmitSimple`,
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+            <h2 style="color:#5BC8DC;">Reset your password</h2>
+            <p>Hi ${user.name},</p>
+            <p>Click the button below to reset your AdmitSimple password. This link expires in <strong>1 hour</strong>.</p>
+            <p style="margin:32px 0;">
+              <a href="${resetLink}" style="background:#5BC8DC;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Reset Password</a>
+            </p>
+            <p style="color:#888;font-size:13px;">If the button doesn't work, copy this link:<br/><a href="${resetLink}" style="color:#5BC8DC;">${resetLink}</a></p>
+            <p style="color:#888;font-size:13px;">If you didn't request a password reset, you can safely ignore this email.</p>
+          </div>
+        `,
+      });
+    }
+
+    await logAudit({ userId: user.id, action: "PASSWORD_RESET_REQUESTED", ipAddress: ip });
+    res.json({ message: "If that email is on file, a reset link has been sent." });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/reset-password", async (req, res) => {
+  const ip = getClientIp(req as any);
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      res.status(400).json({ error: "Token and new password are required" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          gt(passwordResetTokens.expiresAt, new Date()),
+          eq(passwordResetTokens.usedAt, null as any),
+        ),
+      )
+      .limit(1);
+
+    if (!resetToken) {
+      res.status(400).json({ error: "This reset link is invalid or has expired. Please request a new one." });
+      return;
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await db.update(users).set({ password: hashed }).where(eq(users.id, resetToken.userId));
+    await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, resetToken.id));
+
+    await logAudit({ userId: resetToken.userId, action: "PASSWORD_RESET_SUCCESS", ipAddress: ip });
+    res.json({ message: "Password reset successfully. You can now log in." });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
 import logoImg from "@assets/Untitled_1775863851436.png";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { login, isLoggingIn } = useAuth();
+  const [, navigate] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +62,13 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
-                <span className="text-xs text-muted-foreground">Contact your administrator to reset</span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Forgot password?
+                </button>
               </div>
               <Input
                 id="password"

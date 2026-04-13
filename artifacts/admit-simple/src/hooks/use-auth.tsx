@@ -16,8 +16,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isLoginPage] = useRoute("/login");
+  const isPublicPage = isLoginPage || location.startsWith("/forgot-password") || location.startsWith("/reset-password");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -59,10 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isLoading && isError && !isLoginPage) {
+    if (!isLoading && isError && !isPublicPage) {
       setLocation("/login");
     }
-  }, [isLoading, isError, isLoginPage, setLocation]);
+  }, [isLoading, isError, isPublicPage, setLocation]);
 
   return (
     <AuthContext.Provider 

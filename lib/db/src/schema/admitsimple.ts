@@ -27,6 +27,15 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const inquiries = pgTable("inquiries", {
   id: serial("id").primaryKey(),
   firstName: varchar("first_name", { length: 100 }).notNull(),
