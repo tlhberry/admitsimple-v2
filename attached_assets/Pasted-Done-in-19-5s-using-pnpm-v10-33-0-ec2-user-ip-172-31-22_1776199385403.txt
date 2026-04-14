@@ -1,0 +1,43 @@
+Done in 19.5s using pnpm v10.33.0
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ pnpm --filter @workspace/db run push-force
+No projects matched the filters in "/home/ec2-user/Admissions-CRM"
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ ls lib
+ls: cannot access 'lib': No such file or directory
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ ls -la
+total 1572
+drwxr-xr-x.  13 ec2-user ec2-user  16384 Apr 14 20:40 .
+drwx------.   9 ec2-user ec2-user  16384 Apr 14 20:40 ..
+-rw-r--r--.   1 ec2-user ec2-user    430 Mar 13 15:27 .dockerignore
+-rw-r--r--.   1 ec2-user ec2-user    786 Mar 25 16:13 .env
+-rw-r--r--.   1 ec2-user ec2-user    278 Mar 29 01:01 .env.example
+drwxr-xr-x.   7 ec2-user ec2-user  16384 Apr 14 20:35 .git
+-rw-r--r--.   1 ec2-user ec2-user     72 Mar 13 15:27 .gitignore
+-rw-r--r--.   1 ec2-user ec2-user    875 Mar 29 01:01 .replit
+-rw-r--r--.   1 root     root        786 Mar 26 15:17 Dockerfile
+-rw-r--r--.   1 ec2-user ec2-user   4387 Mar 13 15:27 SECURITY_REPORT.md
+drwxr-xr-x.   2 ec2-user ec2-user  16384 Mar 13 15:27 attached_assets
+-rw-r--r--.   1 ec2-user ec2-user  10653 Mar 13 15:27 bed_board_card.png
+drwxr-xr-x.   4 ec2-user ec2-user     49 Mar 13 15:27 client
+-rw-r--r--.   1 ec2-user ec2-user    459 Mar 13 15:27 components.json
+-rw-r--r--.   1 ec2-user ec2-user  38261 Mar 13 15:27 dashboard_mobile_full.png
+drwxr-xr-x.   2 ec2-user ec2-user    139 Apr 13 15:40 deploy
+-rw-r--r--.   1 ec2-user ec2-user   5969 Mar 13 15:27 design_guidelines.md
+drwxr-xr-x.   3 ec2-user ec2-user     37 Mar 29 00:44 dist
+drwxr-xr-x.   2 ec2-user ec2-user     46 Mar 13 15:27 docs
+-rw-r--r--.   1 ec2-user ec2-user    325 Mar 13 15:27 drizzle.config.ts
+-rw-r--r--.   1 ec2-user ec2-user 126442 Mar 13 15:27 landing_full.png
+-rw-r--r--.   1 ec2-user ec2-user 384497 Mar 13 15:27 neondb.sql
+drwxr-xr-x. 400 ec2-user ec2-user  32768 Apr 14 20:40 node_modules
+-rw-r--r--.   1 ec2-user ec2-user 505253 Mar 29 01:01 package-lock.json
+-rw-r--r--.   1 ec2-user ec2-user   4966 Mar 29 01:01 package.json
+-rw-r--r--.   1 ec2-user ec2-user 316461 Apr 14 20:40 pnpm-lock.yaml
+-rw-r--r--.   1 ec2-user ec2-user     80 Mar 13 15:27 postcss.config.js
+-rw-r--r--.   1 ec2-user ec2-user  11248 Mar 29 01:01 replit.md
+drwxr-xr-x.   2 ec2-user ec2-user     22 Mar 29 01:01 script
+drwxr-xr-x.   6 ec2-user ec2-user  16384 Mar 29 02:17 server
+drwxr-xr-x.   3 ec2-user ec2-user     37 Mar 28 23:50 shared
+-rw-r--r--.   1 ec2-user ec2-user   4050 Mar 13 15:27 tailwind.config.ts
+-rw-r--r--.   1 ec2-user ec2-user    657 Mar 13 15:27 tsconfig.json
+drwxr-xr-x.   2 ec2-user ec2-user     41 Mar 13 15:27 uploads
+-rw-r--r--.   1 ec2-user ec2-user   1080 Mar 13 15:27 vite.config.ts
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ 
