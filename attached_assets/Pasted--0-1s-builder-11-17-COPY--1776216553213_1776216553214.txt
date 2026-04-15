@@ -1,0 +1,76 @@
+                                                                     0.1s
+ => [builder 11/17] COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/                                                                                 0.1s
+ => [builder 12/17] COPY lib/db/src ./lib/db/src                                                                                                                    0.1s
+ => [builder 13/17] COPY lib/db/tsconfig.json ./lib/db/                                                                                                             0.1s
+ => [builder 14/17] COPY lib/api-zod/src ./lib/api-zod/src                                                                                                          0.1s
+ => [builder 15/17] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                                   0.1s
+ => [builder 16/17] COPY tsconfig.json ./                                                                                                                           0.0s
+ => [builder 17/17] RUN pnpm --filter @workspace/api-server run build                                                                                               3.8s
+ => [runner 4/5] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist ./dist                                                                    0.7s
+ => [runner 5/5] COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules                                                                         3.1s
+ => exporting to image                                                                                                                                              2.0s
+ => => exporting layers                                                                                                                                             2.0s
+ => => writing image sha256:7ba4be19a7db5793939d8e00ddb40b040c417d2abadfc964ac6fbb800a73e301                                                                        0.0s
+ => => naming to docker.io/library/admitsimple-api:latest                                                                                                           0.0s
+✅ API built
+[ec2-user@ip-172-31-22-79 new-app]$ source ~/new-app/deploy/.env && docker run -d \
+>   --name admitsimple-api \
+>   --restart unless-stopped \
+>   --network admitsimple-net \
+>   -p 3001:3001 \
+>   -e NODE_ENV=production \
+>   -e PORT=3001 \
+>   -e DATABASE_URL="postgres://admitsimple:${DB_PASSWORD}@admitsimple-db:5432/admitsimple" \
+>   -e SESSION_SECRET="$SESSION_SECRET" \
+>   -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+>   admitsimple-api:latest && echo "✅ API started"
+fb0011eb631ed1c22312b8e6e5b5be8528dbc0d49f70b6afd3d0cd61fe830a9b
+✅ API started
+[ec2-user@ip-172-31-22-79 new-app]$ docker ps | grep admitsimple
+fb0011eb631e   admitsimple-api:latest   "docker-entrypoint.s…"   34 seconds ago   Up 33 seconds   0.0.0.0:3001->3001/tcp, :::3001->3001/tcp   admitsimple-api
+5a6d18960060   postgres:16-alpine       "docker-entrypoint.s…"   6 minutes ago    Up 6 minutes    5432/tcp                                    admitsimple-db
+[ec2-user@ip-172-31-22-79 new-app]$ curl -s http://localhost:3001/api/health
+{"error":"Unauthorized"}[ec2-user@ip-172-31-22-79 new-app]$ cd ~/new-app && pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/admit-simple run build && echo "✅ Frontend built"
+Scope: all 12 workspace projects
+Lockfile is up to date, resolution step is skipped
+Packages: +798
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Downloading @mediapipe/tasks-vision@0.10.17: 6.13 MB/6.13 MB, done
+Downloading three@0.182.0: 12.47 MB/12.47 MB, done
+Downloading hls.js@1.6.15: 5.86 MB/5.86 MB, done
+Progress: resolved 798, reused 376, downloaded 422, added 798, done
+node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild: Running postinstall script.node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild: Running postinstall script, done in 362ms
+
+devDependencies:
++ prettier 3.8.1
++ typescript 5.9.3
+
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+└─ Done in 16ms
+╭ Warning ───────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                            │
+│   Ignored build scripts: core-js@3.49.0.                                                   │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.   │
+│                                                                                            │
+╰────────────────────────────────────────────────────────────────────────────────────────────╯
+Done in 21.4s using pnpm v10.33.0
+
+> @workspace/admit-simple@0.0.0 build /home/ec2-user/new-app/artifacts/admit-simple
+> vite build --config vite.config.ts
+
+failed to load config from /home/ec2-user/new-app/artifacts/admit-simple/vite.config.ts
+error during build:
+Error: PORT environment variable is required but was not provided.
+    at file:///home/ec2-user/new-app/artifacts/admit-simple/node_modules/.vite-temp/vite.config.ts.timestamp-1776216533896-988d6a9233b73.mjs:10:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async loadConfigFromBundledFile (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35909:12)
+    at async bundleAndLoadConfigFile (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35797:17)
+    at async loadConfigFromFile (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35764:42)
+    at async resolveConfig (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35413:22)
+    at async createBuilder (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33875:19)
+    at async CAC.<anonymous> (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:10)
+/home/ec2-user/new-app/artifacts/admit-simple:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/admit-simple@0.0.0 build: `vite build --config vite.config.ts`
+Exit status 1
+[ec2-user@ip-172-31-22-79 new-app]$ 
