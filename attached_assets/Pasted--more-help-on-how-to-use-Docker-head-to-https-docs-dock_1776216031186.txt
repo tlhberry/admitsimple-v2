@@ -1,0 +1,72 @@
+ more help on how to use Docker, head to https://docs.docker.com/go/guides/
+
+[ec2-user@ip-172-31-22-79 new-app]$ docker-compose -f deploy/docker-compose.ec2.yml --env-file deploy/.env up -d --build
+-bash: docker-compose: command not found
+[ec2-user@ip-172-31-22-79 new-app]$ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose && docker-compose --version
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100 30.8M  100 30.8M    0     0  85.8M      0 --:--:-- --:--:-- --:--:--  203M
+Docker Compose version v5.1.2
+[ec2-user@ip-172-31-22-79 new-app]$ cd ~/new-app && docker-compose -f deploy/docker-compose.ec2.yml --env-file deploy/.env up -d --build
+[+] up 0/1
+ ⠋ Image postgres:16-alpine Pulling                                                [+] up 0/1                                                                        0
+ ⠙ Image postgres:16-alpine Pulling                                                [+] up 0/1                                                                        0
+ ⠹ Image postgres:16-alpine Pulling                                                [+] up 0/1                                                                        0
+ ⠸ Image postgres:16-alpine Pulling                                                [+] up 0/1                                                                        0
+ ⠼ Image postgres:16-alpine Pulling                                                [+] up 0/1                                                                        0
+ ⠴ Image postgres:16-alpine Pulling                                                [+] up 0/12                                                                       0
+ ⠦ Image postgres:16-alpine [⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀] Pulling                                  [+] up 0/12                                                                       0
+ ⠧ Image postgres:16-alpine [⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀] Pulling                                  [+] up 4/12                                                                       0
+ ⠇ Image postgres:16-alpine [⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀] Pulling                                  [+] up 6/12                                                                       0
+ ⠏ Image postgres:16-alpine [⣿⣿⣿⣿⣿⠀⣿⣿⠀⠀⠀] Pulling                                  [+] up 8/12                                                                       1
+ ⠋ Image postgres:16-alpine [⣿⣿⣿⣿⣿⠀⣿⣿⣿⣿⠀] Pulling                                  [+] up 9/12                                                                       1
+ ⠙ Image postgres:16-alpine [⣿⣿⣿⣿⣿⡀⣿⣿⣿⣿⣿]  21.1MB / 110MB   Pulling                [+] up 9/12                                                                       1
+ ⠹ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣀⣿⣿⣿⣿⣿] 37.11MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠸ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣄⣿⣿⣿⣿⣿] 48.86MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠼ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣤⣿⣿⣿⣿⣿] 59.01MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠴ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣤⣿⣿⣿⣿⣿] 68.61MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠦ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣦⣿⣿⣿⣿⣿] 77.66MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠧ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣶⣿⣿⣿⣿⣿] 93.17MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠇ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      1
+ ⠏ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠋ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠙ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠹ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠸ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠼ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠴ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠦ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠧ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠇ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      2
+ ⠏ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠋ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠙ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠹ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠸ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠼ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠴ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠦ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠧ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠇ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      3
+ ⠏ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠋ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠙ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠹ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠸ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠼ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠴ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠦ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠧ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠇ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      4
+ ⠏ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 103.3MB / 110MB   Pulling                [+] up 10/12                                                                      5
+ ⠋ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 107.3MB / 110MB   Pulling                [+] up 10/12                                                                      5
+ ⠙ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿]   110MB / 110MB   Pulling                [+] up 10/12                                                                      5
+ ⠹ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿]   110MB / 110MB   Pulling                [+] up 10/12                                                                      5
+ ⠸ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿]   110MB / 110MB   Pulling                [+] up 11/12                                                                      5
+ ⠼ Image postgres:16-alpine [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿]   110MB / 110MB   Pulling                [+] up 12/13                                                                      5
+ ✔ Image postgres:16-alpine Pulled                                                                                                                                   5.5s
+ ⠋ Image deploy-api         Building                                                                                                                                 0.0s
+compose build requires buildx 0.17.0 or later
+[ec2-user@ip-172-31-22-79 new-app]$ 
