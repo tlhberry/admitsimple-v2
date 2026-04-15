@@ -1,0 +1,53 @@
+ -d \
+  --name admitsimple-api \
+  --restart unless-stopped \
+  --network admitsimple-net \
+  -p 3001:3001 \
+  -e NODE_ENV=production \
+  -e PORT=3001 \
+  -e SECURE_COOKIES=false \
+  -e DATABASE_URL="postgres://admitsimple:${DB_PASSWORD}@admitsimple-db:5432/admitsimple" \
+  -e SESSION_SECRET="$SESSION_SECRET" \
+  -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+  admitsimple-api:latest && echo "✅ API restarted"
+[+] Building 44.8s (29/29) FINISHED                                 docker:default
+ => [internal] load build definition from Dockerfile.api                      0.0s
+ => => transferring dockerfile: 1.53kB                                        0.0s
+ => [internal] load metadata for docker.io/library/node:20-alpine             0.3s
+ => [internal] load .dockerignore                                             0.0s
+ => => transferring context: 2B                                               0.0s
+ => [internal] load build context                                             0.1s
+ => => transferring context: 20.65kB                                          0.0s
+ => [base 1/2] FROM docker.io/library/node:20-alpine@sha256:f598378b5240225e  0.0s
+ => CACHED [runner 2/6] WORKDIR /app                                          0.0s
+ => CACHED [runner 3/6] RUN addgroup -g 1001 -S nodejs && adduser -S nodejs   0.0s
+ => [runner 4/6] RUN mkdir -p /app/artifacts/api-server                       0.3s
+ => CACHED [base 2/2] RUN corepack enable && corepack prepare pnpm@latest --  0.0s
+ => CACHED [builder  1/17] WORKDIR /app                                       0.0s
+ => CACHED [builder  2/17] COPY package.json pnpm-workspace.yaml pnpm-lock.y  0.0s
+ => CACHED [builder  3/17] COPY artifacts/api-server/package.json ./artifact  0.0s
+ => CACHED [builder  4/17] COPY artifacts/api-server/build.mjs ./artifacts/a  0.0s
+ => CACHED [builder  5/17] COPY lib/db/package.json ./lib/db/                 0.0s
+ => CACHED [builder  6/17] COPY lib/api-zod/package.json ./lib/api-zod/       0.0s
+ => CACHED [builder  7/17] COPY lib/api-spec/package.json ./lib/api-spec/     0.0s
+ => CACHED [builder  8/17] COPY lib/api-client-react/package.json ./lib/api-  0.0s
+ => CACHED [builder  9/17] RUN pnpm install --frozen-lockfile                 0.0s
+ => [builder 10/17] COPY artifacts/api-server/src ./artifacts/api-server/src  0.1s
+ => [builder 11/17] COPY artifacts/api-server/tsconfig.json ./artifacts/api-  0.1s
+ => [builder 12/17] COPY lib/db/src ./lib/db/src                              0.1s
+ => [builder 13/17] COPY lib/db/tsconfig.json ./lib/db/                       0.1s
+ => [builder 14/17] COPY lib/api-zod/src ./lib/api-zod/src                    0.1s
+ => [builder 15/17] COPY lib/api-zod/tsconfig.json ./lib/api-zod/             0.0s
+ => [builder 16/17] COPY tsconfig.json ./                                     0.0s
+ => [builder 17/17] RUN pnpm --filter @workspace/api-server run build         5.5s
+ => [runner 5/6] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/ap  0.2s
+ => [runner 6/6] COPY --from=builder --chown=nodejs:nodejs /app/node_module  10.1s
+ => exporting to image                                                        8.2s
+ => => exporting layers                                                       8.1s
+ => => writing image sha256:a882140afada80e1509ccc35154793843b5c386452686b39  0.0s
+ => => naming to docker.io/library/admitsimple-api:latest                     0.0s
+admitsimple-api
+admitsimple-api
+8a3a9acdc85c1635cae739856c5c9e04c3fecd561e39a9cb5dc62765fcf0254b
+✅ API restarted
+[ec2-user@ip-172-31-22-79 new-app]$ 
