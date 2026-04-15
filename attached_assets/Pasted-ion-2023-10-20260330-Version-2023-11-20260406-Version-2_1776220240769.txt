@@ -1,0 +1,66 @@
+ion 2023.10.20260330:
+  Version 2023.11.20260406:
+  Version 2023.11.20260413:
+Run "/usr/bin/dnf check-release-update" for full release and version update info
+   ,     #_
+   ~\_  ####_        Amazon Linux 2023
+  ~~  \_#####\
+  ~~     \###|
+  ~~       \#/ ___   https://aws.amazon.com/linux/amazon-linux-2023
+   ~~       V~' '->
+    ~~~         /
+      ~~._.   _/
+         _/ _/
+       _/m/'
+Last login: Tue Apr 14 23:55:53 2026
+[ec2-user@ip-172-31-22-79 ~]$ source ~/new-app/deploy/.env
+docker exec admitsimple-db psql -U admitsimple -d admitsimple -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; UPDATE users SET password = crypt('Admitsimple1!', gen_salt('bf', 12)) WHERE username = 'admin'; SELECT 'done';"
+-bash: !',: event not found
+[ec2-user@ip-172-31-22-79 ~]$ docker exec -i admitsimple-db psql -U admitsimple -d admitsimple << 'EOF'
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+UPDATE users SET password = crypt('Admitsimple1!', gen_salt('bf', 12)) WHERE username = 'admin';
+SELECT 'done';
+EOF
+CREATE EXTENSION
+UPDATE 1
+ ?column? 
+----------
+ done
+(1 row)
+
+[ec2-user@ip-172-31-22-79 ~]$ cat > /tmp/reset.mjs << 'EOF'
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+import { readdirSync } from 'fs';
+
+const pnpm = '/home/ec2-user/new-app/node_modules/.pnpm';
+const dirs = readdirSync(pnpm);
+const bcrypt = require(`${pnpm}/${dirs.find(d => d.startsWith('bcryptjs'))}/node_modules/bcryptjs`);
+const { Pool } = require(`${pnpm}/${dirs.find(d => d.startsWith('pg@8'))}/node_modules/pg`);
+
+const hash = await bcrypt.hash('Admitsimple1!', 12);
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+await pool.query("UPDATE users SET password = $1 WHERE username = 'admin'", [hash]);
+console.log('Password reset!');
+await pool.end();
+EOF
+source ~/new-app/deploy/.env && DATABASE_URL="postgres://admitsimple:${DB_PASSWORD}@localhost:5432/admitsimple" node /tmp/reset.mjs
+Password reset!
+[ec2-user@ip-172-31-22-79 ~]$source ~/new-app/deploy/.envv
+docker stop admitsimple-api && docker rm admitsimple-api
+docker run -d \
+  --name admitsimple-api \
+  --restart unless-stopped \
+  --network admitsimple-net \
+  -p 3001:3001 \
+  -e NODE_ENV=development \
+  -e PORT=3001 \
+  -e DATABASE_URL="postgres://admitsimple:${DB_PASSWORD}@admitsimple-db:5432/admitsimple" \
+  -e SESSION_SECRET="$SESSION_SECRET" \
+  -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+  admitsimple-api:latest && echo "✅ API restarted"
+admitsimple-api
+admitsimple-api
+c1897ee670753d8f0d8027cafc8e97a9e51dd8d146a3438e5461106b4128b54f
+✅ API restarted
+[ec2-user@ip-172-31-22-79 ~]$ 
