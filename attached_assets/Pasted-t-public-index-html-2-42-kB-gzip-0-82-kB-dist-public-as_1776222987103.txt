@@ -1,0 +1,32 @@
+t/public/index.html                                    2.42 kB │ gzip:   0.82 kB
+dist/public/assets/Untitled_1775863851436-Bo8_bJnk.png  138.81 kB
+dist/public/assets/index-CcgXwX8K.css                   130.02 kB │ gzip:  20.63 kB
+dist/public/assets/index-ItlRUKKf.js                    526.96 kB │ gzip: 164.47 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.33s
+
+> @workspace/admit-simple@0.0.0 build /home/ec2-user/new-app/artifacts/admit-simple
+> vite build --config vite.config.ts
+
+vite v7.3.1 building client environment for production...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 3019 modules transformed.
+dist/public/index.html                                      0.91 kB │ gzip:   0.46 kB
+dist/public/assets/Untitled_1775863851436-Bo8_bJnk.png    138.81 kB
+dist/public/assets/index-CPEwhTes.css                     177.82 kB │ gzip:  26.19 kB
+dist/public/assets/index-DTIK7Hml.js                    1,808.02 kB │ gzip: 492.13 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.60s
+✅ Both sites live
+[ec2-user@ip-172-31-22-79 new-app]$ 
