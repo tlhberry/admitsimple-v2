@@ -1,0 +1,158 @@
+ata: https:;connect-src 'self';base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests
+< Cross-Origin-Opener-Policy: same-origin
+< Cross-Origin-Resource-Policy: same-origin
+< Origin-Agent-Cluster: ?1
+< Referrer-Policy: strict-origin-when-cross-origin
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+< X-Content-Type-Options: nosniff
+< X-DNS-Prefetch-Control: off
+< X-Download-Options: noopen
+< X-Frame-Options: DENY
+< X-Permitted-Cross-Domain-Policies: none
+< X-XSS-Protection: 0
+< RateLimit-Policy: 10;w=900
+< RateLimit-Limit: 10
+< RateLimit-Remaining: 9
+< RateLimit-Reset: 900
+< ETag: W/"ab-i47PeT61nh1i2pYnuM/5Ljcf4Yg"
+< Set-Cookie: connect.sid=s%3Ac3EKsUi2SMDG56txozwDZLIL7xc2IWMn.6er%2FEhiKBNuiZPKbiWhs8Lupe7alJ8ep1QTPrOl6yRc; Path=/; Expires=Tue, 14 Apr 2026 23:47:10 GMT; HttpOnly; Secure; SameSite=Lax
+< 
+* Connection #0 to host admitsimple.com left intact
+{"message":"Login successful","user":{"id":"bb14edef-398a-49ad-bc9f-4166d1f785d4","email":"austin@admitsimple.com","firstName":"Austin","lastName":"Berry","role":"admin"}}[ec2-user@ip-172-31-22-79 Admissions-CRM]$ dig +short admitsimple.com
+3.223.7.206
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ sudo nginx -T | grep -n "server_name\|listen 443\|proxy_pass"
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+41:        server_name  _;
+62:#        server_name  _;
+1093:    server_name admitsimple.com www.admitsimple.com;
+1098:    listen 443 ssl;
+1099:    server_name admitsimple.com www.admitsimple.com;
+1110:        proxy_pass http://localhost:5000;
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ cd ~
+[ec2-user@ip-172-31-22-79 ~]$ git clone https://github.com/tlhberry/admitsimple-v2.git new-app 2>/dev/null || (cd new-app && git pull)
+Username for 'https://github.com': 
+Password for 'https://ls%20~%2Fnew-app@github.com': 
+-bash: cd: new-app: No such file or directory
+[ec2-user@ip-172-31-22-79 ~]$ cd ~
+[ec2-user@ip-172-31-22-79 ~]$ git clone https://github.com/tlhberry/admitsimple-v2.git new-app
+Cloning into 'new-app'...
+remote: Enumerating objects: 3393, done.
+remote: Counting objects: 100% (293/293), done.
+remote: Compressing objects: 100% (107/107), done.
+remote: Total 3393 (delta 212), reused 255 (delta 186), pack-reused 3100 (from 1)
+Receiving objects: 100% (3393/3393), 59.54 MiB | 58.06 MiB/s, done.
+Resolving deltas: 100% (2320/2320), done.
+[ec2-user@ip-172-31-22-79 ~]$ node --version
+v20.20.0
+[ec2-user@ip-172-31-22-79 ~]$ pnpm --version 2>/dev/null || echo 'no pnpm'
+10.33.0
+[ec2-user@ip-172-31-22-79 ~]$ ls ~/new-app/
+artifacts        deploy  lib                 package.json    pnpm-workspace.yaml  replit.md  tsconfig.base.json
+attached_assets  docs    live_call_form.png  pnpm-lock.yaml  public               scripts    tsconfig.json
+[ec2-user@ip-172-31-22-79 ~]$ ls ~/new-app/deploy/ 2>/dev/null || echo 'no deploy folder'
+Dockerfile.api  Dockerfile.web  clients  docker-compose.yml  nginx.conf  scripts  terraform
+[ec2-user@ip-172-31-22-79 ~]$ cat /etc/nginx/conf.d/admitsimple.conf
+cat: /etc/nginx/conf.d/admitsimple.conf: No such file or directory
+[ec2-user@ip-172-31-22-79 ~]$ 
+[ec2-user@ip-172-31-22-79 ~]$ cat /etc/nginx/conf.d/admititsimple.conf
+cat: /etc/nginx/conf.d/admititsimple.conf: No such file or directory
+[ec2-user@ip-172-31-22-79 ~]$ ls /etc/nginx/conf.d/ && sudo cat /etc/nginx/conf.d/$(ls /etc/nginx/conf.d/)
+admititsimple.conf.bak  admitltsimple.conf
+
+server {
+    listen 80;
+    server_name admitsimple.com www.admitsimple.com;
+    return 301 https://admitsimple.com$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name admitsimple.com www.admitsimple.com;
+
+    ssl_certificate /etc/letsencrypt/live/admitsimple.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admitsimple.com/privkey.pem;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+cat: admitltsimple.conf: No such file or directory
+[ec2-user@ip-172-31-22-79 ~]$ sudo -u postgres psql -c "\l" 2>/dev/null || echo "no local postgres"
+no local postgres
+[ec2-user@ip-172-31-22-79 ~]$ cd ~/new-app
+[ec2-user@ip-172-31-22-79 new-app]$ SESSION_SECRET=$(openssl rand -base64 48)
+[ec2-user@ip-172-31-22-79 new-app]$ DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20)
+[ec2-user@ip-172-31-22-79 new-app]$ cat > deploy/.env << ENVEOF
+> SESSION_SECRET=$SESSION_SECRET
+> ADMIN_PASSWORD=Admitsimple1!
+> DB_PASSWORD=$DB_PASSWORD
+> TWILIO_ACCOUNT_SID=
+> TWILIO_AUTH_TOKEN=
+> TWILIO_PHONE_NUMBER=
+> TWILIO_TWIML_APP_SID=
+> ENVEOF
+[ec2-user@ip-172-31-22-79 new-app]$ echo "✅ .env created"
+✅ .env created
+[ec2-user@ip-172-31-22-79 new-app]$ cat deploy/.env
+SESSION_SECRET=gjwRr3lq7nbJ2wRIZf/SiB+I8/LaOAtyLDXT6DnmKMf2OFEcXp4MGOO9WNbf+T3Q
+ADMIN_PASSWORD=Admitsimple1!
+DB_PASSWORD=WJ0ObpajJmZc4pqp9SKF
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+TWILIO_TWIML_APP_SID=
+[ec2-user@ip-172-31-22-79 new-app]$ docker stop admitsimple 2>/dev/null; docker rm admitsimple 2>/dev/null; echo "✅ Old container stopped"
+admitsimple
+admitsimple
+✅ Old container stopped
+[ec2-user@ip-172-31-22-79 new-app]$ cat > ~/new-app/deploy/docker-compose.ec2.yml << 'EOF'
+> services:
+>   db:
+>     image: postgres:16-alpine
+>     restart: unless-stopped
+>     environment:
+>       POSTGRES_DB: admitsimple
+>       POSTGRES_USER: admitsimple
+>       POSTGRES_PASSWORD: ${DB_PASSWORD}
+>     volumes:
+>       - postgres_data:/var/lib/postgresql/data
+>     healthcheck:
+>       test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+>       interval: 10s
+>       timeout: 5s
+>       retries: 5
+>   api:
+>     build:
+>       context: ..
+>       dockerfile: deploy/Dockerfile.api
+>     restart: unless-stopped
+>     ports:
+>       - "3001:3001"
+>     environment:
+>       NODE_ENV: production
+>       PORT: 3001
+>       DATABASE_URL: postgres://admitsimple:${DB_PASSWORD}@db:5432/admitsimple
+>       SESSION_SECRET: ${SESSION_SECRET}
+>       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+>       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+>       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+>       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+>       TWILIO_TWIML_APP_SID: ${TWILIO_TWIML_APP_SID:-}
+>     depends_on:
+>       db:
+>         condition: service_healthy
+> volumes:
+>   postgres_data:
+> EOF
+[ec2-user@ip-172-31-22-79 new-app]$ echo "✅ docker-compose.ec2.yml ready"
+✅ docker-compose.ec2.yml ready
