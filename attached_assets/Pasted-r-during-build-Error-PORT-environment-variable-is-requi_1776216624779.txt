@@ -1,0 +1,49 @@
+r during build:
+Error: PORT environment variable is required but was not provided.
+    at file:///home/ec2-user/new-app/artifacts/admit-simple/node_modules/.vite-temp/vite.config.ts.timestamp-1776216533896-988d6a9233b73.mjs:10:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async loadConfigFromBundledFile (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35909:12)
+    at async bundleAndLoadConfigFile (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35797:17)
+    at async loadConfigFromFile (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35764:42)
+    at async resolveConfig (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35413:22)
+    at async createBuilder (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33875:19)
+    at async CAC.<anonymous> (file:///home/ec2-user/new-app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:10)
+/home/ec2-user/new-app/artifacts/admit-simple:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/admit-simple@0.0.0 build: `vite build --config vite.config.ts`
+Exit status 1
+[ec2-user@ip-172-31-22-79 new-app]$ PORT=3000 BASE_PATH=/ pnpm --filter @workspace/admit-simple run build && echo "✅ Frontend built"
+
+> @workspace/admit-simple@0.0.0 build /home/ec2-user/new-app/artifacts/admit-simple
+> vite build --config vite.config.ts
+
+vite v7.3.1 building client environment for production...
+transforming (5) ../../node_modules/.pnpm/react@19.1.0/node_modules/react/cjs/react
+transforming (6) ../../node_modules/.pnpm/react@19.1.0/node_modules/react/jsx-runti
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+transforming (36) ../../node_modules/.pnpm/@tanstack+query-core@5.90.20/node_module
+transforming (78) ../../node_modules/.pnpm/react-markdown@10.1.0_@types+react@19.2.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+transforming (117) ../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modu
+transforming (1091) ../../node_modules/.pnpm/lucide-react@0.545.0_react@19.1.0/node
+transforming (1120) ../../node_modules/.pnpm/lucide-react@0.545.0_react@19.1.0/node
+transforming (1122) ../../node_modules/.pnpm/lucide-react@0.545.0_react@19.1.0/node
+transforming (1857) ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/a
+transforming (2106) ../../node_modules/.pnpm/clsx@2.1.1/node_modules/clsx/dist/clsx
+transforming (2133) ../../node_modules/.pnpm/events@3.3.0/node_modules/events/event
+transforming (2200) ../../node_modules/.pnpm/recharts@2.15.4_react-dom@19.1.0_react
+transforming (2224) ../../node_modules/.pnpm/@radix-ui+number@1.1.1/node_modules/@r
+transforming (2251) ../../node_modules/.pnpm/react-remove-scroll@2.7.2_@types+react
+transforming (2321) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_bas
+transforming (2434) ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/l
+transforming (2453) ../../node_modules/.pnpm/react-is@18.3.1/node_modules/react-is/
+transforming (2486) ../../node_modules/.pnpm/style-to-js@1.1.21/node_modules/style-
+transforming (2562) ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/l
+transforming (2580) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_nat
+transforming (2758) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_ini
+transforming (2809) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_sta
+transforming (2873) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_map
+transforming (2964) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_equ
+✓ 3019 modules transformed.
