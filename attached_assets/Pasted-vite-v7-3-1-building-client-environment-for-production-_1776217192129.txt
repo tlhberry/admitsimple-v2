@@ -1,0 +1,46 @@
+vite v7.3.1 building client environment for production...
+transforming (5) ../../node_modules/.pnpm/react@19.1.0/node_modules/react/cjs/react
+transforming (6) ../../node_modules/.pnpm/react@19.1.0/node_modules/react/jsx-runti
+transforming (8) ../../node_modules/.pnpm/wouter@3.9.0_react@19.1.0/node_modules/wo
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+transforming (67) ../../node_modules/.pnpm/@tanstack+query-core@5.90.20/node_module
+transforming (83) ../../node_modules/.pnpm/@tanstack+query-core@5.90.20/node_module
+transforming (103) ../../node_modules/.pnpm/scheduler@0.26.0/node_modules/scheduler
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+transforming (105) ../../node_modules/.pnpm/scheduler@0.26.0/node_modules/scheduler
+transforming (124) ../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modu
+src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+transforming (125) ../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modu
+transforming (918) ../../node_modules/.pnpm/lucide-react@0.545.0_react@19.1.0/node_
+transforming (1134) ../../node_modules/.pnpm/lucide-react@0.545.0_react@19.1.0/node
+transforming (1147) ../../node_modules/.pnpm/lucide-react@0.545.0_react@19.1.0/node
+transforming (2101) ../../node_modules/.pnpm/recharts@2.15.4_react-dom@19.1.0_react
+transforming (2135) ../../node_modules/.pnpm/use-sync-external-store@1.6.0_react@19
+transforming (2204) ../../node_modules/.pnpm/recharts@2.15.4_react-dom@19.1.0_react
+transforming (2228) ../../node_modules/.pnpm/@radix-ui+react-roving-focus@1.1.11_@t
+transforming (2291) ../../node_modules/.pnpm/@twilio+voice-sdk@2.18.1/node_modules/
+transforming (2321) ../../node_modules/.pnpm/use-sync-external-store@1.6.0_react@19
+transforming (2334) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_bas
+transforming (2455) ../../node_modules/.pnpm/react-is@18.3.1/node_modules/react-is/
+transforming (2497) ../../node_modules/.pnpm/property-information@7.1.0/node_module
+transforming (2575) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_map
+transforming (2588) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_bas
+transforming (2603) ../../node_modules/.pnpm/property-information@7.1.0/node_module
+transforming (2759) ../../node_modules/.pnpm/use-callback-ref@1.3.3_@types+react@19
+transforming (2810) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_sta
+transforming (2889) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_bas
+transforming (2969) ../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_bas
+✓ 3019 modules transformed.
+dist/public/index.html                                      0.89 kB │ gzip:   0.45 kB
+dist/public/assets/Untitled_1775863851436-Bo8_bJnk.png    138.81 kB
+dist/public/assets/index-CPEwhTes.css                     177.82 kB │ gzip:  26.19 kB
+dist/public/assets/index-lxUp8viB.js                    1,808.01 kB │ gzip: 492.12 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.89s
+✅ Frontend built
+[ec2-user@ip-172-31-22-79 new-app]$ 
