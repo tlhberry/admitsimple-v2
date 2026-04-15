@@ -92,7 +92,7 @@ app.use(
     rolling: true, // reset maxAge on every request (inactivity timeout)
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.SECURE_COOKIES === "true",
       sameSite: "lax",
       maxAge: SESSION_MAX_AGE,
     },
