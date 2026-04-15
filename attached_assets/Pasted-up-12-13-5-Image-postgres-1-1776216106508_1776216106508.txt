@@ -1,0 +1,36 @@
+up 12/13                                                                      5
+ ✔ Image postgres:16-alpine Pulled                                                                                                                                   5.5s
+ ⠋ Image deploy-api         Building                                                                                                                                 0.0s
+compose build requires buildx 0.17.0 or later
+[ec2-user@ip-172-31-22-79 new-app]$ source ~/new-app/deploy/.env
+[ec2-user@ip-172-31-22-79 new-app]$ docker network create admitsimple-net 2>/dev/null || true
+d27657fe97521220dbe913401351675770054ccfdadfae13506b544bbdfba45d
+[ec2-user@ip-172-31-22-79 new-app]$ docker run -d \
+>   --name admitsimple-db \
+>   --restart unless-stopped \
+>   --network admitsimple-net \
+>   -e POSTGRES_DB=admitsimple \
+>   -e POSTGRES_USER=admitsimple \
+>   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
+>   -v admitsimple_postgres:/var/lib/postgresql/data \
+>   postgres:16-alpine && echo "✅ Postgres started"
+5a6d189600600344a0bcec3308da0663bf221a216bda7b5ac84648fcc4606107
+✅ Postgres started
+[ec2-user@ip-172-31-22-79 new-app]$ cd ~/new-app && docker build -f deploy/Dockerfile.api -t admitsimple-api:latest . && echo "✅ API built"
+ERROR: open /home/ec2-user/.docker/buildx/activity/default: permission denied
+[ec2-user@ip-172-31-22-79 new-app]$ source ~/new-app/deploy/.env
+[ec2-user@ip-172-31-22-79 new-app]$ docker run -d \
+>   --name admitsimple-api \
+>   --restart unless-stopped \
+>   --network admitsimple-net \
+>   -p 3001:3001 \
+>   -e NODE_ENV=production \
+>   -e PORT=3001 \
+>   -e DATABASE_URL="postgres://admitsimple:${DB_PASSWORD}@admitsimple-db:5432/admitsimple" \
+>   -e SESSION_SECRET="$SESSION_SECRET" \
+>   -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+>   admitsimple-api:latest && echo "✅ API started"
+Unable to find image 'admitsimple-api:latest' locally
+docker: Error response from daemon: pull access denied for admitsimple-api, repository does not exist or may require 'docker login': denied: requested access to the resource is denied.
+See 'docker run --help'.
+[ec2-user@ip-172-31-22-79 new-app]$ 
