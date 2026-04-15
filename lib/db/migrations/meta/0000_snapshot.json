@@ -1,0 +1,2532 @@
+{
+  "id": "1a9ce504-7a2b-43f7-9388-2fcb3804d781",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.activities": {
+      "name": "activities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "patient_id": {
+          "name": "patient_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduled_at": {
+          "name": "scheduled_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "activities_inquiry_id_inquiries_id_fk": {
+          "name": "activities_inquiry_id_inquiries_id_fk",
+          "tableFrom": "activities",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "activities_patient_id_patients_id_fk": {
+          "name": "activities_patient_id_patients_id_fk",
+          "tableFrom": "activities",
+          "tableTo": "patients",
+          "columnsFrom": [
+            "patient_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "activities_user_id_users_id_fk": {
+          "name": "activities_user_id_users_id_fk",
+          "tableFrom": "activities",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ai_stage_suggestions": {
+      "name": "ai_stage_suggestions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_stage": {
+          "name": "current_stage",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "suggested_stage": {
+          "name": "suggested_stage",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reasoning": {
+          "name": "reasoning",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ai_stage_suggestions_inquiry_id_inquiries_id_fk": {
+          "name": "ai_stage_suggestions_inquiry_id_inquiries_id_fk",
+          "tableFrom": "ai_stage_suggestions",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ai_stage_suggestions_resolved_by_users_id_fk": {
+          "name": "ai_stage_suggestions_resolved_by_users_id_fk",
+          "tableFrom": "ai_stage_suggestions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "resolved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.audit_logs": {
+      "name": "audit_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "details": {
+          "name": "details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "audit_logs_user_id_users_id_fk": {
+          "name": "audit_logs_user_id_users_id_fk",
+          "tableFrom": "audit_logs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_logs_inquiry_id_inquiries_id_fk": {
+          "name": "audit_logs_inquiry_id_inquiries_id_fk",
+          "tableFrom": "audit_logs",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bd_activity_logs": {
+      "name": "bd_activity_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activity_type": {
+          "name": "activity_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activity_date": {
+          "name": "activity_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bd_activity_logs_account_id_referral_accounts_id_fk": {
+          "name": "bd_activity_logs_account_id_referral_accounts_id_fk",
+          "tableFrom": "bd_activity_logs",
+          "tableTo": "referral_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bd_activity_logs_user_id_users_id_fk": {
+          "name": "bd_activity_logs_user_id_users_id_fk",
+          "tableFrom": "bd_activity_logs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.beds": {
+      "name": "beds",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'general'"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'available'"
+        },
+        "current_patient_name": {
+          "name": "current_patient_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_discharge_date": {
+          "name": "expected_discharge_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.chatbot_sessions": {
+      "name": "chatbot_sessions",
+      "schema": "",
+      "columns": {
+        "session_id": {
+          "name": "session_id",
+          "type": "varchar(100)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "messages": {
+          "name": "messages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'[]'::jsonb"
+        },
+        "notified_at": {
+          "name": "notified_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_ai_tasks": {
+      "name": "daily_ai_tasks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_date": {
+          "name": "task_date",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tasks_data": {
+          "name": "tasks_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generated_at": {
+          "name": "generated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "daily_ai_tasks_task_date_unique": {
+          "name": "daily_ai_tasks_task_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_task_completions": {
+      "name": "daily_task_completions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_date": {
+          "name": "task_date",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "task_type": {
+          "name": "task_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "daily_task_completions_user_id_users_id_fk": {
+          "name": "daily_task_completions_user_id_users_id_fk",
+          "tableFrom": "daily_task_completions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "daily_task_completions_inquiry_id_inquiries_id_fk": {
+          "name": "daily_task_completions_inquiry_id_inquiries_id_fk",
+          "tableFrom": "daily_task_completions",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.discharges": {
+      "name": "discharges",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "patient_id": {
+          "name": "patient_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discharge_type": {
+          "name": "discharge_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level_of_care": {
+          "name": "level_of_care",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "level_of_care_other": {
+          "name": "level_of_care_other",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_type": {
+          "name": "destination_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_source_id": {
+          "name": "referral_source_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_source_name": {
+          "name": "referral_source_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hospital_name": {
+          "name": "hospital_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clinical_transfer": {
+          "name": "clinical_transfer",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "follow_up": {
+          "name": "follow_up",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "discharges_patient_id_patients_id_fk": {
+          "name": "discharges_patient_id_patients_id_fk",
+          "tableFrom": "discharges",
+          "tableTo": "patients",
+          "columnsFrom": [
+            "patient_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "discharges_referral_source_id_referral_sources_id_fk": {
+          "name": "discharges_referral_source_id_referral_sources_id_fk",
+          "tableFrom": "discharges",
+          "tableTo": "referral_sources",
+          "columnsFrom": [
+            "referral_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "discharges_created_by_users_id_fk": {
+          "name": "discharges_created_by_users_id_fk",
+          "tableFrom": "discharges",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.inquiries": {
+      "name": "inquiries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dob": {
+          "name": "dob",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_provider": {
+          "name": "insurance_provider",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_member_id": {
+          "name": "insurance_member_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_group_number": {
+          "name": "insurance_group_number",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_carrier_phone": {
+          "name": "insurance_carrier_phone",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_diagnosis": {
+          "name": "primary_diagnosis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "substance_history": {
+          "name": "substance_history",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "medical_history": {
+          "name": "medical_history",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mental_health_history": {
+          "name": "mental_health_history",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "level_of_care": {
+          "name": "level_of_care",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_source": {
+          "name": "referral_source",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_contact": {
+          "name": "referral_contact",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_to": {
+          "name": "assigned_to",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'new'"
+        },
+        "priority": {
+          "name": "priority",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'medium'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_parsed_data": {
+          "name": "ai_parsed_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parsed_at": {
+          "name": "parsed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "search_keywords": {
+          "name": "search_keywords",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pre_cert_form_data": {
+          "name": "pre_cert_form_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pre_cert_form_complete": {
+          "name": "pre_cert_form_complete",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'no'"
+        },
+        "nursing_assessment_data": {
+          "name": "nursing_assessment_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nursing_assessment_complete": {
+          "name": "nursing_assessment_complete",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'no'"
+        },
+        "pre_screening_data": {
+          "name": "pre_screening_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pre_screening_complete": {
+          "name": "pre_screening_complete",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'no'"
+        },
+        "pre_assessment_completed": {
+          "name": "pre_assessment_completed",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'no'"
+        },
+        "pre_assessment_date": {
+          "name": "pre_assessment_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pre_assessment_notes": {
+          "name": "pre_assessment_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vob_data": {
+          "name": "vob_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cost_acceptance": {
+          "name": "cost_acceptance",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "non_admit_reason": {
+          "name": "non_admit_reason",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "non_admit_notes": {
+          "name": "non_admit_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_out_at": {
+          "name": "referral_out_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_out_type": {
+          "name": "referral_out_type",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_out_message": {
+          "name": "referral_out_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "appointment_date": {
+          "name": "appointment_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "calendar_event_id": {
+          "name": "calendar_event_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reminder_sent_at": {
+          "name": "reminder_sent_at",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_destination": {
+          "name": "referral_destination",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inquiry_number": {
+          "name": "inquiry_number",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ctm_call_id": {
+          "name": "ctm_call_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ctm_tracking_number": {
+          "name": "ctm_tracking_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ctm_source": {
+          "name": "ctm_source",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "call_duration_seconds": {
+          "name": "call_duration_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "call_recording_url": {
+          "name": "call_recording_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "call_date_time": {
+          "name": "call_date_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_details": {
+          "name": "referral_details",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "online_source": {
+          "name": "online_source",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_origin": {
+          "name": "referral_origin",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transcription": {
+          "name": "transcription",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_extracted_data": {
+          "name": "ai_extracted_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "call_summary": {
+          "name": "call_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "call_status": {
+          "name": "call_status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_locked": {
+          "name": "is_locked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "presenting_problem": {
+          "name": "presenting_problem",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_substance": {
+          "name": "primary_substance",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caller_is_not_patient": {
+          "name": "caller_is_not_patient",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "caller_name": {
+          "name": "caller_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caller_relationship": {
+          "name": "caller_relationship",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "patient_phone": {
+          "name": "patient_phone",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "inquiries_assigned_to_users_id_fk": {
+          "name": "inquiries_assigned_to_users_id_fk",
+          "tableFrom": "inquiries",
+          "tableTo": "users",
+          "columnsFrom": [
+            "assigned_to"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.insurance_verifications": {
+      "name": "insurance_verifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "patient_id": {
+          "name": "patient_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "group_number": {
+          "name": "group_number",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deductible": {
+          "name": "deductible",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deductible_met": {
+          "name": "deductible_met",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "out_of_pocket": {
+          "name": "out_of_pocket",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coverage_details": {
+          "name": "coverage_details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verified_by": {
+          "name": "verified_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "insurance_verifications_inquiry_id_inquiries_id_fk": {
+          "name": "insurance_verifications_inquiry_id_inquiries_id_fk",
+          "tableFrom": "insurance_verifications",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "insurance_verifications_patient_id_patients_id_fk": {
+          "name": "insurance_verifications_patient_id_patients_id_fk",
+          "tableFrom": "insurance_verifications",
+          "tableTo": "patients",
+          "columnsFrom": [
+            "patient_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "insurance_verifications_verified_by_users_id_fk": {
+          "name": "insurance_verifications_verified_by_users_id_fk",
+          "tableFrom": "insurance_verifications",
+          "tableTo": "users",
+          "columnsFrom": [
+            "verified_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.password_reset_tokens": {
+      "name": "password_reset_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "password_reset_tokens_user_id_users_id_fk": {
+          "name": "password_reset_tokens_user_id_users_id_fk",
+          "tableFrom": "password_reset_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "password_reset_tokens_token_unique": {
+          "name": "password_reset_tokens_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.patient_stays": {
+      "name": "patient_stays",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "patient_name": {
+          "name": "patient_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bed_id": {
+          "name": "bed_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admit_date": {
+          "name": "admit_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "expected_discharge_date": {
+          "name": "expected_discharge_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_discharge_date": {
+          "name": "actual_discharge_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "patient_stays_inquiry_id_inquiries_id_fk": {
+          "name": "patient_stays_inquiry_id_inquiries_id_fk",
+          "tableFrom": "patient_stays",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "patient_stays_bed_id_beds_id_fk": {
+          "name": "patient_stays_bed_id_beds_id_fk",
+          "tableFrom": "patient_stays",
+          "tableTo": "beds",
+          "columnsFrom": [
+            "bed_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.patients": {
+      "name": "patients",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dob": {
+          "name": "dob",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_provider": {
+          "name": "insurance_provider",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_member_id": {
+          "name": "insurance_member_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "level_of_care": {
+          "name": "level_of_care",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admit_date": {
+          "name": "admit_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "discharge_date": {
+          "name": "discharge_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_stage": {
+          "name": "current_stage",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_clinician": {
+          "name": "assigned_clinician",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_admissions": {
+          "name": "assigned_admissions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "credit_user_id": {
+          "name": "credit_user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "credit_override_by": {
+          "name": "credit_override_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "credit_overridden_at": {
+          "name": "credit_overridden_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "is_alumni": {
+          "name": "is_alumni",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "patients_inquiry_id_inquiries_id_fk": {
+          "name": "patients_inquiry_id_inquiries_id_fk",
+          "tableFrom": "patients",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "patients_assigned_clinician_users_id_fk": {
+          "name": "patients_assigned_clinician_users_id_fk",
+          "tableFrom": "patients",
+          "tableTo": "users",
+          "columnsFrom": [
+            "assigned_clinician"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "patients_assigned_admissions_users_id_fk": {
+          "name": "patients_assigned_admissions_users_id_fk",
+          "tableFrom": "patients",
+          "tableTo": "users",
+          "columnsFrom": [
+            "assigned_admissions"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "patients_credit_user_id_users_id_fk": {
+          "name": "patients_credit_user_id_users_id_fk",
+          "tableFrom": "patients",
+          "tableTo": "users",
+          "columnsFrom": [
+            "credit_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "patients_credit_override_by_users_id_fk": {
+          "name": "patients_credit_override_by_users_id_fk",
+          "tableFrom": "patients",
+          "tableTo": "users",
+          "columnsFrom": [
+            "credit_override_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pipeline_stages": {
+      "name": "pipeline_stages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'#3B82F6'"
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.referral_accounts": {
+      "name": "referral_accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website": {
+          "name": "website",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_bd_rep_id": {
+          "name": "assigned_bd_rep_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "referral_accounts_assigned_bd_rep_id_users_id_fk": {
+          "name": "referral_accounts_assigned_bd_rep_id_users_id_fk",
+          "tableFrom": "referral_accounts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "assigned_bd_rep_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "referral_accounts_created_by_users_id_fk": {
+          "name": "referral_accounts_created_by_users_id_fk",
+          "tableFrom": "referral_accounts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.referral_contacts": {
+      "name": "referral_contacts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "referral_contacts_account_id_referral_accounts_id_fk": {
+          "name": "referral_contacts_account_id_referral_accounts_id_fk",
+          "tableFrom": "referral_contacts",
+          "tableTo": "referral_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.referral_sources": {
+      "name": "referral_sources",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact": {
+          "name": "contact",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "owned_by_user_id": {
+          "name": "owned_by_user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "referral_sources_owned_by_user_id_users_id_fk": {
+          "name": "referral_sources_owned_by_user_id_users_id_fk",
+          "tableFrom": "referral_sources",
+          "tableTo": "users",
+          "columnsFrom": [
+            "owned_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reports": {
+      "name": "reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generated_by": {
+          "name": "generated_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_range_start": {
+          "name": "date_range_start",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_range_end": {
+          "name": "date_range_end",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parameters": {
+          "name": "parameters",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_narrative": {
+          "name": "ai_narrative",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "report_data": {
+          "name": "report_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "reports_generated_by_users_id_fk": {
+          "name": "reports_generated_by_users_id_fk",
+          "tableFrom": "reports",
+          "tableTo": "users",
+          "columnsFrom": [
+            "generated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.saved_reports": {
+      "name": "saved_reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sql_query": {
+          "name": "sql_query",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "columns": {
+          "name": "columns",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visualization_type": {
+          "name": "visualization_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'table'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "saved_reports_user_id_users_id_fk": {
+          "name": "saved_reports_user_id_users_id_fk",
+          "tableFrom": "saved_reports",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.settings": {
+      "name": "settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "settings_key_unique": {
+          "name": "settings_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sms_messages": {
+      "name": "sms_messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "direction": {
+          "name": "direction",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "twilio_sid": {
+          "name": "twilio_sid",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'sent'"
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "read_at": {
+          "name": "read_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sms_messages_inquiry_id_inquiries_id_fk": {
+          "name": "sms_messages_inquiry_id_inquiries_id_fk",
+          "tableFrom": "sms_messages",
+          "tableTo": "inquiries",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "sms_messages_user_id_users_id_fk": {
+          "name": "sms_messages_user_id_users_id_fk",
+          "tableFrom": "sms_messages",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'admissions'"
+        },
+        "initials": {
+          "name": "initials",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_username_unique": {
+          "name": "users_username_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "username"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

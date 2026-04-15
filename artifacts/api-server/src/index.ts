@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedDatabase, migratePipelineStages } from "./seed";
+import { runMigrations } from "@workspace/db/migrate";
 
 const rawPort = process.env["PORT"];
 
@@ -16,17 +17,17 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-seedDatabase()
-  .then(() => migratePipelineStages())
-  .catch(err => {
-    logger.error(err, "Failed to seed/migrate database");
-  });
-
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-
   logger.info({ port }, "Server listening");
 });
+
+runMigrations()
+  .then(() => seedDatabase())
+  .then(() => migratePipelineStages())
+  .catch(err => {
+    logger.error(err, "Failed to migrate/seed database");
+  });

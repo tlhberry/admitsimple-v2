@@ -20,6 +20,7 @@ COPY artifacts/api-server/src ./artifacts/api-server/src
 COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/
 COPY lib/db/src ./lib/db/src
 COPY lib/db/tsconfig.json ./lib/db/
+COPY lib/db/migrations ./lib/db/migrations
 COPY lib/api-zod/src ./lib/api-zod/src
 COPY lib/api-zod/tsconfig.json ./lib/api-zod/
 COPY tsconfig.json ./
@@ -33,6 +34,7 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
 COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/lib/db/migrations ./migrations
 
 USER nodejs
 
@@ -40,5 +42,6 @@ EXPOSE 3001
 
 ENV NODE_ENV=production
 ENV PORT=3001
+ENV MIGRATIONS_PATH=/app/migrations
 
 CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
