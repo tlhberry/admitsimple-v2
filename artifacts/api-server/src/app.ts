@@ -114,14 +114,18 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
 // Mount before main router to avoid the per-subrouter requireAuth middleware.
 let seedInProgress = false;
 app.post("/api/admin/seed-demo", async (req: Request, res: Response) => {
-  const password = (process.env.ADMIN_PASSWORD || "").trim();
+  const password = process.env.ADMIN_PASSWORD?.trim();
+  if (!password) {
+    res.status(503).json({ error: "ADMIN_PASSWORD not configured — endpoint disabled" });
+    return;
+  }
   const headerVal = req.headers["x-admin-password"];
   const authVal = req.headers["authorization"];
   const provided = (
     (Array.isArray(headerVal) ? headerVal[0] : headerVal) ||
     ((Array.isArray(authVal) ? authVal[0] : authVal) || "").replace(/^Bearer\s+/i, "")
   ).trim();
-  if (!password || provided !== password) {
+  if (!provided || provided !== password) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
