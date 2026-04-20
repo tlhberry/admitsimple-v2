@@ -1,0 +1,66 @@
+/6] COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules                                                                      3.3s
+ => exporting to image                                                                                                                                              2.1s
+ => => exporting layers                                                                                                                                             2.1s
+ => => writing image sha256:c966edc61b935ebfef0998df987d974e499dbb524e6adf54b127e57ee94fd9b8                                                                        0.0s
+ => => naming to docker.io/library/deploy-api                                                                                                                       0.0s
+ => resolving provenance for metadata file                                                                                                                          0.1s
+[+] up 3/3
+ ✔ Image deploy-api       Built                                                                                                                                     22.7s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                    0.6s
+ ✔ Container deploy-api-1 Started                                                                                                                                    1.3s
+[ec2-user@ip-172-31-22-79 new-app]$ curl -s -X POST http://localhost:3001/api/admin/seed-demo \
+  -H 'X-Admin-Password: admin'
+{"error":"Unauthorized"}[ec2-user@ipdocker exec deploy-api-1 sh -c 'echo "PASS=[$ADMIN_PASSWORD]"'PASS=[$ADMIN_PASSWORD]"'
+Error response from daemon: Container e661e8354eecfa13d28aa2a8cef17c3516ce5e31a1d5adbe3f4016bf15e52785 is restarting, wait until the container is running
+[ec2-user@ip-172-31-22-79 new-app]$ docker logs deploy-api-1 --tail 50 2>&1
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'connect-pg-simple' imported from /app/artifacts/api-server/dist/index.mjs
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v20.20.2
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'connect-pg-simple' imported from /app/artifacts/api-server/dist/index.mjs
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v20.20.2
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'connect-pg-simple' imported from /app/artifacts/api-server/dist/index.mjs
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v20.20.2
+[ec2-user@ip-172-31-22-79 new-app]$ 
