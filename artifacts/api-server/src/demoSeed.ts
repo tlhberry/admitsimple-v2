@@ -154,8 +154,15 @@ const smsOutbound = [
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-async function main() {
+export async function main() {
   console.log("🌱 Starting demo seed...\n");
+
+  // Skip if demo data already exists
+  const [existingUsers] = await db.select({ count: count() }).from(users).where(eq(users.username, "sarah.mitchell"));
+  if (Number(existingUsers.count) > 0) {
+    console.log("✅ Demo data already exists — skipping demoSeed.");
+    return;
+  }
 
   // ── 1. Facility settings ──────────────────────────────────────────────────
   console.log("Setting facility info...");
@@ -589,7 +596,6 @@ async function main() {
   console.log(`   Patients:         ${insertedPatients.length}`);
   console.log(`   SMS Messages:     ${smsData.length}`);
   console.log(`   AI Suggestions:   ${suggestionData.length}`);
-  process.exit(0);
 }
 
 // Helper: map flat index back to its stage (used for VOB filter)
@@ -605,7 +611,9 @@ function getStageForIndex(id: number, stages: { status: string; count: number }[
   return "New Inquiry";
 }
 
-main().catch(err => {
-  console.error("❌ Seed failed:", err);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith("demoSeed.ts") || process.argv[1]?.endsWith("demoSeed.js")) {
+  main().catch(err => {
+    console.error("❌ Seed failed:", err);
+    process.exit(1);
+  });
+}

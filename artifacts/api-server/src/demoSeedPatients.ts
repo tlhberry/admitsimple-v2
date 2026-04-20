@@ -12,7 +12,7 @@ const referralSourceNames = ["Banner Desert Medical Center","Phoenix VA Medical 
 const smsInbound = ["Hi I'm looking for help with my drinking, a friend told me to reach out","My son needs treatment for heroin, do you take Aetna?","Can someone call me back? I need help","Do you have beds available? My insurance is BCBS PPO","Is detox included in the program?","How long is the program?","Can family come visit?","I relapsed again and I need help right away","Do you accept Medicaid/AHCCCS?"];
 const smsOutbound = ["Hi! This is Jake from Sunrise Recovery. Thanks for reaching out — I'd love to chat. Are you available for a quick call today?","Great to hear from you. We do accept BCBS PPO. Let me check your benefits right now.","Absolutely, we have beds available and can move quickly.","Our detox program is 5-7 days medically supervised, then residential if appropriate.","Visiting hours are Saturday and Sunday 1-4pm. Let me send you our address.","You've taken a brave step reaching out. Let's get you the help you need today.","Yes, we work with AHCCCS — let me verify your coverage right now."];
 
-async function main() {
+export async function main() {
   const allInquiryRows = await db.select().from(inquiries).where(inArray(inquiries.status, ["Admitted","Discharged"]));
   const existingPts = await db.select({ inquiryId: patients.inquiryId }).from(patients);
   const existingIds = new Set(existingPts.map(p => p.inquiryId).filter(Boolean));
@@ -91,7 +91,8 @@ async function main() {
   for (let i = 0; i < smsData.length; i += 100) await db.insert(smsMessages).values(smsData.slice(i, i+100) as any);
   console.log(`✅ Created ${smsData.length} SMS messages`);
 
-  process.exit(0);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+if (process.argv[1]?.endsWith("demoSeedPatients.ts") || process.argv[1]?.endsWith("demoSeedPatients.js")) {
+  main().catch(e => { console.error(e); process.exit(1); });
+}

@@ -60,7 +60,7 @@ const stagePairs: [string, string][] = [
   ["Pre-Assessment", "Scheduled to Admit"],
 ];
 
-async function main() {
+export async function main() {
   console.log("▶ Continuing demo seed from patients step...\n");
 
   // Fetch all existing inquiries
@@ -214,10 +214,11 @@ async function main() {
   }
 
   console.log("\n✅ Continuation seed complete!");
-  process.exit(0);
 }
 
-main().catch(err => {
-  console.error("❌ Failed:", err);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith("demoSeedContinue.ts") || process.argv[1]?.endsWith("demoSeedContinue.js")) {
+  main().catch(err => {
+    console.error("❌ Failed:", err);
+    process.exit(1);
+  });
+}

@@ -7,8 +7,8 @@ import multer from "multer";
 import * as XLSX from "xlsx";
 import { getAnthropicClient } from "../lib/anthropicClient";
 import { logAudit } from "../lib/logAudit";
-
 const router = Router();
+
 router.use(requireAuth);
 
 // Admin-only guard

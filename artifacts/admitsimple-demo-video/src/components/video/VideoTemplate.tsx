@@ -222,7 +222,6 @@ export default function VideoTemplate() {
         )}
       </AnimatePresence>
 
-<<<<<<< HEAD
       {/* Processing indicator */}
       <AnimatePresence>
         {isProcessing && (
@@ -329,23 +328,6 @@ export default function VideoTemplate() {
           </motion.div>
         )}
       </AnimatePresence>
-=======
-      {/* Recording instructions modal */}
-      {recordingState === 'waiting' && (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#1a2332] border border-white/10 rounded-2xl p-8 max-w-md text-center shadow-2xl">
-            <div className="text-4xl mb-4">🎬</div>
-            <h2 className="text-white text-lg font-semibold mb-2">Choose this tab to record</h2>
-            <p className="text-white/50 text-sm leading-relaxed">
-              A screen-share prompt will appear. Select <strong className="text-white/80">this browser tab</strong> and click Share. The video will reset to the beginning and record all 55 seconds automatically.
-            </p>
-            <p className="mt-4 text-white/30 text-xs">
-              To cancel, dismiss the browser sharing prompt.
-            </p>
-          </div>
-        </div>
-      )}
->>>>>>> e2d30a1 (Update video recorder to allow external control and improve usability)
     </div>
   );
 }

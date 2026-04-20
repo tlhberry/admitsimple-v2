@@ -7,6 +7,9 @@ import pinoHttp from "pino-http";
 import helmet from "helmet";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { main as runDemoSeed } from "./demoSeed";
+import { main as runDemoSeedContinue } from "./demoSeedContinue";
+import { main as runDemoSeedPatients } from "./demoSeedPatients";
 
 const PgSession = ConnectPgSimple(session);
 
@@ -104,6 +107,42 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Pragma", "no-cache");
   next();
+});
+
+// ── POST /api/admin/seed-demo (public — auth via ADMIN_PASSWORD header) ───────
+// Bypasses session auth so it can be called before any users are logged in.
+// Mount before main router to avoid the per-subrouter requireAuth middleware.
+let seedInProgress = false;
+app.post("/api/admin/seed-demo", async (req: Request, res: Response) => {
+  const password = (process.env.ADMIN_PASSWORD || "").trim();
+  const headerVal = req.headers["x-admin-password"];
+  const authVal = req.headers["authorization"];
+  const provided = (
+    (Array.isArray(headerVal) ? headerVal[0] : headerVal) ||
+    ((Array.isArray(authVal) ? authVal[0] : authVal) || "").replace(/^Bearer\s+/i, "")
+  ).trim();
+  if (!password || provided !== password) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (seedInProgress) {
+    res.status(409).json({ error: "Seed already in progress" });
+    return;
+  }
+  seedInProgress = true;
+  try {
+    logger.info("[seed-demo] Starting demo seed via API...");
+    await runDemoSeed();
+    await runDemoSeedContinue();
+    await runDemoSeedPatients();
+    logger.info("[seed-demo] All seed steps complete.");
+    res.json({ ok: true, message: "Demo data seeded successfully." });
+  } catch (err: any) {
+    logger.error({ err }, "[seed-demo] Seed error");
+    res.status(500).json({ error: err.message || "Seed failed" });
+  } finally {
+    seedInProgress = false;
+  }
 });
 
 app.use("/api", router);
