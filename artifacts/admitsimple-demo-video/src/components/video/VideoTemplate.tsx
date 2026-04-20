@@ -23,7 +23,7 @@ const sceneOffsets = SCENES.reduce<number[]>((acc, s, i) => {
   return acc;
 }, []);
 
-type RecordState = 'idle' | 'countdown' | 'recording' | 'done';
+type RecordState = 'idle' | 'countdown' | 'recording' | 'processing';
 
 export default function VideoTemplate() {
   const [currentScene, setCurrentScene] = useState(0);
@@ -31,11 +31,14 @@ export default function VideoTemplate() {
   const [paused, setPaused] = useState(false);
   const [recordState, setRecordState] = useState<RecordState>('idle');
   const [countdown, setCountdown] = useState(3);
+  const [recordingProgress, setRecordingProgress] = useState(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sceneStartRef = useRef<number>(Date.now());
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const progress = (elapsed / TOTAL_DURATION) * 100;
 
@@ -45,7 +48,6 @@ export default function VideoTemplate() {
     sceneStartRef.current = Date.now();
   }, []);
 
-  // Advance timer
   useEffect(() => {
     if (paused) return;
     sceneStartRef.current = Date.now();
@@ -56,10 +58,8 @@ export default function VideoTemplate() {
       if (newElapsed >= sceneOffsets[currentScene] + SCENES[currentScene].duration) {
         const nextScene = (currentScene + 1) % SCENES.length;
 
-        // If recording, stop after full cycle (scene 5 → scene 0 wraps)
         if (recordState === 'recording' && currentScene === SCENES.length - 1) {
-          setRecordState('done');
-          recorderRef.current?.stop();
+          stopCapture();
         }
 
         setCurrentScene(nextScene);
@@ -72,18 +72,79 @@ export default function VideoTemplate() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [currentScene, paused, recordState]);
 
-  // Start recording flow
-  const handleRecord = async () => {
+  const stopCapture = useCallback(() => {
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearTimeout(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  }, []);
+
+  const startCapture = useCallback((stream: MediaStream) => {
+    chunksRef.current = [];
+
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+      ? 'video/webm;codecs=vp8'
+      : 'video/webm';
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+    recorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    recorder.onstop = () => {
+      setRecordState('processing');
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'admitsimple-linkedin-ad.webm';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      setRecordState('idle');
+      setRecordingProgress(0);
+      setPaused(false);
+    };
+
+    recorder.start(1000);
+    jumpToScene(0);
+    setPaused(false);
+    setRecordState('recording');
+    setRecordingProgress(0);
+
+    const startTime = Date.now();
+    progressIntervalRef.current = setInterval(() => {
+      const pct = Math.min(((Date.now() - startTime) / TOTAL_DURATION) * 100, 100);
+      setRecordingProgress(pct);
+    }, 200);
+
+    recordingTimerRef.current = setTimeout(() => {
+      stopCapture();
+    }, TOTAL_DURATION + 1200);
+  }, [jumpToScene, stopCapture]);
+
+  const handleRecord = useCallback(async () => {
     if (recordState !== 'idle') return;
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 30 },
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        },
         audio: false,
         // @ts-ignore — Chrome-specific hint
         preferCurrentTab: true,
       });
 
-      // Countdown
       setRecordState('countdown');
       setCountdown(3);
       let c = 3;
@@ -96,38 +157,23 @@ export default function VideoTemplate() {
         }
       }, 1000);
     } catch {
-      // User cancelled
-    }
-  };
-
-  const startCapture = (stream: MediaStream) => {
-    chunksRef.current = [];
-    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-    recorder.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'admitsimple-linkedin-ad.webm';
-      a.click();
-      URL.revokeObjectURL(url);
       setRecordState('idle');
+    }
+  }, [recordState, startCapture]);
+
+  useEffect(() => {
+    window.startRecording = handleRecord;
+    window.stopRecording = stopCapture;
+    return () => {
+      delete window.startRecording;
+      delete window.stopRecording;
+      stopCapture();
     };
-    recorder.start();
-    recorderRef.current = recorder;
-    // Reset to scene 0 and begin
-    jumpToScene(0);
-    setRecordState('recording');
-    // Auto stop after full duration + 1s buffer
-    setTimeout(() => {
-      if (recorder.state === 'recording') recorder.stop();
-    }, TOTAL_DURATION + 1200);
-  };
+  }, [handleRecord, stopCapture]);
 
   const isRecording = recordState === 'recording';
   const isCountdown = recordState === 'countdown';
+  const isProcessing = recordState === 'processing';
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#1a2332]">
@@ -141,6 +187,16 @@ export default function VideoTemplate() {
         />
       </div>
 
+      {/* Recording progress bar */}
+      {isRecording && (
+        <div className="absolute top-0 left-0 right-0 z-50 h-1 bg-white/10">
+          <div
+            className="h-full bg-red-500 transition-all duration-200"
+            style={{ width: `${recordingProgress}%` }}
+          />
+        </div>
+      )}
+
       {/* Scenes */}
       <AnimatePresence mode="popLayout">
         {currentScene === 0 && <Scene1 key="problem" />}
@@ -151,7 +207,7 @@ export default function VideoTemplate() {
         {currentScene === 5 && <Scene6 key="close" />}
       </AnimatePresence>
 
-      {/* Recording indicator */}
+      {/* Recording indicator (top-right) */}
       <AnimatePresence>
         {isRecording && (
           <motion.div
@@ -161,7 +217,22 @@ export default function VideoTemplate() {
             exit={{ opacity: 0 }}
           >
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-white/70 text-xs font-mono">REC</span>
+            <span className="text-white/70 text-xs font-mono">REC {Math.round(recordingProgress)}%</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+<<<<<<< HEAD
+      {/* Processing indicator */}
+      <AnimatePresence>
+        {isProcessing && (
+          <motion.div
+            className="absolute top-5 right-5 flex items-center gap-2 px-3 py-1.5 bg-black/50 rounded-full z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <span className="text-white/70 text-xs font-mono">⏳ Saving…</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -186,14 +257,14 @@ export default function VideoTemplate() {
               >
                 {countdown}
               </motion.div>
-              <p className="text-white/50 text-lg mt-4">Recording starts in {countdown}...</p>
+              <p className="text-white/50 text-lg mt-4">Recording starts in {countdown}…</p>
               <p className="text-white/30 text-sm mt-2">Make sure this tab is selected in the screen picker</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Controls bar — hidden while recording */}
+      {/* Controls bar — hidden while recording or counting down */}
       <AnimatePresence>
         {!isRecording && !isCountdown && (
           <motion.div
@@ -248,7 +319,8 @@ export default function VideoTemplate() {
 
               <button
                 onClick={handleRecord}
-                className="ml-auto flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-red-500/80 hover:bg-red-500 text-white transition-all shadow-lg shadow-red-500/20"
+                disabled={isProcessing}
+                className="ml-auto flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-red-500/80 hover:bg-red-500 text-white transition-all shadow-lg shadow-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-white" />
                 Record & Download
@@ -257,6 +329,23 @@ export default function VideoTemplate() {
           </motion.div>
         )}
       </AnimatePresence>
+=======
+      {/* Recording instructions modal */}
+      {recordingState === 'waiting' && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#1a2332] border border-white/10 rounded-2xl p-8 max-w-md text-center shadow-2xl">
+            <div className="text-4xl mb-4">🎬</div>
+            <h2 className="text-white text-lg font-semibold mb-2">Choose this tab to record</h2>
+            <p className="text-white/50 text-sm leading-relaxed">
+              A screen-share prompt will appear. Select <strong className="text-white/80">this browser tab</strong> and click Share. The video will reset to the beginning and record all 55 seconds automatically.
+            </p>
+            <p className="mt-4 text-white/30 text-xs">
+              To cancel, dismiss the browser sharing prompt.
+            </p>
+          </div>
+        </div>
+      )}
+>>>>>>> e2d30a1 (Update video recorder to allow external control and improve usability)
     </div>
   );
 }
