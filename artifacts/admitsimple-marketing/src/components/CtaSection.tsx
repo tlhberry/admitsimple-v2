@@ -43,22 +43,26 @@ export default function CtaSection() {
             <div className="p-10 md:p-12 text-white flex flex-col justify-center relative">
               <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
               <div className="relative z-10">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to see it in action?</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Let's find the right fit for your facility.</h2>
                 <p className="text-white/70 mb-8">
-                  Get a personalized walkthrough of AdmitSimple. See how the AI parsing works, explore the pipeline, and learn how to plug in your own Anthropic account.
+                  Whether you want to own the platform outright, subscribe, or have us set it up for you — we'll walk through the options and figure out what makes sense for your team.
                 </p>
                 <div className="space-y-4 text-sm text-white/80">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Full platform demonstration</span>
+                    <span>Full platform walkthrough</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Discussion of your specific workflow</span>
+                    <span>Review your current admissions workflow</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Pricing and deployment options</span>
+                    <span>Ownership, SaaS, and done-for-you pricing</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
+                    <span>Enterprise and multi-site options</span>
                   </div>
                 </div>
                 <p className="mt-8 text-xs text-white/40">
@@ -76,7 +80,7 @@ export default function CtaSection() {
                     </svg>
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900">Request Received!</h3>
-                  <p className="text-gray-600 text-sm">We'll reach out to schedule your demo shortly.</p>
+                  <p className="text-gray-600 text-sm">We'll reach out to schedule your call shortly.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -97,8 +101,8 @@ export default function CtaSection() {
                     <Input id="phone" type="tel" required placeholder="(555) 000-0000" className="bg-gray-50 border-gray-200" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Anything specific you would like to see?</Label>
-                    <Textarea id="notes" placeholder="We are currently using..." className="bg-gray-50 border-gray-200 resize-none" rows={3} />
+                    <Label htmlFor="notes">Which model interests you most?</Label>
+                    <Textarea id="notes" placeholder="Own it outright, hosted SaaS, done-for-you, or multi-site..." className="bg-gray-50 border-gray-200 resize-none" rows={3} />
                   </div>
                   {error && <p className="text-sm text-red-500">{error}</p>}
                   <Button
@@ -106,7 +110,7 @@ export default function CtaSection() {
                     disabled={loading}
                     className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
                   >
-                    {loading ? "Sending..." : "Request Demo"}
+                    {loading ? "Sending..." : "Request a Call"}
                   </Button>
                 </form>
               )}

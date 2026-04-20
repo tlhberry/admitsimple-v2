@@ -1,36 +1,36 @@
 import { motion } from "framer-motion";
-import { Stethoscope, CheckCircle2, Shield, Settings2, Code2, Users } from "lucide-react";
+import { Package, TrendingUp, Wrench, Building2, BrainCircuit, Shield } from "lucide-react";
 
 const features = [
   {
-    icon: Stethoscope,
-    title: "Clinical Precision",
-    description: "Built specifically for behavioral health and addiction treatment. Every field, status, and workflow maps to reality."
+    icon: Package,
+    title: "The Ownership Model",
+    description: "Buy the source code once, own it forever. Deploy to your own AWS, modify it however you want, and never pay a recurring software fee again. Anti-SaaS by design."
   },
   {
-    icon: Settings2,
-    title: "8-Stage Pipeline",
-    description: "New Inquiry → Initial Contact → Insurance Verification → Pre-Assessment → Scheduled → Admitted → Discharged → Did Not Admit."
+    icon: TrendingUp,
+    title: "AI Agent as a Service",
+    description: "Don't pay for software — pay for outcomes. We align our revenue with yours: charge per admission closed, per VOB completed, or per lead converted. Nobody else in behavioral health is doing this."
   },
   {
-    icon: CheckCircle2,
-    title: "VOB & Intake Forms",
-    description: "Pre-screen intake forms and verification of benefits integrated directly into the patient's centralized profile."
+    icon: Wrench,
+    title: "Done-For-You Setup",
+    description: "We build it for you, configure it to your exact workflow, and train your team. A $5–10K white-glove implementation plus a small annual support retainer. More consulting than SaaS."
   },
   {
-    icon: Users,
-    title: "Business Development",
-    description: "Track referral sources, manage BD rep activity, and automatically parse referral documents with AI."
+    icon: Building2,
+    title: "The Franchise Model",
+    description: "Running multiple facilities or backed by private equity? One flat enterprise license covers every location. One deal replaces 5–10 separate software contracts."
   },
   {
-    icon: Code2,
-    title: "Perpetual License Available",
-    description: "Subscribe to our hosted multi-tenant SaaS, or buy the source code and deploy to your own AWS in 15 minutes."
+    icon: BrainCircuit,
+    title: "Train AI on Your Data",
+    description: "A premium tier where your historical admissions data fine-tunes AI reporting and benchmarking. Your data becomes a competitive moat. Once trained — you'd never leave."
   },
   {
     icon: Shield,
-    title: "Complete Audit Trail",
-    description: "Every click, view, and modification is logged for HIPAA compliance. Built-in CloudTrail audit logging."
+    title: "HIPAA-Compliant Architecture",
+    description: "AES-256 encryption, AWS VPC isolation, audit logging on every PHI access, and signed BAAs on day one. Compliance built in — not bolted on."
   }
 ];
 
@@ -39,15 +39,15 @@ export default function Features() {
     <section id="features" className="py-24 bg-white">
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Built for the whole admissions journey</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Five ways to work with us</h2>
           <p className="text-lg text-gray-600">
-            Generic CRMs require months of custom configuration. AdmitSimple works for treatment centers out of the box.
+            The old "pay us forever" SaaS model is dying. We built AdmitSimple to give treatment centers real flexibility — own it, subscribe to it, or let us run it for you.
           </p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, i) => (
-            <motion.div 
+            <motion.div
               key={i}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}

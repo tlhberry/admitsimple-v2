@@ -1,26 +1,26 @@
 import { motion } from "framer-motion";
-import { Sparkles, FileText, Bot, Zap, Cpu, ChevronRight } from "lucide-react";
+import { Sparkles, FileText, Bot, TrendingUp, Cpu, ChevronRight } from "lucide-react";
 
 const aiFeatures = [
   {
-    icon: Sparkles,
-    title: "Stage Suggestions",
-    description: "Claude reads every inquiry and suggests exactly which pipeline stage it belongs in."
+    icon: TrendingUp,
+    title: "Pay Per Outcome, Not Per Seat",
+    description: "With our AI Agent as a Service model, you pay per admission closed, per VOB run, or per lead converted — not a flat monthly fee. Your software costs scale with revenue."
   },
   {
     icon: FileText,
-    title: "Referral Parsing",
-    description: "Upload a 30-page PDF from a hospital. Claude extracts demographics, clinical history, and generates a structured profile."
+    title: "Referral Document Parsing",
+    description: "Upload a 30-page PDF from a hospital. The AI extracts demographics, clinical history, and insurance information and structures it automatically into the patient profile."
   },
   {
-    icon: Zap,
-    title: "Action Generation",
-    description: "The AI task board automatically generates follow-up actions based on the patient's current state."
+    icon: Sparkles,
+    title: "Pipeline Stage Suggestions",
+    description: "The AI reads every inquiry and suggests exactly which of the 8 pipeline stages it belongs in — and generates the follow-up actions your team needs to take next."
   },
   {
     icon: Bot,
-    title: "24/7 Chatbot",
-    description: "A website chatbot that captures leads around the clock and feeds them directly into the 'New Inquiry' column."
+    title: "24/7 Lead Capture Chatbot",
+    description: "A website chatbot that captures inquiries around the clock and feeds them directly into the New Inquiry column — so no lead goes cold over a weekend."
   }
 ];
 
@@ -44,19 +44,18 @@ export default function AiSection() {
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left — copy */}
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5BC8DC]/15 text-[#5BC8DC] text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
-              <span>Direct AI Integration</span>
+              <span>AI Agent as a Service</span>
             </div>
 
             <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
-              AI that actually works in this workflow.
+              Stop selling software. Sell outcomes.
             </h2>
 
             <p className="text-lg text-white/65 mb-8">
-              Most platforms charge a premium for AI features. AdmitSimple lets you plug in your own Anthropic API key. You pay for exactly what you use, directly to Anthropic.
+              Most platforms charge a flat fee regardless of results. AdmitSimple lets you tie revenue directly to admissions. Pay per VOB, pay per closed admission, pay per converted lead — or own the whole platform outright.
             </p>
 
             <div className="space-y-6">
@@ -81,7 +80,6 @@ export default function AiSection() {
             </div>
           </div>
 
-          {/* Right — Coded Claude analysis mockup */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -90,19 +88,17 @@ export default function AiSection() {
             className="relative"
           >
             <div className="rounded-2xl border border-white/10 shadow-2xl bg-[#1e2535] overflow-hidden">
-              {/* Title bar */}
               <div className="flex items-center gap-2 px-4 py-3 bg-[#181f2e] border-b border-white/8">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-[11px] text-white/30 font-mono">Claude Analysis: Marcus T.</span>
+                <span className="ml-3 text-[11px] text-white/30 font-mono">AI Analysis: Marcus T.</span>
                 <div className="ml-auto flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#5BC8DC] animate-pulse" />
                   <span className="text-[10px] text-[#5BC8DC]">Processing</span>
                 </div>
               </div>
 
-              {/* Patient header */}
               <div className="px-4 pt-4 pb-3 border-b border-white/6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-[#5BC8DC]/20 flex items-center justify-center flex-shrink-0">
                   <span className="text-sm font-bold text-[#5BC8DC]">MT</span>
@@ -114,9 +110,8 @@ export default function AiSection() {
                 <div className="ml-auto text-[10px] bg-orange-500/20 text-orange-300 px-2 py-1 rounded-full font-medium">High Priority</div>
               </div>
 
-              {/* Analysis results */}
               <div className="px-4 py-4 space-y-3">
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">Claude Analysis Results</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">AI Analysis Results</p>
                 {analysisLines.map((line, i) => (
                   <motion.div
                     key={line.label}
@@ -144,7 +139,6 @@ export default function AiSection() {
                 ))}
               </div>
 
-              {/* Generated tasks */}
               <div className="px-4 pb-4">
                 <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-2">Generated Action Items</p>
                 <div className="space-y-1.5">
@@ -164,10 +158,9 @@ export default function AiSection() {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="px-4 py-3 bg-[#181f2e] border-t border-white/6 flex items-center gap-2">
                 <Cpu className="w-3.5 h-3.5 text-[#5BC8DC]" />
-                <span className="text-[11px] text-white/40">Powered by Claude claude-opus-4-5 · Your Anthropic key · $0.003 used</span>
+                <span className="text-[11px] text-white/40">Powered by Claude · Your Anthropic key · $0.003 used this analysis</span>
               </div>
             </div>
           </motion.div>
