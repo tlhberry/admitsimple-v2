@@ -1,0 +1,25 @@
+=> [runner 5/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist /app/artifacts/api-server/dist                                            0.1s
+ => [runner 6/8] COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules                                                                      8.0s
+ => [runner 7/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/node_modules /app/artifacts/api-server/node_modules                            0.1s
+ => [runner 8/8] COPY --from=builder --chown=nodejs:nodejs /app/lib/db/migrations /app/migrations                                                                   0.1s
+ => exporting to image                                                                                                                                              2.8s
+ => => exporting layers                                                                                                                                             2.8s
+ => => writing image sha256:0a954b98979b33eb5716baa611145d01d078b2cf8321edd07f22dc74e1dafded                                                                        0.0s
+ => => naming to docker.io/library/deploy-api                                                                                                                       0.0s
+ => resolving provenance for metadata file                                                                                                                          0.1s
+[+] build 1/1
+ ✔ Image deploy-api Built                                                                                                                                           48.6s
+WARN[0000] The "ADMIN_PASSWORD" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "TWILIO_TWIML_APP_SID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "AI_INTEGRATIONS_ANTHROPIC_BASE_URL" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "AI_INTEGRATIONS_ANTHROPIC_API_KEY" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "SESSION_SECRET" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "TWILIO_ACCOUNT_SID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "TWILIO_AUTH_TOKEN" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "TWILIO_PHONE_NUMBER" variable is not set. Defaulting to a blank string. 
+[+] up 2/2
+ ✔ Container deploy-db-1  Healthy                                                                                                                                   11.1s
+ ✔ Container deploy-api-1 Started                                                                                                                                   11.7s
+[ec2-user@ip-172-31-22-79 new-app]$ curl -s -X POST http://localhost:3001/api/admin/seed-demo \
+  -H 'X-Admin-Password: admin'
+{"error":"Unauthorized"}[ec2-user@ip-172-31-22-79 new-app]$ 
