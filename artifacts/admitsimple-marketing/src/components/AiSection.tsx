@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
-import { Sparkles, FileText, Bot, TrendingUp, Cpu, ChevronRight } from "lucide-react";
+import { Sparkles, FileText, Bot, Zap, Cpu, ChevronRight } from "lucide-react";
 
 const aiFeatures = [
   {
-    icon: TrendingUp,
-    title: "Pay Per Outcome, Not Per Seat",
-    description: "With our AI Agent as a Service model, you pay per admission closed, per VOB run, or per lead converted — not a flat monthly fee. Your software costs scale with revenue."
+    icon: Sparkles,
+    title: "Pipeline Stage Suggestions",
+    description: "The AI reads every inquiry and suggests exactly which of the 8 pipeline stages it belongs in — and generates the follow-up actions your team needs to take next."
   },
   {
     icon: FileText,
@@ -13,9 +13,9 @@ const aiFeatures = [
     description: "Upload a 30-page PDF from a hospital. The AI extracts demographics, clinical history, and insurance information and structures it automatically into the patient profile."
   },
   {
-    icon: Sparkles,
-    title: "Pipeline Stage Suggestions",
-    description: "The AI reads every inquiry and suggests exactly which of the 8 pipeline stages it belongs in — and generates the follow-up actions your team needs to take next."
+    icon: Zap,
+    title: "Action Item Generation",
+    description: "The AI task board automatically generates follow-up actions based on each patient's current state — so your team always knows exactly what to do next."
   },
   {
     icon: Bot,
@@ -47,15 +47,15 @@ export default function AiSection() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5BC8DC]/15 text-[#5BC8DC] text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
-              <span>AI Agent as a Service</span>
+              <span>Direct AI Integration</span>
             </div>
 
             <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
-              Stop selling software. Sell outcomes.
+              AI that actually works in this workflow.
             </h2>
 
             <p className="text-lg text-white/65 mb-8">
-              Most platforms charge a flat fee regardless of results. AdmitSimple lets you tie revenue directly to admissions. Pay per VOB, pay per closed admission, pay per converted lead — or own the whole platform outright.
+              Most platforms bolt on AI as an upsell and charge a premium for it. AdmitSimple lets you plug in your own Anthropic API key and pay for exactly what you use — directly to Anthropic, with no middleman markup.
             </p>
 
             <div className="space-y-6">

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Package, TrendingUp, Wrench, Building2, BrainCircuit, Shield } from "lucide-react";
+import { Package, Wrench, Building2, BrainCircuit, Shield, Settings2 } from "lucide-react";
 
 const features = [
   {
@@ -8,9 +8,9 @@ const features = [
     description: "Buy the source code once, own it forever. Deploy to your own AWS, modify it however you want, and never pay a recurring software fee again. Anti-SaaS by design."
   },
   {
-    icon: TrendingUp,
-    title: "AI Agent as a Service",
-    description: "Don't pay for software — pay for outcomes. We align our revenue with yours: charge per admission closed, per VOB completed, or per lead converted. Nobody else in behavioral health is doing this."
+    icon: Settings2,
+    title: "8-Stage Clinical Pipeline",
+    description: "New Inquiry → Initial Contact → Insurance Verification → Pre-Assessment → Scheduled → Admitted → Discharged → Did Not Admit. Every stage purpose-built for behavioral health."
   },
   {
     icon: Wrench,
@@ -39,9 +39,9 @@ export default function Features() {
     <section id="features" className="py-24 bg-white">
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Five ways to work with us</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Built for treatment centers. Flexible by design.</h2>
           <p className="text-lg text-gray-600">
-            The old "pay us forever" SaaS model is dying. We built AdmitSimple to give treatment centers real flexibility — own it, subscribe to it, or let us run it for you.
+            The old "pay us forever" SaaS model is dying. We built AdmitSimple to give treatment centers real flexibility — own it outright, subscribe, let us set it up, or run it across your whole portfolio.
           </p>
         </div>
 
