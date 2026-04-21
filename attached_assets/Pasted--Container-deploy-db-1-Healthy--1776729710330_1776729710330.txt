@@ -1,0 +1,43 @@
+ ✔ Container deploy-db-1  Healthy                                                                                                                                   11.1s
+ ✔ Container deploy-api-1 Started                                                                                                                                   11.9s
+[ec2-user@ip-172-31-22-79 new-app]$ docker exec deploy-api-1 node /app/artifacts/api-server/dist/seedCli.mjs
+[seedCli] Starting demo seed...
+🌱 Starting demo seed...
+
+[seedCli] Failed: _DrizzleQueryError: Failed query: select count(*) from "users" where "users"."username" = $1
+params: sarah.mitchell
+    at NodePgPreparedQuery.queryWithCache (file:///app/artifacts/api-server/dist/seedCli.mjs:11709:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/artifacts/api-server/dist/seedCli.mjs:11942:22
+    at async main (file:///app/artifacts/api-server/dist/seedCli.mjs:25822:27)
+    at async seed (file:///app/artifacts/api-server/dist/seedCli.mjs:26535:3) {
+  query: 'select count(*) from "users" where "users"."username" = $1',
+  params: [ 'sarah.mitchell' ],
+  cause: error: password authentication failed for user "admitsimple"
+      at file:///app/artifacts/api-server/dist/seedCli.mjs:4294:15
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async file:///app/artifacts/api-server/dist/seedCli.mjs:11949:18
+      at async NodePgPreparedQuery.queryWithCache (file:///app/artifacts/api-server/dist/seedCli.mjs:11707:16)
+      at async file:///app/artifacts/api-server/dist/seedCli.mjs:11942:22
+      at async main (file:///app/artifacts/api-server/dist/seedCli.mjs:25822:27)
+      at async seed (file:///app/artifacts/api-server/dist/seedCli.mjs:26535:3) {
+    length: 107,
+    severity: 'FATAL',
+    code: '28P01',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'auth.c',
+    line: '331',
+    routine: 'auth_failed'
+  }
+}
+[ec2-user@ip-172-31-22-79 new-app]$ 
