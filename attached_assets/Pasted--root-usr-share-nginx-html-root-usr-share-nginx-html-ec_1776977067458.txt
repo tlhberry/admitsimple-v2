@@ -1,0 +1,58 @@
+    root         /usr/share/nginx/html;
+        root /usr/share/nginx/html;
+[ec2-user@ip-172-31-22-79 new-app]$sudo cp -r ~/new-app/artifacts/admit-simple/dist/public/. /usr/share/nginx/html/ && \\
+sudo nginx -s reload && \
+echo "✅ Frontend updated"
+✅ Frontend updated
+[ec2-user@ip-172-31-22-79 new-app]$ docker logs deploy-api-1 --tail 50
+{"level":30,"time":1776975559166,"pid":1,"hostname":"7c36ef230314","req":{"id":8162,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776975589256,"pid":1,"hostname":"7c36ef230314","req":{"id":8163,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975619357,"pid":1,"hostname":"7c36ef230314","req":{"id":8164,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975649476,"pid":1,"hostname":"7c36ef230314","req":{"id":8165,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975679586,"pid":1,"hostname":"7c36ef230314","req":{"id":8166,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776975709676,"pid":1,"hostname":"7c36ef230314","req":{"id":8167,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776975739756,"pid":1,"hostname":"7c36ef230314","req":{"id":8168,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975769846,"pid":1,"hostname":"7c36ef230314","req":{"id":8169,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776975799926,"pid":1,"hostname":"7c36ef230314","req":{"id":8170,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975830006,"pid":1,"hostname":"7c36ef230314","req":{"id":8171,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776975860087,"pid":1,"hostname":"7c36ef230314","req":{"id":8172,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975890196,"pid":1,"hostname":"7c36ef230314","req":{"id":8173,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975920307,"pid":1,"hostname":"7c36ef230314","req":{"id":8174,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975950418,"pid":1,"hostname":"7c36ef230314","req":{"id":8175,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776975980546,"pid":1,"hostname":"7c36ef230314","req":{"id":8176,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976010656,"pid":1,"hostname":"7c36ef230314","req":{"id":8177,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976040757,"pid":1,"hostname":"7c36ef230314","req":{"id":8178,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976070867,"pid":1,"hostname":"7c36ef230314","req":{"id":8179,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976100966,"pid":1,"hostname":"7c36ef230314","req":{"id":8180,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976131047,"pid":1,"hostname":"7c36ef230314","req":{"id":8181,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976161157,"pid":1,"hostname":"7c36ef230314","req":{"id":8182,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976191247,"pid":1,"hostname":"7c36ef230314","req":{"id":8183,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976221347,"pid":1,"hostname":"7c36ef230314","req":{"id":8184,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976251457,"pid":1,"hostname":"7c36ef230314","req":{"id":8185,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976281536,"pid":1,"hostname":"7c36ef230314","req":{"id":8186,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976311621,"pid":1,"hostname":"7c36ef230314","req":{"id":8187,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976341707,"pid":1,"hostname":"7c36ef230314","req":{"id":8188,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976371796,"pid":1,"hostname":"7c36ef230314","req":{"id":8189,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976401877,"pid":1,"hostname":"7c36ef230314","req":{"id":8190,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976431987,"pid":1,"hostname":"7c36ef230314","req":{"id":8191,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976462066,"pid":1,"hostname":"7c36ef230314","req":{"id":8192,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976492157,"pid":1,"hostname":"7c36ef230314","req":{"id":8193,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976522237,"pid":1,"hostname":"7c36ef230314","req":{"id":8194,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976552363,"pid":1,"hostname":"7c36ef230314","req":{"id":8195,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976582482,"pid":1,"hostname":"7c36ef230314","req":{"id":8196,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":11,"msg":"request completed"}
+{"level":30,"time":1776976612578,"pid":1,"hostname":"7c36ef230314","req":{"id":8197,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976642669,"pid":1,"hostname":"7c36ef230314","req":{"id":8198,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976672817,"pid":1,"hostname":"7c36ef230314","req":{"id":8199,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1776976702897,"pid":1,"hostname":"7c36ef230314","req":{"id":8200,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976732976,"pid":1,"hostname":"7c36ef230314","req":{"id":8201,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976763067,"pid":1,"hostname":"7c36ef230314","req":{"id":8202,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976793187,"pid":1,"hostname":"7c36ef230314","req":{"id":8203,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976823329,"pid":1,"hostname":"7c36ef230314","req":{"id":8204,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":3,"msg":"request completed"}
+{"level":30,"time":1776976853420,"pid":1,"hostname":"7c36ef230314","req":{"id":8205,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976883507,"pid":1,"hostname":"7c36ef230314","req":{"id":8206,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976913627,"pid":1,"hostname":"7c36ef230314","req":{"id":8207,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976943747,"pid":1,"hostname":"7c36ef230314","req":{"id":8208,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776976973827,"pid":1,"hostname":"7c36ef230314","req":{"id":8209,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776977003937,"pid":1,"hostname":"7c36ef230314","req":{"id":8210,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1776977034027,"pid":1,"hostname":"7c36ef230314","req":{"id":8211,"method":"GET","url":"/api/health"},"res":{"statusCode":401},"responseTime":1,"msg":"request completed"}
+[ec2-user@ip-172-31-22-79 new-app]$ 
