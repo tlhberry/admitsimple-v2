@@ -8,35 +8,50 @@ WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY artifacts/admit-simple/package.json ./artifacts/admit-simple/
+COPY artifacts/admitsimple-marketing/package.json ./artifacts/admitsimple-marketing/
 COPY lib/api-zod/package.json ./lib/api-zod/
 COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 
 RUN pnpm install --frozen-lockfile
 
+# CRM app sources
 COPY artifacts/admit-simple/src ./artifacts/admit-simple/src
 COPY artifacts/admit-simple/index.html ./artifacts/admit-simple/
 COPY artifacts/admit-simple/vite.config.ts ./artifacts/admit-simple/
 COPY artifacts/admit-simple/tsconfig.json ./artifacts/admit-simple/
 COPY artifacts/admit-simple/public ./artifacts/admit-simple/public
+
+# Marketing site sources
+COPY artifacts/admitsimple-marketing/src ./artifacts/admitsimple-marketing/src
+COPY artifacts/admitsimple-marketing/index.html ./artifacts/admitsimple-marketing/
+COPY artifacts/admitsimple-marketing/vite.config.ts ./artifacts/admitsimple-marketing/
+COPY artifacts/admitsimple-marketing/tsconfig.json ./artifacts/admitsimple-marketing/
+COPY artifacts/admitsimple-marketing/public ./artifacts/admitsimple-marketing/public
+
+# Shared libs
 COPY lib/api-zod/src ./lib/api-zod/src
 COPY lib/api-zod/tsconfig.json ./lib/api-zod/
 COPY lib/api-client-react/src ./lib/api-client-react/src
 COPY lib/api-client-react/tsconfig.json ./lib/api-client-react/
 COPY tsconfig.json ./
 COPY tsconfig.base.json ./
-# attached_assets is aliased as @assets in vite.config.ts and imported by login.tsx etc.
+# attached_assets is aliased as @assets in vite.config.ts
 COPY attached_assets/ ./attached_assets/
 
-# Build-time env vars required by vite.config.ts (PORT is dev-only, BASE_PATH sets the web root)
-ENV PORT=3000
+# Build marketing site at root /
 ENV BASE_PATH=/
+RUN pnpm --filter @workspace/admitsimple-marketing run build
 
+# Build CRM app at /app/
+ENV BASE_PATH=/app/
 RUN pnpm --filter @workspace/admit-simple run build
 
 FROM nginx:alpine AS runner
-# vite.config.ts outputs to dist/public (not dist)
-COPY --from=builder /app/artifacts/admit-simple/dist/public /usr/share/nginx/html
+# Marketing site at root
+COPY --from=builder /app/artifacts/admitsimple-marketing/dist/public /usr/share/nginx/html
+# CRM app in /app/ subdirectory
+COPY --from=builder /app/artifacts/admit-simple/dist/public /usr/share/nginx/html/app
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
