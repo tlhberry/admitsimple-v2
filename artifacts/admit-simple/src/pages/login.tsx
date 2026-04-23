@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,13 @@ import logoImg from "@assets/Untitled_1775863851436.png";
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { login, isLoggingIn } = useAuth();
+  const { login, isLoggingIn, user } = useAuth();
   const [, navigate] = useLocation();
+
+  // Already logged in — go to dashboard so back-navigation to /login doesn't strand the user
+  useEffect(() => {
+    if (user) navigate("/");
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: user, isLoading, isError } = useGetMe({
+  const { data: user, isLoading, isError, error: authError } = useGetMe({
     query: {
       retry: (failureCount, error: any) => {
         // Never retry on 401 (not authenticated) — retry once on network errors
@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       retryDelay: 800,
       staleTime: 1000 * 60 * 5, // 5 mins
+      refetchOnWindowFocus: false, // prevents Sheet/modal close events from triggering auth refetch on mobile
     }
   });
 
@@ -58,12 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Redirect to login if not authenticated
+  // Redirect to login only on a confirmed 401 (not authenticated), not transient network errors
   useEffect(() => {
     if (!isLoading && isError && !isPublicPage) {
-      setLocation("/login");
+      const is401 = (authError as any)?.status === 401;
+      if (is401) setLocation("/login");
     }
-  }, [isLoading, isError, isPublicPage, setLocation]);
+  }, [isLoading, isError, authError, isPublicPage, setLocation]);
 
   return (
     <AuthContext.Provider 
