@@ -1,0 +1,73 @@
+
+ => => transferring context: 2B                                                                                                                                   0.0s
+ => CACHED [web base 1/2] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0                             0.0s
+ => [web internal] load build context                                                                                                                             2.1s
+ => => transferring context: 57.55MB                                                                                                                              2.1s
+ => CACHED [web runner 1/4] FROM docker.io/library/nginx:alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de                           0.0s
+ => [api internal] load build context                                                                                                                             0.3s
+ => => transferring context: 473.92kB                                                                                                                             0.3s
+ => CACHED [api runner 1/8] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293                         0.0s
+ => CACHED [api runner 2/8] WORKDIR /app                                                                                                                          0.0s
+ => [api runner 3/8] RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001                                                                                  0.8s
+ => [api base 2/2] RUN corepack enable && corepack prepare pnpm@latest --activate                                                                                 4.7s
+ => [web base 2/2] RUN corepack enable && corepack prepare pnpm@latest --activate                                                                                 4.4s
+ => [api runner 4/8] RUN mkdir -p /app/artifacts/api-server                                                                                                       1.1s
+ => [web builder  1/27] WORKDIR /app                                                                                                                              0.1s
+ => [web builder  2/27] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                                   0.1s
+ => [web builder  3/27] COPY artifacts/admit-simple/package.json ./artifacts/admit-simple/                                                                        0.1s
+ => [web builder  4/27] COPY artifacts/admitsimple-marketing/package.json ./artifacts/admitsimple-marketing/                                                      0.1s
+ => [web builder  5/27] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                              0.1s
+ => [api builder  1/18] WORKDIR /app                                                                                                                              0.1s
+ => [web builder  6/27] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                            0.1s
+ => [api builder  2/18] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                                   0.1s
+ => [web builder  7/27] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                            0.1s
+ => CANCELED [web builder  8/27] RUN pnpm install --frozen-lockfile                                                                                              16.8s
+ => [api builder  3/18] COPY artifacts/api-server/package.json ./artifacts/api-server/                                                                            0.1s
+ => [api builder  4/18] COPY artifacts/api-server/build.mjs ./artifacts/api-server/                                                                               0.0s
+ => [api builder  5/18] COPY lib/db/package.json ./lib/db/                                                                                                        0.1s
+ => [api builder  6/18] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                              0.1s
+ => [api builder  7/18] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                            0.1s
+ => [api builder  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                            0.1s
+ => ERROR [api builder  9/18] RUN pnpm install --frozen-lockfile                                                                                                 14.1s
+------
+ > [api builder  9/18] RUN pnpm install --frozen-lockfile:
+1.442 Scope: all 6 workspace projects
+2.107 Lockfile is up to date, resolution step is skipped
+2.395 Progress: resolved 1, reused 0, downloaded 0, added 0
+2.591 Packages: +406
+2.591 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+3.403 Progress: resolved 406, reused 0, downloaded 4, added 0
+4.405 Progress: resolved 406, reused 0, downloaded 13, added 0
+5.407 Progress: resolved 406, reused 0, downloaded 32, added 8
+6.411 Progress: resolved 406, reused 0, downloaded 100, added 31
+7.420 Progress: resolved 406, reused 0, downloaded 150, added 44
+8.433 Progress: resolved 406, reused 0, downloaded 189, added 58
+9.456 Progress: resolved 406, reused 0, downloaded 230, added 72
+10.46 Progress: resolved 406, reused 0, downloaded 273, added 87
+11.49 Progress: resolved 406, reused 0, downloaded 314, added 101
+12.49 Progress: resolved 406, reused 0, downloaded 352, added 113
+13.49 Progress: resolved 406, reused 0, downloaded 406, added 215
+13.72  ERR_PNPM_ENOSPC  [importPackage /app/node_modules/.pnpm/on-exit-leak-free@2.1.2/node_modules/on-exit-leak-free] ENOSPC: no space left on device, mkdir '/app/node_modules/.pnpm/on-exit-leak-free@2.1.2/node_modules/on-exit-leak-free_tmp_1_1'
+------
+[+] build 0/2
+ ⠙ Image deploy-api Building                                                                                                                                      22.4s
+ ⠙ Image deploy-web Building                                                                                                                                      22.4s
+Dockerfile.api:17
+
+--------------------
+
+  15 |     COPY lib/api-client-react/package.json ./lib/api-client-react/
+
+  16 |     
+
+  17 | >>> RUN pnpm install --frozen-lockfile
+
+  18 |     
+
+  19 |     COPY artifacts/api-server/src ./artifacts/api-server/src
+
+--------------------
+
+target api: failed to solve: process "/bin/sh -c pnpm install --frozen-lockfile" did not complete successfully: exit code: 1
+
+[ec2-user@ip-172-31-22-79 deploy]$ 
