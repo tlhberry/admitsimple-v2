@@ -553,19 +553,20 @@ router.get("/calls/token", async (req, res) => {
   try {
     const companyId = getCompanyId(req);
     const sess = req.session as any;
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken  = process.env.TWILIO_AUTH_TOKEN;
-    const appSid     = process.env.TWILIO_TWIML_APP_SID;
+
+    const [acctSidRow]   = await db.select().from(settings).where(and(eq(settings.key, "twilio_account_sid"),   eq(settings.companyId, companyId)));
+    const [authTokenRow] = await db.select().from(settings).where(and(eq(settings.key, "twilio_auth_token"),    eq(settings.companyId, companyId)));
+    const [keySidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_sid"),   eq(settings.companyId, companyId)));
+    const [keySecretRow] = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_secret"),eq(settings.companyId, companyId)));
+    const [appSidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_twiml_app_sid"), eq(settings.companyId, companyId)));
+
+    const accountSid = acctSidRow?.value   || process.env.TWILIO_ACCOUNT_SID;
+    const authToken  = authTokenRow?.value || process.env.TWILIO_AUTH_TOKEN;
+    const resolvedAppSid = appSidRow?.value || process.env.TWILIO_TWIML_APP_SID;
 
     if (!accountSid || !authToken) {
       res.status(503).json({ error: "Twilio not configured" }); return;
     }
-
-    const [keySidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_sid"), eq(settings.companyId, companyId)));
-    const [keySecretRow] = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_secret"), eq(settings.companyId, companyId)));
-    const [appSidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_twiml_app_sid"), eq(settings.companyId, companyId)));
-
-    const resolvedAppSid = appSidRow?.value || appSid;
     if (!resolvedAppSid) {
       res.status(503).json({ error: "Twilio not configured" }); return;
     }

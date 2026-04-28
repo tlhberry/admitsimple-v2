@@ -134,6 +134,8 @@ export default function Settings() {
   const [savingTwilio, setSavingTwilio] = useState(false);
   // Track whether we're in "replace" mode for Twilio keys
   const [replacingTwilioKeys, setReplacingTwilioKeys] = useState(false);
+  const [newTwilioAccountSid, setNewTwilioAccountSid] = useState("");
+  const [newTwilioAuthToken, setNewTwilioAuthToken] = useState("");
   const [newTwilioSid, setNewTwilioSid] = useState("");
   const [newTwilioSecret, setNewTwilioSecret] = useState("");
   const [newTwilioAppSid, setNewTwilioAppSid] = useState("");
@@ -147,12 +149,14 @@ export default function Settings() {
   // Derived: are Twilio keys already saved in DB?
   const twilioSidSaved   = !!values["twilio_api_key_sid"];
   const twilioSecretSaved = !!values["twilio_api_key_secret"];
-  const twilioKeysSaved  = twilioSidSaved || twilioSecretSaved;
+  const twilioKeysSaved  = twilioSidSaved || twilioSecretSaved || !!values["twilio_account_sid"];
 
   const maskSid    = (sid: string)    => sid.length > 4 ? sid.slice(0, 4) + "•".repeat(Math.min(sid.length - 4, 28)) : "•".repeat(sid.length);
   const maskSecret = (secret: string) => "•".repeat(Math.min(secret.length || 32, 32));
 
   const startReplacingTwilioKeys = () => {
+    setNewTwilioAccountSid("");
+    setNewTwilioAuthToken("");
     setNewTwilioSid("");
     setNewTwilioSecret("");
     setNewTwilioAppSid("");
@@ -162,6 +166,8 @@ export default function Settings() {
 
   const cancelReplacingTwilioKeys = () => {
     setReplacingTwilioKeys(false);
+    setNewTwilioAccountSid("");
+    setNewTwilioAuthToken("");
     setNewTwilioSid("");
     setNewTwilioSecret("");
     setNewTwilioAppSid("");
@@ -171,10 +177,14 @@ export default function Settings() {
     setSavingTwilio(true);
     try {
       // If replacing, use the new values; otherwise use current values (first-time entry)
-      const sidValue    = replacingTwilioKeys ? newTwilioSid    : values["twilio_api_key_sid"]    || "";
-      const secretValue = replacingTwilioKeys ? newTwilioSecret : values["twilio_api_key_secret"] || "";
-      const appSidValue = replacingTwilioKeys ? newTwilioAppSid : values["twilio_twiml_app_sid"]  || "";
+      const acctSidValue = replacingTwilioKeys ? newTwilioAccountSid : values["twilio_account_sid"]   || "";
+      const authTokenValue = replacingTwilioKeys ? newTwilioAuthToken  : values["twilio_auth_token"]    || "";
+      const sidValue     = replacingTwilioKeys ? newTwilioSid       : values["twilio_api_key_sid"]    || "";
+      const secretValue  = replacingTwilioKeys ? newTwilioSecret    : values["twilio_api_key_secret"] || "";
+      const appSidValue  = replacingTwilioKeys ? newTwilioAppSid    : values["twilio_twiml_app_sid"]  || "";
       const keysToSave = [
+        { key: "twilio_account_sid",    value: acctSidValue },
+        { key: "twilio_auth_token",     value: authTokenValue },
         { key: "twilio_api_key_sid",    value: sidValue },
         { key: "twilio_api_key_secret", value: secretValue },
         { key: "twilio_twiml_app_sid",  value: appSidValue },
@@ -615,31 +625,31 @@ export default function Settings() {
                       {[
                         {
                           n: 1,
-                          title: "Create a Twilio API Key",
-                          body: "In your Twilio Console, go to",
-                          link: { href: "https://console.twilio.com/us1/account/keys-credentials/api-keys", label: "Account → API Keys & Tokens" },
-                          detail: "Click Create API Key, choose Standard, give it a name (e.g. \"AdmitSimple\"), then click Create.",
+                          title: "Get your Account SID and Auth Token",
+                          body: "Go to your",
+                          link: { href: "https://console.twilio.com/us1/account/home", label: "Twilio Console dashboard" },
+                          detail: "Your Account SID (starts with AC) and Auth Token are shown at the top. Copy both.",
                         },
                         {
                           n: 2,
-                          title: "Copy the SID and Secret",
-                          body: null,
-                          link: null,
-                          detail: "The SID starts with SK and the Secret is shown only once — copy both immediately before closing the page.",
+                          title: "Create an API Key",
+                          body: "Go to",
+                          link: { href: "https://console.twilio.com/us1/account/keys-credentials/api-keys", label: "Account → API Keys & Tokens" },
+                          detail: "Click Create API Key, choose Standard, give it a name (e.g. \"AdmitSimple\"). Copy the SID (starts with SK) and Secret — the Secret is shown only once.",
                         },
                         {
                           n: 3,
-                          title: "Create a TwiML App (if you haven't already)",
+                          title: "Create a TwiML App",
                           body: "Go to",
                           link: { href: "https://console.twilio.com/us1/develop/voice/manage/twiml-apps", label: "Voice → TwiML Apps" },
-                          detail: "Create a new app. Set the Voice Request URL to your webhook endpoint. Copy the TwiML App SID (starts with AP) — paste it below.",
+                          detail: "Create a new app. Set the Voice Request URL to your webhook endpoint. Copy the TwiML App SID (starts with AP).",
                         },
                         {
                           n: 4,
-                          title: "Paste the API Key SID, Secret, and TwiML App SID below",
+                          title: "Paste all five values below and save",
                           body: null,
                           link: null,
-                          detail: "Enter all three values below and click Save Twilio Keys. Browser calling will activate immediately — no restart needed.",
+                          detail: "Enter Account SID, Auth Token, API Key SID, API Key Secret, and TwiML App SID below. Click Save Twilio Keys — browser calling activates immediately.",
                         },
                       ].map(step => (
                         <div key={step.n} className="flex gap-3">
@@ -676,9 +686,12 @@ export default function Settings() {
                       <div className="flex items-center gap-2 min-w-0">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-emerald-400">API keys configured</p>
+                          <p className="text-xs font-semibold text-emerald-400">Twilio configured</p>
                           <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-                            SID: {maskSid(values["twilio_api_key_sid"] || "")}
+                            Account SID: {maskSid(values["twilio_account_sid"] || "")}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">
+                            API Key SID: {maskSid(values["twilio_api_key_sid"] || "")}
                           </p>
                           <p className="text-xs text-muted-foreground font-mono">
                             Secret: {maskSecret(values["twilio_api_key_secret"] || "")}
@@ -707,6 +720,27 @@ export default function Settings() {
                         Enter new keys below. Saving will overwrite the existing keys.
                       </div>
                     )}
+                    <div>
+                      <Label className={labelCls}>Account SID <span className="text-xs text-muted-foreground font-normal">(starts with AC…)</span></Label>
+                      <Input
+                        value={replacingTwilioKeys ? newTwilioAccountSid : values["twilio_account_sid"] || ""}
+                        onChange={e => replacingTwilioKeys ? setNewTwilioAccountSid(e.target.value) : set("twilio_account_sid", e.target.value)}
+                        placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className={`${fieldCls} mt-1.5 font-mono text-sm`}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div>
+                      <Label className={labelCls}>Auth Token</Label>
+                      <Input
+                        type="password"
+                        value={replacingTwilioKeys ? newTwilioAuthToken : values["twilio_auth_token"] || ""}
+                        onChange={e => replacingTwilioKeys ? setNewTwilioAuthToken(e.target.value) : set("twilio_auth_token", e.target.value)}
+                        placeholder="Your Twilio Auth Token"
+                        className={`${fieldCls} mt-1.5 font-mono text-sm`}
+                        autoComplete="new-password"
+                      />
+                    </div>
                     <div>
                       <Label className={labelCls}>API Key SID <span className="text-xs text-muted-foreground font-normal">(starts with SK…)</span></Label>
                       <Input
@@ -756,7 +790,7 @@ export default function Settings() {
                       )}
                       <Button
                         onClick={saveTwilioKeys}
-                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioSid.trim() || !newTwilioSecret.trim() || !newTwilioAppSid.trim()))}
+                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioAccountSid.trim() || !newTwilioAuthToken.trim() || !newTwilioSid.trim() || !newTwilioSecret.trim() || !newTwilioAppSid.trim()))}
                         className="h-10 px-6 rounded-xl gap-2 ml-auto"
                       >
                         {savingTwilio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
