@@ -1,0 +1,203 @@
+ABLE "ai_stage_suggestions" ADD CONSTRAINT "ai_stage_suggestions_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "companies"("id") ON DELEOSQLe;
+CREATE TABLE
+INSERT 0 1
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+UPDATE 1
+UPDATE 0
+UPDATE 0
+UPDATE 8
+UPDATE 0
+UPDATE 0
+UPDATE 16
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+[ec2-user@ip-172-31-22-79 new-app]$ docker-compose -f ~/new-app/deploy/docker-compose.ec2.yml restart api            docker-compose -f ~/new-app/deploy/docker-compose.ec2.yml restart api
+[+] restart 0/1
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠏ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠋ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠙ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠹ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠸ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠼ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠴ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠦ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠧ Container deploy-api-1 Restarting                                             [+] restart 0/1                                                                  
+ ⠇ Container deploy-api-1 Restarting                                                                                                                              10.9s
+[ec2-user@ip-172-31-22-79 new-app]$ 
