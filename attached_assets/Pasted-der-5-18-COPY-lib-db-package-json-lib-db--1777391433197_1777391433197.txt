@@ -1,0 +1,91 @@
+der  5/18] COPY lib/db/package.json ./lib/db/                                                                                                     0.0s
+ => CACHED [builder  6/18] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                           0.0s
+ => CACHED [builder  7/18] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                         0.0s
+ => CACHED [builder  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                         0.0s
+ => CACHED [builder  9/18] RUN pnpm install --frozen-lockfile                                                                                                     0.0s
+ => CACHED [builder 10/18] COPY artifacts/api-server/src ./artifacts/api-server/src                                                                               0.0s
+ => CACHED [builder 11/18] COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/                                                                        0.0s
+ => CACHED [builder 12/18] COPY lib/db/src ./lib/db/src                                                                                                           0.0s
+ => CACHED [builder 13/18] COPY lib/db/tsconfig.json ./lib/db/                                                                                                    0.0s
+ => CACHED [builder 14/18] COPY lib/db/migrations ./lib/db/migrations                                                                                             0.0s
+ => CACHED [builder 15/18] COPY lib/api-zod/src ./lib/api-zod/src                                                                                                 0.0s
+ => CACHED [builder 16/18] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                          0.0s
+ => CACHED [builder 17/18] COPY tsconfig.json ./                                                                                                                  0.0s
+ => CACHED [builder 18/18] RUN pnpm --filter @workspace/api-server run build                                                                                      0.0s
+ => CACHED [runner 5/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist /app/artifacts/api-server/dist                                   0.0s
+ => CACHED [runner 6/8] COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules                                                             0.0s
+ => CACHED [runner 7/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/node_modules /app/artifacts/api-server/node_modules                   0.0s
+ => CACHED [runner 8/8] COPY --from=builder --chown=nodejs:nodejs /app/lib/db/migrations /app/migrations                                                          0.0s
+ => exporting to image                                                                                                                                            0.0s
+ => => exporting layers                                                                                                                                           0.0s
+ => => writing image sha256:087971439c4bfbc915d402123dd6610b5e43ebbe46f02c0ec49c4175fc99cd9e                                                                      0.0s
+ => => naming to docker.io/library/deploy-api                                                                                                                     0.0s
+ => resolving provenance for metadata file                                                                                                                        0.0s
+[+] up 1/2
+ ✔ Image deploy-api      Built                                                                                                                                     0.4s
+[+] up 1/2er deploy-db-1 Waiting                                                 
+ ✔ Image deploy-api      Built                                                                                                                                     0.4s
+[+] up 1/2er deploy-db-1 Waiting                                                 
+ ✔ Image deploy-api      Built                                                                                                                                     0.4s
+[+] up 1/2er deploy-db-1 Waiting                                                 
+ ✔ Image deploy-api      Built                                                                                                                                     0.4s
+[+] up 1/2er deploy-db-1 Waiting                                                 
+ ✔ Image deploy-api      Built                                                                                                                                     0.4s
+[+] up 2/3er deploy-db-1 Waiting                                                 
+ ✔ Image deploy-api       Built                                                                                                                                    0.4s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                    0.4s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                    0.4s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 [+] up 3/3
+ ✔ Image deploy-api       Built                                                                                                                                    0.4s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                  0.5s
+ ✔ Container deploy-api-1 Started                                                                                                                                  0.4s
+[ec2-user@ip-172-31-22-79 deploy]$ docker ps
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS                   PORTS                                       NAMES
+66bafdf252b2   deploy-api           "docker-entrypoint.s…"   6 minutes ago   Up 52 seconds            0.0.0.0:3001->3001/tcp, :::3001->3001/tcp   deploy-api-1
+14da24026445   postgres:16-alpine   "docker-entrypoint.s…"   6 minutes ago   Up 6 minutes (healthy)   0.0.0.0:5433->5432/tcp, :::5433->5432/tcp   deploy-db-1
+2d44fe4b9f28   postgres:16-alpine   "docker-entrypoint.s…"   13 days ago     Up 13 days               0.0.0.0:5432->5432/tcp, :::5432->5432/tcp   admitsimple-db
+[ec2-user@ip-172-31-22-79 deploy]$ cat ~/new-app/deploy/docker-compose.ec2.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admitsimple
+      POSTGRES_USER: admitsimple
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://admitsimple:${DB_PASSWORD}@db:5432/admitsimple
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      TWILIO_TWIML_APP_SID: ${TWILIO_TWIML_APP_SID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+[ec2-user@ip-172-31-22-79 deploy]$ 
