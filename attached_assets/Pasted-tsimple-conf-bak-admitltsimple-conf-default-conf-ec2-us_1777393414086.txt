@@ -1,0 +1,151 @@
+tsimple.conf.bak  admitltsimple.conf  default.conf
+[ec2-user@ip-172-31-22-79 deploy]$ sudo tee /etc/nginx/conf.d/admitltsimple.conf > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name admitsimple.com www.admitsimple.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name admitsimple.com www.admitsimple.com;
+
+    ssl_certificate /etc/letsencrypt/live/admitsimple.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admitsimple.com/privkey.pem;
+
+    # API
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Cookie $http_cookie;
+        proxy_read_timeout 300s;
+    }
+
+    # Everything else → Docker web container
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+sudo nginx -t && sudo systemctl reload nginxscheme;_x_forwarded_for;
+nginx: [warn] conflicting server name "_" on 0.0.0.0:80, ignored
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[ec2-user@ip-172-31-22-79 deploy]$ cd ~/new-app && git pull && cd deploy && docker compose -f docker-compose.ec2.yml builcd ~/new-app && git pull && cd deploy && docker compose -f docker-compose.ec2.yml build web && docker compose -f docker-compose.ec2.yml up -d
+remote: Enumerating objects: 28, done.
+remote: Counting objects: 100% (28/28), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 24 (delta 19), reused 24 (delta 19), pack-reused 0 (from 0)
+Unpacking objects: 100% (24/24), 9.19 KiB | 448.00 KiB/s, done.
+From https://github.com/tlhberry/admitsimple-v2
+   bb4099a..f174ca9  main       -> origin/main
+Updating bb4099a..f174ca9
+error: Your local changes to the following files would be overwritten by merge:
+        deploy/docker-compose.ec2.yml
+Please commit your changes or stash them before you merge.
+Aborting
+[ec2-user@ip-172-31-22-79 new-app]$ git stash && git pull && cd deploy && docker compose -f docker-compose.ec2.yml build wgit stash && git pull && cd deploy && docker compose -f docker-compose.ec2.yml build web && docker compose -f docker-compose.ec2.yml up -d
+Saved working directory and index state WIP on main: bb4099a Add the web service to the EC2 deployment configuration
+Updating bb4099a..f174ca9
+Fast-forward
+ attached_assets/Pasted--up-4-5er-deploy-api-1-Running-Image-deploy-17773929396_1777392939656.txt | 116 ++++++++++++++++++++
+ attached_assets/Pasted-ame-root-usr-share-nginx-html-index-index-html-gzip-on-_1777393048363.txt |  98 +++++++++++++++++
+ attached_assets/Pasted-api-build-context-dockerfile-deploy-Dockerfile-api-rest_1777392839842.txt | 358 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/Pasted-r-deploy-api-1-Running-Image-deploy-api-Bu-177739270183_1777392701836.txt |  83 +++++++++++++++
+ attached_assets/Pasted-ver-listen-80-server-name-root-usr-share-nginx-html-ind_1777393003198.txt |  64 +++++++++++
+ deploy/docker-compose.ec2.yml                                                                    |   5 +-
+ 6 files changed, 720 insertions(+), 4 deletions(-)
+ create mode 100644 attached_assets/Pasted--up-4-5er-deploy-api-1-Running-Image-deploy-17773929396_1777392939656.txt
+ create mode 100644 attached_assets/Pasted-ame-root-usr-share-nginx-html-index-index-html-gzip-on-_1777393048363.txt
+ create mode 100644 attached_assets/Pasted-api-build-context-dockerfile-deploy-Dockerfile-api-rest_1777392839842.txt
+ create mode 100644 attached_assets/Pasted-r-deploy-api-1-Running-Image-deploy-api-Bu-177739270183_1777392701836.txt
+ create mode 100644 attached_assets/Pasted-ver-listen-80-server-name-root-usr-share-nginx-html-ind_1777393003198.txt
+unknown shorthand flag: 'f' in -f
+See 'docker --help'.
+
+Usage:  docker [OPTIONS] COMMAND
+
+A self-sufficient runtime for containers
+
+Common Commands:
+  run         Create and run a new container from an image
+  exec        Execute a command in a running container
+  ps          List containers
+  build       Build an image from a Dockerfile
+  pull        Download an image from a registry
+  push        Upload an image to a registry
+  images      List images
+  login       Log in to a registry
+  logout      Log out from a registry
+  search      Search Docker Hub for images
+  version     Show the Docker version information
+  info        Display system-wide information
+
+Management Commands:
+  builder     Manage builds
+  buildx*     Docker Buildx (Docker Inc., v0.19.3)
+  container   Manage containers
+  context     Manage contexts
+  image       Manage images
+  manifest    Manage Docker image manifests and manifest lists
+  network     Manage networks
+  plugin      Manage plugins
+  system      Manage Docker
+  trust       Manage trust on Docker images
+  volume      Manage volumes
+
+Swarm Commands:
+  swarm       Manage Swarm
+
+Commands:
+  attach      Attach local standard input, output, and error streams to a running container
+  commit      Create a new image from a container's changes
+  cp          Copy files/folders between a container and the local filesystem
+  create      Create a new container
+  diff        Inspect changes to files or directories on a container's filesystem
+  events      Get real time events from the server
+  export      Export a container's filesystem as a tar archive
+  history     Show the history of an image
+  import      Import the contents from a tarball to create a filesystem image
+  inspect     Return low-level information on Docker objects
+  kill        Kill one or more running containers
+  load        Load an image from a tar archive or STDIN
+  logs        Fetch the logs of a container
+  pause       Pause all processes within one or more containers
+  port        List port mappings or a specific mapping for the container
+  rename      Rename a container
+  restart     Restart one or more containers
+  rm          Remove one or more containers
+  rmi         Remove one or more images
+  save        Save one or more images to a tar archive (streamed to STDOUT by default)
+  start       Start one or more stopped containers
+  stats       Display a live stream of container(s) resource usage statistics
+  stop        Stop one or more running containers
+  tag         Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+  top         Display the running processes of a container
+  unpause     Unpause all processes within one or more containers
+  update      Update configuration of one or more containers
+  wait        Block until one or more containers stop, then print their exit codes
+
+Global Options:
+      --config string      Location of client config files (default "/home/ec2-user/.docker")
+  -c, --context string     Name of the context to use to connect to the daemon (overrides DOCKER_HOST env var and default context set with "docker context use")
+  -D, --debug              Enable debug mode
+  -H, --host list          Daemon socket to connect to
+  -l, --log-level string   Set the logging level ("debug", "info", "warn", "error", "fatal") (default "info")
+      --tls                Use TLS; implied by --tlsverify
+      --tlscacert string   Trust certs signed only by this CA (default "/home/ec2-user/.docker/ca.pem")
+      --tlscert string     Path to TLS certificate file (default "/home/ec2-user/.docker/cert.pem")
+      --tlskey string      Path to TLS key file (default "/home/ec2-user/.docker/key.pem")
+      --tlsverify          Use TLS and verify the remote
+  -v, --version            Print version information and quit
+
+Run 'docker COMMAND --help' for more information on a command.
+
+For more help on how to use Docker, head to https://docs.docker.com/go/guides/
+
+[ec2-user@ip-172-31-22-79 deploy]$ 
