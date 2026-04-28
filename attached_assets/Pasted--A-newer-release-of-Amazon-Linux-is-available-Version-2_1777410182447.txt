@@ -1,0 +1,279 @@
+
+A newer release of "Amazon Linux" is available.
+  Version 2023.10.20260202:
+  Version 2023.10.20260216:
+  Version 2023.10.20260302:
+  Version 2023.10.20260325:
+  Version 2023.10.20260330:
+  Version 2023.11.20260406:
+  Version 2023.11.20260413:
+Run "/usr/bin/dnf check-release-update" for full release and version update info
+   ,     #_
+   ~\_  ####_        Amazon Linux 2023
+  ~~  \_#####\
+  ~~     \###|
+  ~~       \#/ ___   https://aws.amazon.com/linux/amazon-linux-2023
+   ~~       V~' '->
+    ~~~         /
+      ~~._.   _/
+         _/ _/
+       _/m/'
+Last login: Tue Apr 28 15:38:46 2026 from 18.206.107.28
+[ec2-user@ip-172-31-22-79 ~]$ cd ~/new-app && git pull && cd deploy && docker-compose -f docker-compose.ec2.yml build --no-cache api && docker-compose -f docker-compose.ec2.yml up -d
+remote: Enumerating objects: 28, done.
+remote: Counting objects: 100% (28/28), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 16 (delta 13), reused 15 (delta 12), pack-reused 0 (from 0)
+Unpacking objects: 100% (16/16), 3.85 KiB | 171.00 KiB/s, done.
+From https://github.com/tlhberry/admitsimple-v2
+   438370f..fb359ac  main       -> origin/main
+Updating 438370f..fb359ac
+Fast-forward
+ artifacts/admit-simple/src/pages/settings/index.tsx                              | 72 +++++++++++++++++++++++++++++++++++++++++++++++++++++-------------------
+ artifacts/api-server/src/routes/inquiries.ts                                     | 19 ++++++++++---------
+ attached_assets/Pasted--transferring-context-2B--1777401056903_1777401056904.txt | 73 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 136 insertions(+), 28 deletions(-)
+ create mode 100644 attached_assets/Pasted--transferring-context-2B--1777401056903_1777401056904.txt
+[+] Building 44.6s (34/34) FINISHED                                                                                                                                      
+ => [internal] load local bake definitions                                                                                                                          0.0s
+ => => reading from stdin 517B                                                                                                                                      0.0s
+ => [internal] load build definition from Dockerfile.api                                                                                                            0.0s
+ => => transferring dockerfile: 1.81kB                                                                                                                              0.0s
+ => [internal] load metadata for docker.io/library/node:20-alpine                                                                                                   0.3s
+ => [internal] load .dockerignore                                                                                                                                   0.0s
+ => => transferring context: 2B                                                                                                                                     0.0s
+ => CACHED [runner 1/8] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293                               0.0s
+ => [internal] load build context                                                                                                                                   0.1s
+ => => transferring context: 55.12kB                                                                                                                                0.0s
+ => CACHED [runner 2/8] WORKDIR /app                                                                                                                                0.0s
+ => [base 2/2] RUN corepack enable && corepack prepare pnpm@latest --activate                                                                                       2.7s
+ => [runner 3/8] RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001                                                                                        0.6s
+ => [runner 4/8] RUN mkdir -p /app/artifacts/api-server                                                                                                             0.6s
+ => [builder  1/18] WORKDIR /app                                                                                                                                    0.0s 
+ => [builder  2/18] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                                         0.1s
+ => [builder  3/18] COPY artifacts/api-server/package.json ./artifacts/api-server/                                                                                  0.1s
+ => [builder  4/18] COPY artifacts/api-server/build.mjs ./artifacts/api-server/                                                                                     0.1s
+ => [builder  5/18] COPY lib/db/package.json ./lib/db/                                                                                                              0.1s
+ => [builder  6/18] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                                    0.0s
+ => [builder  7/18] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                                  0.0s
+ => [builder  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                                  0.0s
+ => [builder  9/18] RUN pnpm install --frozen-lockfile                                                                                                             11.6s
+ => [builder 10/18] COPY artifacts/api-server/src ./artifacts/api-server/src                                                                                        0.1s 
+ => [builder 11/18] COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/                                                                                 0.1s 
+ => [builder 12/18] COPY lib/db/src ./lib/db/src                                                                                                                    0.1s 
+ => [builder 13/18] COPY lib/db/tsconfig.json ./lib/db/                                                                                                             0.1s 
+ => [builder 14/18] COPY lib/db/migrations ./lib/db/migrations                                                                                                      0.1s 
+ => [builder 15/18] COPY lib/api-zod/src ./lib/api-zod/src                                                                                                          0.1s 
+ => [builder 16/18] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                                   0.1s
+ => [builder 17/18] COPY tsconfig.json ./                                                                                                                           0.0s
+ => [builder 18/18] RUN pnpm --filter @workspace/api-server run build                                                                                               4.3s
+ => [runner 5/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist /app/artifacts/api-server/dist                                            0.2s
+ => [runner 6/8] COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules                                                                      3.3s
+ => [runner 7/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/node_modules /app/artifacts/api-server/node_modules                            0.1s
+ => [runner 8/8] COPY --from=builder --chown=nodejs:nodejs /app/lib/db/migrations /app/migrations                                                                   0.1s
+ => exporting to image                                                                                                                                              2.2s
+ => => exporting layers                                                                                                                                             2.2s
+ => => writing image sha256:27fdc2fb776daa13eaaf21ca702b03cbf71543165692c4fa46c3c3823fe2e54b                                                                        0.0s
+ => => naming to docker.io/library/deploy-api                                                                                                                       0.0s
+ => resolving provenance for metadata file                                                                                                                          0.1s
+[+] build 1/1
+ ✔ Image deploy-api Built                                                                                                                                           44.7s
+[+] up 3/3
+ ✔ Container deploy-db-1  Healthy                                                                                                                                   11.1s
+ ✔ Container deploy-api-1 Started                                                                                                                                   11.7s
+ ✔ Container deploy-web-1 Running                                                                                                                                    0.0s
+[ec2-user@ip-172-31-22-79 deploy]$ docker logs deploy-api-1 --tail 30
+{"level":30,"time":1777403122223,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":26,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2004,"msg":"request aborted"}
+{"level":30,"time":1777403122224,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":24,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2031,"msg":"request aborted"}
+{"level":30,"time":1777403122225,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":25,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2022,"msg":"request aborted"}
+{"level":30,"time":1777403123485,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":28,"method":"GET","url":"/api/calls/active"},"res":{"statusCode":200},"responseTime":13,"msg":"request completed"}
+{"level":30,"time":1777403123489,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":29,"method":"GET","url":"/api/calls/log"},"res":{"statusCode":200},"responseTime":16,"msg":"request completed"}
+{"level":30,"time":1777403123543,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":31,"method":"GET","url":"/api/auth/me"},"res":{"statusCode":200},"responseTime":5,"msg":"request completed"}
+{"level":30,"time":1777403123547,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":30,"method":"GET","url":"/api/calls/token"},"res":{"statusCode":503},"err":{"type":"Error","message":"failed with status code 503","stack":"Error: failed with status code 503\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:536:35)\n    at onFinish (node:_http_outgoing:1031:10)\n    at callback (node:internal/streams/writable:766:21)\n    at afterWrite (node:internal/streams/writable:710:5)\n    at afterWriteTick (node:internal/streams/writable:696:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":11,"msg":"request errored"}
+{"level":30,"time":1777403123616,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":33,"method":"GET","url":"/api/sms/unread-count"},"res":{"statusCode":200},"responseTime":8,"msg":"request completed"}
+{"level":30,"time":1777403123617,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":34,"method":"GET","url":"/api/ai-suggestions"},"res":{"statusCode":200},"responseTime":8,"msg":"request completed"}
+{"level":30,"time":1777403125706,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":35,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2062,"msg":"request aborted"}
+{"level":30,"time":1777403125707,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":36,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2061,"msg":"request aborted"}
+{"level":30,"time":1777403125707,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":37,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2042,"msg":"request aborted"}
+{"level":30,"time":1777403125708,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":32,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":2138,"msg":"request aborted"}
+{"level":30,"time":1777403125792,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":38,"method":"GET","url":"/api/calls/active"},"res":{"statusCode":200},"responseTime":8,"msg":"request completed"}
+{"level":30,"time":1777403125794,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":39,"method":"GET","url":"/api/calls/log"},"res":{"statusCode":200},"responseTime":9,"msg":"request completed"}
+{"level":30,"time":1777403125851,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":41,"method":"GET","url":"/api/auth/me"},"res":{"statusCode":200},"responseTime":6,"msg":"request completed"}
+{"level":30,"time":1777403125852,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":40,"method":"GET","url":"/api/calls/token"},"res":{"statusCode":503},"err":{"type":"Error","message":"failed with status code 503","stack":"Error: failed with status code 503\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:536:35)\n    at onFinish (node:_http_outgoing:1031:10)\n    at callback (node:internal/streams/writable:766:21)\n    at afterWrite (node:internal/streams/writable:710:5)\n    at afterWriteTick (node:internal/streams/writable:696:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":11,"msg":"request errored"}
+{"level":30,"time":1777403125921,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":43,"method":"GET","url":"/api/sms/unread-count"},"res":{"statusCode":200},"responseTime":7,"msg":"request completed"}
+{"level":30,"time":1777403125924,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":44,"method":"GET","url":"/api/ai-suggestions"},"res":{"statusCode":200},"responseTime":9,"msg":"request completed"}
+{"level":30,"time":1777403131759,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":49,"method":"GET","url":"/api/auth/me"},"res":{"statusCode":200},"responseTime":6,"msg":"request completed"}
+{"level":30,"time":1777403131763,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":48,"method":"GET","url":"/api/calls/token"},"res":{"statusCode":503},"err":{"type":"Error","message":"failed with status code 503","stack":"Error: failed with status code 503\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:536:35)\n    at onFinish (node:_http_outgoing:1031:10)\n    at callback (node:internal/streams/writable:766:21)\n    at afterWrite (node:internal/streams/writable:710:5)\n    at afterWriteTick (node:internal/streams/writable:696:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":13,"msg":"request errored"}
+{"level":30,"time":1777403131842,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":50,"method":"GET","url":"/api/sms/unread-count"},"res":{"statusCode":200},"responseTime":13,"msg":"request completed"}
+{"level":30,"time":1777403131844,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":51,"method":"GET","url":"/api/calls/active"},"res":{"statusCode":200},"responseTime":14,"msg":"request completed"}
+{"level":30,"time":1777403131903,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":52,"method":"GET","url":"/api/ai-suggestions"},"res":{"statusCode":200},"responseTime":10,"msg":"request completed"}
+{"level":30,"time":1777403131921,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":53,"method":"GET","url":"/api/admissions-performance"},"res":{"statusCode":200},"responseTime":26,"msg":"request completed"}
+{"level":30,"time":1777403131962,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":54,"method":"GET","url":"/api/dashboard/command-center"},"res":{"statusCode":200},"responseTime":9,"msg":"request completed"}
+{"level":30,"time":1777403133210,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":56,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":1197,"msg":"request aborted"}
+{"level":30,"time":1777403133211,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":55,"method":"GET","url":"/api/events"},"res":{"statusCode":200},"responseTime":1241,"msg":"request aborted"}
+{"level":30,"time":1777403133319,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":57,"method":"GET","url":"/api/ai-suggestions"},"res":{"statusCode":200},"responseTime":12,"msg":"request completed"}
+{"level":30,"time":1777403133320,"pid":1,"hostname":"ad0c6783b3d4","req":{"id":58,"method":"GET","url":"/api/calls/log"},"res":{"statusCode":200},"responseTime":11,"msg":"request completed"}
+[ec2-user@ip-172-31-22-79 deploy]$ cd ~/new-app/deploy && docker-compose -f docker-compose.ec2.yml build --no-cache web && docker-compose -f docker-compose.ec2.yml up -d
+[+] Building 59.1s (41/41) FINISHED                                                                                                                                      
+ => [internal] load local bake definitions                                                                                                                          0.0s
+ => => reading from stdin 932B                                                                                                                                      0.0s
+ => [internal] load build definition from Dockerfile.web                                                                                                            0.0s
+ => => transferring dockerfile: 2.41kB                                                                                                                              0.0s
+ => [internal] load metadata for docker.io/library/node:20-slim                                                                                                     0.7s
+ => [internal] load metadata for docker.io/library/nginx:alpine                                                                                                     0.6s
+ => [internal] load .dockerignore                                                                                                                                   0.0s
+ => => transferring context: 2B                                                                                                                                     0.0s
+ => CACHED [base 1/2] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0                                   0.0s
+ => [internal] load build context                                                                                                                                   1.5s
+ => => transferring context: 57.56MB                                                                                                                                1.5s
+ => CACHED [runner 1/4] FROM docker.io/library/nginx:alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de                                 0.0s
+ => [base 2/2] RUN corepack enable && corepack prepare pnpm@latest --activate                                                                                       3.7s
+ => [builder  1/27] WORKDIR /app                                                                                                                                    0.1s 
+ => [builder  2/27] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                                         0.1s
+ => [builder  3/27] COPY artifacts/admit-simple/package.json ./artifacts/admit-simple/                                                                              0.1s
+ => [builder  4/27] COPY artifacts/admitsimple-marketing/package.json ./artifacts/admitsimple-marketing/                                                            0.0s
+ => [builder  5/27] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                                    0.0s
+ => [builder  6/27] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                                  0.1s
+ => [builder  7/27] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                                  0.1s
+ => [builder  8/27] RUN pnpm install --frozen-lockfile                                                                                                             22.0s
+ => [builder  9/27] COPY artifacts/admit-simple/src ./artifacts/admit-simple/src                                                                                    0.2s 
+ => [builder 10/27] COPY artifacts/admit-simple/index.html ./artifacts/admit-simple/                                                                                0.0s 
+ => [builder 11/27] COPY artifacts/admit-simple/vite.config.ts ./artifacts/admit-simple/                                                                            0.0s 
+ => [builder 12/27] COPY artifacts/admit-simple/tsconfig.json ./artifacts/admit-simple/                                                                             0.0s 
+ => [builder 13/27] COPY artifacts/admit-simple/public ./artifacts/admit-simple/public                                                                              0.1s 
+ => [builder 14/27] COPY artifacts/admitsimple-marketing/src ./artifacts/admitsimple-marketing/src                                                                  0.1s 
+ => [builder 15/27] COPY artifacts/admitsimple-marketing/index.html ./artifacts/admitsimple-marketing/                                                              0.1s
+ => [builder 16/27] COPY artifacts/admitsimple-marketing/vite.config.ts ./artifacts/admitsimple-marketing/                                                          0.2s
+ => [builder 17/27] COPY artifacts/admitsimple-marketing/tsconfig.json ./artifacts/admitsimple-marketing/                                                           0.0s
+ => [builder 18/27] COPY artifacts/admitsimple-marketing/public ./artifacts/admitsimple-marketing/public                                                            0.1s
+ => [builder 19/27] COPY lib/api-zod/src ./lib/api-zod/src                                                                                                          0.1s
+ => [builder 20/27] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                                   0.0s
+ => [builder 21/27] COPY lib/api-client-react/src ./lib/api-client-react/src                                                                                        0.0s
+ => [builder 22/27] COPY lib/api-client-react/tsconfig.json ./lib/api-client-react/                                                                                 0.1s
+ => [builder 23/27] COPY tsconfig.json ./                                                                                                                           0.0s
+ => [builder 24/27] COPY tsconfig.base.json ./                                                                                                                      0.0s
+ => [builder 25/27] COPY attached_assets/ ./attached_assets/                                                                                                        0.6s
+ => [builder 26/27] RUN pnpm --filter @workspace/admitsimple-marketing run build                                                                                   10.4s
+ => [builder 27/27] RUN pnpm --filter @workspace/admit-simple run build                                                                                            17.4s
+ => [runner 2/4] COPY --from=builder /app/artifacts/admitsimple-marketing/dist/public /usr/share/nginx/html                                                         0.1s
+ => [runner 3/4] COPY --from=builder /app/artifacts/admit-simple/dist/public /usr/share/nginx/html/app                                                              0.1s
+ => [runner 4/4] COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf                                                                                              0.1s
+ => exporting to image                                                                                                                                              0.4s
+ => => exporting layers                                                                                                                                             0.3s
+ => => writing image sha256:712c40d8478020213f74f0799c09ce5fda7623c2397e13a57adb8a37de5c1488                                                                        0.0s
+ => => naming to docker.io/library/deploy-web                                                                                                                       0.0s
+ => resolving provenance for metadata file                                                                                                                          0.2s
+[+] build 1/2
+ ✔ Image deploy-web Built                                                                                                                                           59.3s
+ ⠙ Image deploy-api Building                                                                                                                                        59.3s
+[+] up 3/3
+ ✔ Container deploy-db-1  Healthy                                                                                                                                    2.3s
+ ✔ Container deploy-api-1 Running                                                                                                                                    0.0s
+ ✔ Container deploy-web-1 Started                                                                                                                                    2.8s
+[ec2-user@ip-172-31-22-79 deploy]$ git push https://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@github.com/YOUR_ORG/YOUR_REPO.git main
+remote: Repository not found.
+fatal: repository 'https://github.com/YOUR_ORG/YOUR_REPO.git/' not found
+[ec2-user@ip-172-31-22-79 deploy]$ git push https://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@github.com/tlhberry/admitsimple-v2.git main
+Everything up-to-date
+[ec2-user@ip-172-31-22-79 deploy]$ git pull
+docker-compose -f docker-compose.ec2.yml exec -T db psql -U postgres < lib/db/migrations/0001_add_multitenancy.sql
+docker-compose -f docker-compose.ec2.yml exec -T db psql -U postgres < lib/db/migrations/0002_reports_reader_rls.sql
+docker-compose -f docker-compose.ec2.yml up -d --build api web
+Already up to date.
+-bash: lib/db/migrations/0001_add_multitenancy.sql: No such file or directory
+-bash: lib/db/migrations/0002_reports_reader_rls.sql: No such file or directory
+[+] Building 1.0s (74/74) FINISHED                                                                                                                                       
+ => [internal] load local bake definitions                                                                                                                          0.0s
+ => => reading from stdin 899B                                                                                                                                      0.0s
+ => [api internal] load build definition from Dockerfile.api                                                                                                        0.0s
+ => => transferring dockerfile: 1.81kB                                                                                                                              0.0s
+ => [web internal] load build definition from Dockerfile.web                                                                                                        0.0s
+ => => transferring dockerfile: 2.41kB                                                                                                                              0.0s
+ => [api internal] load metadata for docker.io/library/node:20-alpine                                                                                               0.3s
+ => [web internal] load metadata for docker.io/library/nginx:alpine                                                                                                 0.3s
+ => [web internal] load metadata for docker.io/library/node:20-slim                                                                                                 0.3s
+ => [api internal] load .dockerignore                                                                                                                               0.0s
+ => => transferring context: 2B                                                                                                                                     0.0s
+ => [web internal] load .dockerignore                                                                                                                               0.0s
+ => => transferring context: 2B                                                                                                                                     0.0s
+ => [api internal] load build context                                                                                                                               0.1s
+ => => transferring context: 474.23kB                                                                                                                               0.1s
+ => [api base 1/2] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293                                    0.0s
+ => [web base 1/2] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0                                      0.0s
+ => [web internal] load build context                                                                                                                               0.2s
+ => => transferring context: 178.87kB                                                                                                                               0.1s
+ => [web runner 1/4] FROM docker.io/library/nginx:alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de                                    0.0s
+ => CACHED [api runner 2/8] WORKDIR /app                                                                                                                            0.0s
+ => CACHED [api runner 3/8] RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001                                                                             0.0s
+ => CACHED [api runner 4/8] RUN mkdir -p /app/artifacts/api-server                                                                                                  0.0s
+ => CACHED [api base 2/2] RUN corepack enable && corepack prepare pnpm@latest --activate                                                                            0.0s
+ => CACHED [api builder  1/18] WORKDIR /app                                                                                                                         0.0s
+ => CACHED [api builder  2/18] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                              0.0s
+ => CACHED [api builder  3/18] COPY artifacts/api-server/package.json ./artifacts/api-server/                                                                       0.0s
+ => CACHED [api builder  4/18] COPY artifacts/api-server/build.mjs ./artifacts/api-server/                                                                          0.0s
+ => CACHED [api builder  5/18] COPY lib/db/package.json ./lib/db/                                                                                                   0.0s
+ => CACHED [api builder  6/18] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                         0.0s
+ => CACHED [api builder  7/18] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                       0.0s
+ => CACHED [api builder  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                       0.0s
+ => CACHED [api builder  9/18] RUN pnpm install --frozen-lockfile                                                                                                   0.0s
+ => CACHED [api builder 10/18] COPY artifacts/api-server/src ./artifacts/api-server/src                                                                             0.0s
+ => CACHED [api builder 11/18] COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/                                                                      0.0s
+ => CACHED [api builder 12/18] COPY lib/db/src ./lib/db/src                                                                                                         0.0s
+ => CACHED [api builder 13/18] COPY lib/db/tsconfig.json ./lib/db/                                                                                                  0.0s
+ => CACHED [api builder 14/18] COPY lib/db/migrations ./lib/db/migrations                                                                                           0.0s
+ => CACHED [api builder 15/18] COPY lib/api-zod/src ./lib/api-zod/src                                                                                               0.0s
+ => CACHED [api builder 16/18] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                        0.0s
+ => CACHED [api builder 17/18] COPY tsconfig.json ./                                                                                                                0.0s
+ => CACHED [api builder 18/18] RUN pnpm --filter @workspace/api-server run build                                                                                    0.0s
+ => CACHED [api runner 5/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/dist /app/artifacts/api-server/dist                                 0.0s
+ => CACHED [api runner 6/8] COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules                                                           0.0s
+ => CACHED [api runner 7/8] COPY --from=builder --chown=nodejs:nodejs /app/artifacts/api-server/node_modules /app/artifacts/api-server/node_modules                 0.0s
+ => CACHED [api runner 8/8] COPY --from=builder --chown=nodejs:nodejs /app/lib/db/migrations /app/migrations                                                        0.0s
+ => [api] exporting to image                                                                                                                                        0.0s
+ => => exporting layers                                                                                                                                             0.0s
+ => => writing image sha256:27fdc2fb776daa13eaaf21ca702b03cbf71543165692c4fa46c3c3823fe2e54b                                                                        0.0s
+ => => naming to docker.io/library/deploy-api                                                                                                                       0.0s
+ => CACHED [web base 2/2] RUN corepack enable && corepack prepare pnpm@latest --activate                                                                            0.0s
+ => CACHED [web builder  1/27] WORKDIR /app                                                                                                                         0.0s
+ => CACHED [web builder  2/27] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                              0.0s
+ => CACHED [web builder  3/27] COPY artifacts/admit-simple/package.json ./artifacts/admit-simple/                                                                   0.0s
+ => CACHED [web builder  4/27] COPY artifacts/admitsimple-marketing/package.json ./artifacts/admitsimple-marketing/                                                 0.0s
+ => CACHED [web builder  5/27] COPY lib/api-zod/package.json ./lib/api-zod/                                                                                         0.0s
+ => CACHED [web builder  6/27] COPY lib/api-spec/package.json ./lib/api-spec/                                                                                       0.0s
+ => CACHED [web builder  7/27] COPY lib/api-client-react/package.json ./lib/api-client-react/                                                                       0.0s
+ => CACHED [web builder  8/27] RUN pnpm install --frozen-lockfile                                                                                                   0.0s
+ => CACHED [web builder  9/27] COPY artifacts/admit-simple/src ./artifacts/admit-simple/src                                                                         0.0s
+ => CACHED [web builder 10/27] COPY artifacts/admit-simple/index.html ./artifacts/admit-simple/                                                                     0.0s
+ => CACHED [web builder 11/27] COPY artifacts/admit-simple/vite.config.ts ./artifacts/admit-simple/                                                                 0.0s
+ => CACHED [web builder 12/27] COPY artifacts/admit-simple/tsconfig.json ./artifacts/admit-simple/                                                                  0.0s
+ => CACHED [web builder 13/27] COPY artifacts/admit-simple/public ./artifacts/admit-simple/public                                                                   0.0s
+ => CACHED [web builder 14/27] COPY artifacts/admitsimple-marketing/src ./artifacts/admitsimple-marketing/src                                                       0.0s
+ => CACHED [web builder 15/27] COPY artifacts/admitsimple-marketing/index.html ./artifacts/admitsimple-marketing/                                                   0.0s
+ => CACHED [web builder 16/27] COPY artifacts/admitsimple-marketing/vite.config.ts ./artifacts/admitsimple-marketing/                                               0.0s
+ => CACHED [web builder 17/27] COPY artifacts/admitsimple-marketing/tsconfig.json ./artifacts/admitsimple-marketing/                                                0.0s
+ => CACHED [web builder 18/27] COPY artifacts/admitsimple-marketing/public ./artifacts/admitsimple-marketing/public                                                 0.0s
+ => CACHED [web builder 19/27] COPY lib/api-zod/src ./lib/api-zod/src                                                                                               0.0s
+ => CACHED [web builder 20/27] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                        0.0s
+ => CACHED [web builder 21/27] COPY lib/api-client-react/src ./lib/api-client-react/src                                                                             0.0s
+ => CACHED [web builder 22/27] COPY lib/api-client-react/tsconfig.json ./lib/api-client-react/                                                                      0.0s
+ => CACHED [web builder 23/27] COPY tsconfig.json ./                                                                                                                0.0s
+ => CACHED [web builder 24/27] COPY tsconfig.base.json ./                                                                                                           0.0s
+ => CACHED [web builder 25/27] COPY attached_assets/ ./attached_assets/                                                                                             0.0s
+ => CACHED [web builder 26/27] RUN pnpm --filter @workspace/admitsimple-marketing run build                                                                         0.0s
+ => CACHED [web builder 27/27] RUN pnpm --filter @workspace/admit-simple run build                                                                                  0.0s
+ => CACHED [web runner 2/4] COPY --from=builder /app/artifacts/admitsimple-marketing/dist/public /usr/share/nginx/html                                              0.0s
+ => CACHED [web runner 3/4] COPY --from=builder /app/artifacts/admit-simple/dist/public /usr/share/nginx/html/app                                                   0.0s
+ => CACHED [web runner 4/4] COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf                                                                                   0.0s
+ => [web] exporting to image                                                                                                                                        0.0s
+ => => exporting layers                                                                                                                                             0.0s
+ => => writing image sha256:712c40d8478020213f74f0799c09ce5fda7623c2397e13a57adb8a37de5c1488                                                                        0.0s
+ => => naming to docker.io/library/deploy-web                                                                                                                       0.0s
+ => [api] resolving provenance for metadata file                                                                                                                    0.0s
+ => [web] resolving provenance for metadata file                                                                                                                    0.0s
+[+] up 5/5
+ ✔ Image deploy-api       Built                                                                                                                                      1.1s
+ ✔ Image deploy-web       Built                                                                                                                                      1.1s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                    0.5s
+ ✔ Container deploy-api-1 Running                                                                                                                                    0.0s
+ ✔ Container deploy-web-1 Running                                                                                                                                    0.0s
+[ec2-user@ip-172-31-22-79 deploy]$ 
