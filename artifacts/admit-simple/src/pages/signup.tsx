@@ -17,6 +17,7 @@ export default function Signup() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [form, setForm] = useState({
     facilityName: "",
     adminName: "",
@@ -56,6 +57,10 @@ export default function Signup() {
     }
     if (!passwordsMatch) {
       setError("Passwords do not match.");
+      return;
+    }
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service and Privacy Policy to continue.");
       return;
     }
 
@@ -204,6 +209,37 @@ export default function Signup() {
                 <p className="text-xs text-destructive">Passwords do not match.</p>
               )}
             </div>
+
+            {/* Terms agreement */}
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={e => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-border text-primary accent-primary cursor-pointer flex-shrink-0"
+              />
+              <span className="text-xs text-muted-foreground leading-relaxed">
+                I agree to the{" "}
+                <a
+                  href="https://admitsimple.com/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a
+                  href="https://admitsimple.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  Privacy Policy
+                </a>
+                , including the Business Associate Agreement governing protected health information.
+              </span>
+            </label>
 
             {error && (
               <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2.5">
