@@ -1,0 +1,344 @@
+                                                                                 63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Recreated                                                                                                                               [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Starting                                                                                                                                [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠦ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠧ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠇ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠏ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 [+] up 2/3
+ ✔ Image deploy-api       Built                                                                                                                                   63.9s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 22.6s
+ ⠦ Container deploy-api-1 Starting                                                                                                                                21.9s
+Error response from daemon: driver failed programming external connectivity on endpoint deploy-api-1 (0e1f0ceb86234186edf172cd6ff57e49134081c56bd61140c7ab0513196282e6): Bind for 0.0.0.0:3001 failed: port is
