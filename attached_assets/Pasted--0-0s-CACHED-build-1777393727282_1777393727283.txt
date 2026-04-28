@@ -1,0 +1,35 @@
+                                                                             0.0s
+ => CACHED [builder 20/27] COPY lib/api-zod/tsconfig.json ./lib/api-zod/                                                                                          0.0s
+ => CACHED [builder 21/27] COPY lib/api-client-react/src ./lib/api-client-react/src                                                                               0.0s
+ => CACHED [builder 22/27] COPY lib/api-client-react/tsconfig.json ./lib/api-client-react/                                                                        0.0s
+ => CACHED [builder 23/27] COPY tsconfig.json ./                                                                                                                  0.0s
+ => CACHED [builder 24/27] COPY tsconfig.base.json ./                                                                                                             0.0s
+ => CACHED [builder 25/27] COPY attached_assets/ ./attached_assets/                                                                                               0.0s
+ => CACHED [builder 26/27] RUN pnpm --filter @workspace/admitsimple-marketing run build                                                                           0.0s
+ => CACHED [builder 27/27] RUN pnpm --filter @workspace/admit-simple run build                                                                                    0.0s
+ => CACHED [runner 2/4] COPY --from=builder /app/artifacts/admitsimple-marketing/dist/public /usr/share/nginx/html                                                0.0s
+ => CACHED [runner 3/4] COPY --from=builder /app/artifacts/admit-simple/dist/public /usr/share/nginx/html/app                                                     0.0s
+ => CACHED [runner 4/4] COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf                                                                                     0.0s
+ => exporting to image                                                                                                                                            0.0s
+ => => exporting layers                                                                                                                                           0.0s
+ => => writing image sha256:c7ec949e68983377e0852155c7539622c5e7f50f887854c7ad8e867842290583                                                                      0.0s
+ => => naming to docker.io/library/deploy-web                                                                                                                     0.0s
+ => resolving provenance for metadata file                                                                                                                        0.0s
+[+] build 1/2
+ ⠙ Image deploy-api Building                                                                                                                                       0.6s
+ ✔ Image deploy-web Built                                                                                                                                          0.6s
+[+] up 2/3
+ ⠋ Container deploy-db-1  Waiting                                                                                                                                  0.1s
+ ✔ Container deploy-api-1 Running                                                                                                                                 [+] up 2/3
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                  0.2s
+ ✔ Container deploy-api-1 Running                                                                                                                                 [+] up 2/3
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                  0.3s
+ ✔ Container deploy-api-1 Running                                                                                                                                 [+] up 2/3
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                  0.4s
+ ✔ Container deploy-api-1 Running                                                                                                                                 [+] up 2/3
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                  0.5s
+ ✔ Container deploy-api-1 Running                                                                                                                                 [+] up 3/3
+ ✔ Container deploy-db-1  Healthy                                                                                                                                  0.5s
+ ✔ Container deploy-api-1 Running                                                                                                                                  0.0s
+ ✔ Container deploy-web-1 Running                                                                                                                                  0.0s
+[ec2-user@ip-172-31-22-79 deploy]$ 
