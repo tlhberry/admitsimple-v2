@@ -4,16 +4,17 @@ interface SSEClient {
   id: string;
   res: Response;
   userId?: number;
+  companyId?: number;
 }
 
 const clients = new Map<string, SSEClient>();
 
-export function addSSEClient(id: string, res: Response, userId?: number): () => void {
-  clients.set(id, { id, res, userId });
+export function addSSEClient(id: string, res: Response, userId?: number, companyId?: number): () => void {
+  clients.set(id, { id, res, userId, companyId });
   return () => clients.delete(id);
 }
 
-/** Broadcast to ALL connected clients */
+/** Broadcast to ALL connected clients (use only for system-level events with no PHI) */
 export function broadcastSSE(event: string, data: unknown): void {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const [id, client] of clients) {
@@ -21,6 +22,20 @@ export function broadcastSSE(event: string, data: unknown): void {
       client.res.write(payload);
     } catch {
       clients.delete(id);
+    }
+  }
+}
+
+/** Broadcast to all connected clients belonging to a specific company */
+export function broadcastSSEToCompany(companyId: number, event: string, data: unknown): void {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const [id, client] of clients) {
+    if (client.companyId === companyId) {
+      try {
+        client.res.write(payload);
+      } catch {
+        clients.delete(id);
+      }
     }
   }
 }

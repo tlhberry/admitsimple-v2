@@ -12,6 +12,7 @@ const router = Router();
 router.get("/events", requireAuth, (req, res) => {
   const sess = req.session as any;
   const userId: number | undefined = sess?.userId ? Number(sess.userId) : undefined;
+  const companyId: number | undefined = sess?.companyId ? Number(sess.companyId) : undefined;
   const clientId = `${userId ?? "anon"}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   res.setHeader("Content-Type", "text/event-stream");
@@ -24,7 +25,7 @@ router.get("/events", requireAuth, (req, res) => {
   // Initial handshake
   res.write(`event: connected\ndata: {"clientId":"${clientId}"}\n\n`);
 
-  const cleanup = addSSEClient(clientId, res, userId);
+  const cleanup = addSSEClient(clientId, res, userId, companyId);
 
   // Keep-alive every 25 seconds to avoid proxy timeouts
   const ping = setInterval(() => {

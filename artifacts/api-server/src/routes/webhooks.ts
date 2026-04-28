@@ -3,7 +3,7 @@ import twilio from "twilio";
 import { db } from "@workspace/db";
 import { inquiries, activities, settings, users } from "@workspace/db/schema";
 import { eq, desc, ilike, and } from "drizzle-orm";
-import { broadcastSSE, sendSSEToUser } from "../lib/sse";
+import { broadcastSSE, broadcastSSEToCompany, sendSSEToUser } from "../lib/sse";
 
 const router = Router();
 
@@ -287,13 +287,14 @@ router.post("/webhooks/ctm", async (req, res) => {
       // Only notify the assigned rep
       sendSSEToUser(assignedUserId, "incoming_call", ssePayload);
     } else {
-      // All reps — first to claim wins
-      broadcastSSE("incoming_call", ssePayload);
+      // All reps at this company — first to claim wins
+      broadcastSSEToCompany(companyId, "incoming_call", ssePayload);
     }
 
     // ── Auto-miss timer (15 seconds if still ringing) ─────────────────────
     if (!isDirectlyAssigned) {
       const inquiryId = inquiry.id;
+      const missCompanyId = companyId;
       setTimeout(async () => {
         try {
           const [current] = await db
@@ -307,7 +308,7 @@ router.post("/webhooks/ctm", async (req, res) => {
               updatedAt: new Date(),
             }).where(eq(inquiries.id, inquiryId));
 
-            broadcastSSE("call_status", {
+            broadcastSSEToCompany(missCompanyId, "call_status", {
               inquiryId,
               status: "missed",
             });
@@ -418,7 +419,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
       } catch { /* best-effort */ }
     }
 
-    broadcastSSE("incoming_call", {
+    broadcastSSEToCompany(companyId, "incoming_call", {
       callSid: CallSid,
       inquiryId,
       callerPhone,
@@ -432,12 +433,13 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
     // Auto-miss after 30 seconds if still ringing
     if (inquiryId) {
       const id = inquiryId;
+      const twilioCompanyId = companyId;
       setTimeout(async () => {
         try {
           const [cur] = await db.select({ callStatus: inquiries.callStatus }).from(inquiries).where(eq(inquiries.id, id));
           if (cur?.callStatus === "ringing") {
             await db.update(inquiries).set({ callStatus: "missed", updatedAt: new Date() }).where(eq(inquiries.id, id));
-            broadcastSSE("call_status", { inquiryId: id, status: "missed" });
+            broadcastSSEToCompany(twilioCompanyId, "call_status", { inquiryId: id, status: "missed" });
           }
         } catch { /* best-effort */ }
       }, 30000);
