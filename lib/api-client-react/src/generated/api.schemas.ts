@@ -30,6 +30,7 @@ export interface UserSession {
   role: string;
   initials?: string;
   createdAt?: string;
+  companyId?: number;
 }
 
 export interface User {

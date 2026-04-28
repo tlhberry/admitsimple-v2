@@ -20,23 +20,32 @@ const router = Router();
  */
 router.post("/webhooks/ctm", async (req, res) => {
   try {
-    const [secretRow] = await db
+    // Look up ALL companies' CTM secrets and match the incoming token
+    // This is how we identify WHICH company this webhook belongs to
+    const allSecretRows = await db
       .select()
       .from(settings)
       .where(eq(settings.key, "ctm_webhook_secret"));
 
-    const storedSecret = secretRow?.value;
+    const incomingToken =
+      (req.headers["x-ctm-token"] as string) ||
+      (req.query.token as string) ||
+      req.body?.token;
 
-    if (storedSecret) {
-      const incomingToken =
-        req.headers["x-ctm-token"] ||
-        req.query.token ||
-        req.body?.token;
+    let companyId: number | null = null;
 
-      if (incomingToken !== storedSecret) {
+    if (allSecretRows.length > 0) {
+      const matchedRow = allSecretRows.find(r => r.value === incomingToken);
+      if (!matchedRow) {
         res.status(401).json({ error: "Invalid webhook token" });
         return;
       }
+      companyId = matchedRow.companyId;
+    }
+
+    // If no secrets are configured at all, fall back to company 1 (legacy)
+    if (companyId === null) {
+      companyId = 1;
     }
 
     const body = req.body as Record<string, string>;
@@ -161,25 +170,25 @@ router.post("/webhooks/ctm", async (req, res) => {
 
     const notes = noteLines.join("\n");
 
-    // ── Find existing inquiry by phone (dedup) ─────────────────────────────
+    // ── Find existing inquiry by phone (dedup, scoped to company) ─────────────────────────────
     let inquiry: typeof inquiries.$inferSelect | null = null;
     if (phone) {
       const [existing] = await db
         .select()
         .from(inquiries)
-        .where(eq(inquiries.phone, phone))
+        .where(and(eq(inquiries.phone, phone), eq(inquiries.companyId, companyId)))
         .orderBy(desc(inquiries.createdAt))
         .limit(1);
       if (existing) inquiry = existing;
     }
 
-    // ── Agent-to-user matching (by name, case-insensitive fuzzy) ────────────
+    // ── Agent-to-user matching (by name, scoped to company) ────────────
     let assignedUserId: number | null = null;
     if (agentName) {
       const [matchedUser] = await db
         .select({ id: users.id, name: users.name })
         .from(users)
-        .where(ilike(users.name, `%${agentName.split(" ")[0]}%`))
+        .where(and(ilike(users.name, `%${agentName.split(" ")[0]}%`), eq(users.companyId, companyId)))
         .limit(1);
       if (matchedUser) assignedUserId = matchedUser.id;
     }
@@ -210,6 +219,7 @@ router.post("/webhooks/ctm", async (req, res) => {
       const [created] = await db
         .insert(inquiries)
         .values({
+          companyId,
           firstName,
           lastName,
           phone,
@@ -251,6 +261,7 @@ router.post("/webhooks/ctm", async (req, res) => {
       .join("\n");
 
     await db.insert(activities).values({
+      companyId,
       inquiryId: inquiry.id,
       type: "call",
       subject: `Inbound call from ${firstName} ${lastName}`,
@@ -315,9 +326,15 @@ router.post("/webhooks/ctm", async (req, res) => {
 });
 
 // ── POST /api/webhooks/twilio/voice — TwiML for outbound browser calls ────────
-router.post("/webhooks/twilio/voice", (req, res) => {
-  const to       = (req.body.To       as string | undefined) || "";
-  const callerId = process.env.TWILIO_PHONE_NUMBER || "";
+// Each company's TwiML App must set Voice URL to: /api/webhooks/twilio/voice?company={companyId}
+router.post("/webhooks/twilio/voice", async (req, res) => {
+  const to       = (req.body.To as string | undefined) || "";
+  const companyId = parseInt((req.query.company as string) || "1", 10);
+
+  // Look up caller ID from company settings, fall back to env var
+  const [phoneRow] = await db.select().from(settings)
+    .where(and(eq(settings.key, "twilio_phone_number"), eq(settings.companyId, companyId)));
+  const callerId = phoneRow?.value || process.env.TWILIO_PHONE_NUMBER || "";
 
   res.setHeader("Content-Type", "text/xml");
 
@@ -337,19 +354,21 @@ router.post("/webhooks/twilio/voice", (req, res) => {
 });
 
 // ── POST /api/webhooks/twilio/incoming — new inbound call ─────────────────────
+// Each company's TwiML App must set incoming URL to: /api/webhooks/twilio/incoming?company={companyId}
 router.post("/webhooks/twilio/incoming", async (req, res) => {
   try {
     const { CallerName, From: callerPhone, CallSid } = req.body as Record<string, string>;
     const callerName = CallerName || "Unknown Caller";
+    const companyId = parseInt((req.query.company as string) || "1", 10);
 
-    // Upsert inquiry by phone number
+    // Upsert inquiry by phone number, scoped to company
     let inquiryId: number;
     let isExistingInquiry = false;
     if (callerPhone) {
       const [existing] = await db
         .select({ id: inquiries.id })
         .from(inquiries)
-        .where(eq(inquiries.phone, callerPhone))
+        .where(and(eq(inquiries.phone, callerPhone), eq(inquiries.companyId, companyId)))
         .orderBy(desc(inquiries.createdAt))
         .limit(1);
 
@@ -365,6 +384,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
       } else {
         const nameParts = callerName.trim().split(/\s+/);
         const [created] = await db.insert(inquiries).values({
+          companyId,
           firstName: nameParts[0] || "Unknown",
           lastName:  nameParts.slice(1).join(" ") || "Caller",
           phone: callerPhone,
@@ -389,6 +409,7 @@ router.post("/webhooks/twilio/incoming", async (req, res) => {
     if (inquiryId) {
       try {
         await db.insert(activities).values({
+          companyId,
           inquiryId,
           type: "call",
           subject: `Inbound call from ${callerName}${callerPhone ? ` (${callerPhone})` : ""}`,

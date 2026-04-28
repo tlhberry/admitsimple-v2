@@ -136,6 +136,7 @@ export default function Settings() {
   const [replacingTwilioKeys, setReplacingTwilioKeys] = useState(false);
   const [newTwilioAccountSid, setNewTwilioAccountSid] = useState("");
   const [newTwilioAuthToken, setNewTwilioAuthToken] = useState("");
+  const [newTwilioPhone, setNewTwilioPhone] = useState("");
   const [newTwilioSid, setNewTwilioSid] = useState("");
   const [newTwilioSecret, setNewTwilioSecret] = useState("");
   const [newTwilioAppSid, setNewTwilioAppSid] = useState("");
@@ -157,6 +158,7 @@ export default function Settings() {
   const startReplacingTwilioKeys = () => {
     setNewTwilioAccountSid("");
     setNewTwilioAuthToken("");
+    setNewTwilioPhone("");
     setNewTwilioSid("");
     setNewTwilioSecret("");
     setNewTwilioAppSid("");
@@ -168,6 +170,7 @@ export default function Settings() {
     setReplacingTwilioKeys(false);
     setNewTwilioAccountSid("");
     setNewTwilioAuthToken("");
+    setNewTwilioPhone("");
     setNewTwilioSid("");
     setNewTwilioSecret("");
     setNewTwilioAppSid("");
@@ -177,14 +180,16 @@ export default function Settings() {
     setSavingTwilio(true);
     try {
       // If replacing, use the new values; otherwise use current values (first-time entry)
-      const acctSidValue = replacingTwilioKeys ? newTwilioAccountSid : values["twilio_account_sid"]   || "";
-      const authTokenValue = replacingTwilioKeys ? newTwilioAuthToken  : values["twilio_auth_token"]    || "";
-      const sidValue     = replacingTwilioKeys ? newTwilioSid       : values["twilio_api_key_sid"]    || "";
-      const secretValue  = replacingTwilioKeys ? newTwilioSecret    : values["twilio_api_key_secret"] || "";
-      const appSidValue  = replacingTwilioKeys ? newTwilioAppSid    : values["twilio_twiml_app_sid"]  || "";
+      const acctSidValue   = replacingTwilioKeys ? newTwilioAccountSid : values["twilio_account_sid"]    || "";
+      const authTokenValue = replacingTwilioKeys ? newTwilioAuthToken  : values["twilio_auth_token"]     || "";
+      const phoneValue     = replacingTwilioKeys ? newTwilioPhone      : values["twilio_phone_number"]   || "";
+      const sidValue       = replacingTwilioKeys ? newTwilioSid        : values["twilio_api_key_sid"]    || "";
+      const secretValue    = replacingTwilioKeys ? newTwilioSecret     : values["twilio_api_key_secret"] || "";
+      const appSidValue    = replacingTwilioKeys ? newTwilioAppSid     : values["twilio_twiml_app_sid"]  || "";
       const keysToSave = [
         { key: "twilio_account_sid",    value: acctSidValue },
         { key: "twilio_auth_token",     value: authTokenValue },
+        { key: "twilio_phone_number",   value: phoneValue },
         { key: "twilio_api_key_sid",    value: sidValue },
         { key: "twilio_api_key_secret", value: secretValue },
         { key: "twilio_twiml_app_sid",  value: appSidValue },
@@ -742,6 +747,16 @@ export default function Settings() {
                       />
                     </div>
                     <div>
+                      <Label className={labelCls}>Twilio Phone Number <span className="text-xs text-muted-foreground font-normal">(your caller ID, e.g. +18005551234)</span></Label>
+                      <Input
+                        value={replacingTwilioKeys ? newTwilioPhone : values["twilio_phone_number"] || ""}
+                        onChange={e => replacingTwilioKeys ? setNewTwilioPhone(e.target.value) : set("twilio_phone_number", e.target.value)}
+                        placeholder="+18005551234"
+                        className={`${fieldCls} mt-1.5 font-mono text-sm`}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div>
                       <Label className={labelCls}>API Key SID <span className="text-xs text-muted-foreground font-normal">(starts with SK…)</span></Label>
                       <Input
                         value={replacingTwilioKeys ? newTwilioSid : values["twilio_api_key_sid"] || ""}
@@ -790,7 +805,7 @@ export default function Settings() {
                       )}
                       <Button
                         onClick={saveTwilioKeys}
-                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioAccountSid.trim() || !newTwilioAuthToken.trim() || !newTwilioSid.trim() || !newTwilioSecret.trim() || !newTwilioAppSid.trim()))}
+                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioAccountSid.trim() || !newTwilioAuthToken.trim() || !newTwilioPhone.trim() || !newTwilioSid.trim() || !newTwilioSecret.trim() || !newTwilioAppSid.trim()))}
                         className="h-10 px-6 rounded-xl gap-2 ml-auto"
                       >
                         {savingTwilio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -799,6 +814,24 @@ export default function Settings() {
                     </div>
                   </div>
                 )}
+
+                {/* Webhook URLs — always shown so admins can copy them into Twilio */}
+                <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-foreground uppercase tracking-wider">TwiML App Webhook URLs</p>
+                  <p className="text-xs text-muted-foreground">Paste these into your Twilio TwiML App Voice Configuration.</p>
+                  {[
+                    { label: "Outbound Voice (Voice URL)", url: `https://admitsimple.com/api/webhooks/twilio/voice?company=${user?.companyId ?? 1}` },
+                    { label: "Inbound Call (Incoming URL)", url: `https://admitsimple.com/api/webhooks/twilio/incoming?company=${user?.companyId ?? 1}` },
+                  ].map(({ label, url }) => (
+                    <div key={label}>
+                      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-background border border-border rounded-lg px-3 py-2 font-mono text-foreground truncate">{url}</code>
+                        <Button variant="outline" size="sm" className="h-8 px-3 shrink-0" onClick={() => { navigator.clipboard.writeText(url); toast({ title: "Copied to clipboard" }); }}>Copy</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
