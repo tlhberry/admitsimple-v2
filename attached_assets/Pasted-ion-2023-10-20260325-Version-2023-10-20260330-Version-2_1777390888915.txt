@@ -1,0 +1,108 @@
+ion 2023.10.20260325:
+  Version 2023.10.20260330:
+  Version 2023.11.20260406:
+  Version 2023.11.20260413:
+Run "/usr/bin/dnf check-release-update" for full release and version update info
+   ,     #_
+   ~\_  ####_        Amazon Linux 2023
+  ~~  \_#####\
+  ~~     \###|
+  ~~       \#/ ___   https://aws.amazon.com/linux/amazon-linux-2023
+   ~~       V~' '->
+    ~~~         /
+      ~~._.   _/
+         _/ _/
+       _/m/'
+Last login: Thu Apr 23 20:33:17 2026 from 18.206.107.28
+[ec2-user@ip-172-31-22-79 ~]$ cd /path/to/admitsimple-v2
+git pull origin main
+docker-compose up -d --build
+-bash: cd: /path/to/admitsimple-v2: No such file or directory
+fatal: not a git repository (or any of the parent directories): .git
+no configuration file provided: not found
+[ec2-user@ip-172-31-22-79 ~]$ ls ~
+Admissions-CRM  app.log  new-app
+[ec2-user@ip-172-31-22-79 ~]$ cd ~/Admissions-CRM && git remote -v
+origin  git@github.com:tlhberry/Admissions-CRM.git (fetch)
+origin  git@github.com:tlhberry/Admissions-CRM.git (push)
+[ec2-user@ip-172-31-22-79 Admissions-CRM]$ cd ~/new-app && git remote -v
+origin  https://github.com/tlhberry/admitsimple-v2.git (fetch)
+origin  https://github.com/tlhberry/admitsimple-v2.git (push)
+[ec2-user@ip-172-31-22-79 new-app]$ git pull origin main
+docker-compose up -d --build
+remote: Enumerating objects: 210, done.
+remote: Counting objects: 100% (210/210), done.
+remote: Compressing objects: 100% (27/27), done.
+remote: Total 150 (delta 127), reused 146 (delta 123), pack-reused 0 (from 0)
+Receiving objects: 100% (150/150), 1.60 MiB | 43.11 MiB/s, done.
+Resolving deltas: 100% (127/127), completed with 54 local objects.
+From https://github.com/tlhberry/admitsimple-v2
+ * branch            main       -> FETCH_HEAD
+   61b0b02..0902fa0  main       -> origin/main
+Updating 61b0b02..0902fa0
+Fast-forward
+ .replit                                                                                          |   2 +-
+ artifacts/admit-simple/public/opengraph.jpg                                                      | Bin 26800 -> 28842 bytes
+ artifacts/admit-simple/src/App.tsx                                                               |   2 +
+ artifacts/admit-simple/src/hooks/use-auth.tsx                                                    |   2 +-
+ artifacts/admit-simple/src/pages/login.tsx                                                       |  10 ++
+ artifacts/admit-simple/src/pages/signup.tsx                                                      | 279 +++++++++++++++++++++++++++++++++++
+ artifacts/admitsimple-marketing/public/opengraph.jpg                                             | Bin 82109 -> 82172 bytes
+ artifacts/admitsimple-marketing/src/components/ClaudeDataSafety.tsx                              |   9 --
+ artifacts/admitsimple-marketing/src/components/CtaSection.tsx                                    | 169 ++++++++-------------
+ artifacts/admitsimple-marketing/src/components/Header.tsx                                        |  15 +-
+ artifacts/admitsimple-marketing/src/components/Hero.tsx                                          |  28 ++--
+ artifacts/admitsimple-marketing/src/components/Pricing.tsx                                       | 226 +++++++++++-----------------
+ artifacts/admitsimple-marketing/src/pages/Home.tsx                                               |   4 +-
+ artifacts/api-server/build.mjs                                                                   |   8 +-
+ artifacts/api-server/src/addMultitenancy.ts                                                      | 131 +++++++++++++++++
+ artifacts/api-server/src/demoSeed.ts                                                             |  16 +-
+ artifacts/api-server/src/demoSeedContinue.ts                                                     |   5 +
+ artifacts/api-server/src/demoSeedPatients.ts                                                     |   6 +-
+ artifacts/api-server/src/lib/audit.ts                                                            |   2 +
+ artifacts/api-server/src/lib/getCompanyId.ts                                                     |  17 +++
+ artifacts/api-server/src/lib/logAudit.ts                                                         |   5 +-
+ artifacts/api-server/src/routes/activities.ts                                                    |  14 +-
+ artifacts/api-server/src/routes/admin.ts                                                         |  88 +++--------
+ artifacts/api-server/src/routes/ai.ts                                                            | 494 ++++++++++++++++++++------------------------------------------
+ artifacts/api-server/src/routes/aiStageSuggestions.ts                                            |  41 ++----
+ artifacts/api-server/src/routes/analytics.ts                                                     | 403 +++++++++++++-------------------------------------
+ artifacts/api-server/src/routes/auditLogs.ts                                                     |   7 +-
+ artifacts/api-server/src/routes/auth.ts                                                          | 235 ++++++++++++++++++++----------
+ artifacts/api-server/src/routes/bd.ts                                                            | 106 ++++++++------
+ artifacts/api-server/src/routes/bdReports.ts                                                     |  65 ++-------
+ artifacts/api-server/src/routes/beds.ts                                                          |  60 ++++----
+ artifacts/api-server/src/routes/discharges.ts                                                    |  42 ++----
+ artifacts/api-server/src/routes/inquiries.ts                                                     | 385 +++++++++++++-----------------------------------
+ artifacts/api-server/src/routes/patients.ts                                                      |  41 +++---
+ artifacts/api-server/src/routes/pipeline.ts                                                      |  43 +++---
+ artifacts/api-server/src/routes/referrals.ts                                                     |  43 +++---
+ artifacts/api-server/src/routes/reports.ts                                                       |  89 ++++-------
+ artifacts/api-server/src/routes/savedReports.ts                                                  |  22 +--
+ artifacts/api-server/src/routes/settings.ts                                                      |  19 ++-
+ artifacts/api-server/src/routes/sms.ts                                                           |  88 +++++------
+ artifacts/api-server/src/routes/users.ts                                                         |  67 +++------
+ attached_assets/IMG_4305_1777382994044.png                                                       | Bin 0 -> 719060 bytes
+ attached_assets/IMG_4306_1777385136558.png                                                       | Bin 0 -> 727633 bytes
+ attached_assets/IMG_4307_1777385136558.jpeg                                                      | Bin 0 -> 79478 bytes
+ attached_assets/Pasted--simple-public-opengraph-jpg-Bin-26198-26800-bytes-arti_1776977979064.txt |  50 +++++++
+ attached_assets/image_1777388595810.png                                                          | Bin 0 -> 56507 bytes
+ attached_assets/image_1777390383083.png                                                          | Bin 0 -> 25572 bytes
+ attached_assets/image_1777390458544.png                                                          | Bin 0 -> 36481 bytes
+ attached_assets/image_1777390517060.png                                                          | Bin 0 -> 23509 bytes
+ lib/db/src/migrate.ts                                                                            |   5 +-
+ lib/db/src/schema/admitsimple.ts                                                                 |  83 ++++++++---
+ 51 files changed, 1632 insertions(+), 1794 deletions(-)
+ create mode 100644 artifacts/admit-simple/src/pages/signup.tsx
+ create mode 100644 artifacts/api-server/src/addMultitenancy.ts
+ create mode 100644 artifacts/api-server/src/lib/getCompanyId.ts
+ create mode 100644 attached_assets/IMG_4305_1777382994044.png
+ create mode 100644 attached_assets/IMG_4306_1777385136558.png
+ create mode 100644 attached_assets/IMG_4307_1777385136558.jpeg
+ create mode 100644 attached_assets/Pasted--simple-public-opengraph-jpg-Bin-26198-26800-bytes-arti_1776977979064.txt
+ create mode 100644 attached_assets/image_1777388595810.png
+ create mode 100644 attached_assets/image_1777390383083.png
+ create mode 100644 attached_assets/image_1777390458544.png
+ create mode 100644 attached_assets/image_1777390517060.png
+no configuration file provided: not found
+[ec2-user@ip-172-31-22-79 new-app]$ 
