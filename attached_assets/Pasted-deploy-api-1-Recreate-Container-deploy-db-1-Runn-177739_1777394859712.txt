@@ -1,0 +1,114 @@
+deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ✔ Container deploy-db-1  Running                                                                                                                                  0.0s
+[+] up 1/2er deploy-api-1 Recreate                                               
+ ⠙ Container deploy-db-1  Waiting                                                                                                                                 10.8s
+[+] up 1/2er deploy-api-1 Recreated                                              
+ ⠹ Container deploy-db-1  Waiting                                                                                                                                 10.9s
+[+] up 1/2er deploy-api-1 Recreated                                              
+ ⠸ Container deploy-db-1  Waiting                                                                                                                                 11.0s
+[+] up 1/2er deploy-api-1 Recreated                                              
+ ⠼ Container deploy-db-1  Waiting                                                                                                                                 11.1s
+[+] up 1/2er deploy-api-1 Recreated                                              
+ ⠴ Container deploy-db-1  Waiting                                                                                                                                 11.2s
+[+] up 1/2er deploy-api-1 Recreated                                              
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 11.3s
+[+] up 1/2er deploy-api-1 Starting                                               
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 11.3s
+[+] up 1/2er deploy-api-1 Starting                                               
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 11.3s
+[+] up 1/2er deploy-api-1 Starting                                               
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 11.3s
+[+] up 1/2er deploy-api-1 Starting                                               
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 11.3s
+[+] up 2/2er deploy-api-1 Starting                                               
+ ✔ Container deploy-db-1  Healthy                                                                                                                                 11.3s
+ ✔ Container deploy-api-1 Started                                                                                                                                 11.7s
+[ec2-user@ip-172-31-22-79 deploy]$ 
