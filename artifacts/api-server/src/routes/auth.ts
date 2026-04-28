@@ -163,6 +163,48 @@ router.post("/auth/signup", signupLimiter, async (req, res) => {
 
     await logAudit({ userId: user.id, action: "SIGNUP", details: `Company: ${company.name} (id=${company.id})`, ipAddress: ip });
 
+    // Notify Austin of new signup so BAA can be sent
+    const sgApiKey = process.env.SENDGRID_API_KEY;
+    if (sgApiKey) {
+      sgMail.setApiKey(sgApiKey);
+      const signupTime = new Date().toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "full", timeStyle: "short" });
+      try {
+        await sgMail.send({
+          to: "austin@admitsimple.com",
+          from: { email: "austin@admitsimple.com", name: "AdmitSimple Signups" },
+          subject: `New signup: ${company.name}`,
+          text: [
+            `New AdmitSimple trial signup — send the BAA!`,
+            ``,
+            `Facility:   ${company.name}`,
+            `Admin:      ${user.name}`,
+            `Email:      ${user.email}`,
+            `Signed up:  ${signupTime} (Central)`,
+            `Company ID: ${company.id}`,
+            ``,
+            `Reply to this email or reach them at ${user.email} to send the BAA.`,
+          ].join("\n"),
+          html: `
+            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#f9fafb;border-radius:12px;padding:32px;">
+              <h2 style="margin:0 0 4px;color:#1a2233;">New trial signup</h2>
+              <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">Send the BAA to this facility.</p>
+              <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+                <tr><td style="padding:12px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #f3f4f6;width:120px;">Facility</td><td style="padding:12px 16px;font-weight:600;color:#1a2233;border-bottom:1px solid #f3f4f6;">${company.name}</td></tr>
+                <tr><td style="padding:12px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #f3f4f6;">Admin</td><td style="padding:12px 16px;font-weight:600;color:#1a2233;border-bottom:1px solid #f3f4f6;">${user.name}</td></tr>
+                <tr><td style="padding:12px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #f3f4f6;">Email</td><td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;"><a href="mailto:${user.email}" style="color:#5BC8DC;font-weight:600;">${user.email}</a></td></tr>
+                <tr><td style="padding:12px 16px;color:#6b7280;font-size:13px;">Signed up</td><td style="padding:12px 16px;color:#1a2233;">${signupTime} (Central)</td></tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Company ID: ${company.id} &mdash; reply directly to reach ${user.email}</p>
+            </div>
+          `,
+          replyTo: user.email,
+        });
+        req.log.info({ to: "austin@admitsimple.com", company: company.name }, "New signup notification sent");
+      } catch (sgErr: any) {
+        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message }, "Signup notification email failed");
+      }
+    }
+
     res.status(201).json({
       id: user.id,
       username: user.username,
