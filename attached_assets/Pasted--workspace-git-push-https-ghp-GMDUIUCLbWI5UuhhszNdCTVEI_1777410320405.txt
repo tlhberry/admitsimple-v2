@@ -1,0 +1,40 @@
+~/workspace$ git push https://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@github.com/tlhberry/admitsimple-v2.git main
+Enumerating objects: 74, done.
+Counting objects: 100% (74/74), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (47/47), done.
+Writing objects: 100% (48/48), 14.99 KiB | 5.00 MiB/s, done.
+Total 48 (delta 39), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (39/39), completed with 21 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:      (?) This repository does not have Secret Scanning enabled, but is eligible. Enable Secret Scanning to view and manage detected secrets.
+remote:      Visit the repository settings page, https://github.com/tlhberry/admitsimple-v2/settings/security_analysis
+remote:     
+remote:     
+remote:       —— GitHub Personal Access Token ——————————————————————
+remote:        locations:
+remote:          - commit: 72a1027353ede653ab63b157c1db7900bb59d280
+remote:            path: attached_assets/Pasted--A-newer-release-of-Amazon-Linux-is-available-Version-2_1777410182447.txt:173
+remote:          - commit: 72a1027353ede653ab63b157c1db7900bb59d280
+remote:            path: attached_assets/Pasted--A-newer-release-of-Amazon-Linux-is-available-Version-2_1777410182447.txt:176
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/tlhberry/admitsimple-v2/security/secret-scanning/unblock-secret/3D0DtBsqoYmDz6O16eSPcUYUULg
+remote:     
+remote: 
+remote: 
+To https://github.com/tlhberry/admitsimple-v2.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/tlhberry/admitsimple-v2.git'
+~/workspace$ 
