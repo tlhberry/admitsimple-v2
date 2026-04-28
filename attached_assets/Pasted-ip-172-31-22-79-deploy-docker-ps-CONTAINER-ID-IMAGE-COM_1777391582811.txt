@@ -1,0 +1,133 @@
+ip-172-31-22-79 deploy]$ docker ps
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS                   PORTS                                       NAMES
+66bafdf252b2   deploy-api           "docker-entrypoint.s…"   6 minutes ago   Up 52 seconds            0.0.0.0:3001->3001/tcp, :::3001->3001/tcp   deploy-api-1
+14da24026445   postgres:16-alpine   "docker-entrypoint.s…"   6 minutes ago   Up 6 minutes (healthy)   0.0.0.0:5433->5432/tcp, :::5433->5432/tcp   deploy-db-1
+2d44fe4b9f28   postgres:16-alpine   "docker-entrypoint.s…"   13 days ago     Up 13 days               0.0.0.0:5432->5432/tcp, :::5432->5432/tcp   admitsimple-db
+[ec2-user@ip-172-31-22-79 deploy]$ cat ~/new-app/deploy/docker-compose.ec2.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admitsimple
+      POSTGRES_USER: admitsimple
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+      DATABASE_URL: postgres://admitsimple:${DB_PASSWORD:-changeme_in_production}      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/healthz || exit 1"      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/healthz || exit 1"[ec2-user@ip-172-31-22-79 deploy]$ .web
+-bash: ✔: command not found
+-bash: ✔: command not found
+-bash: ✔: command not found
+-bash: [ec2-user@ip-172-31-22-79: command not found
+-bash: CONTAINER: command not found
+-bash: 3001/tcp,: No such file or directory
+-bash: syntax error near unexpected token `('
+-bash: 5432/tcp,: No such file or directory
+-bash: [ec2-user@ip-172-31-22-79: command not found
+-bash: services:: command not found
+-bash: db:: command not found
+-bash: image:: command not found
+-bash: restart:: command not found
+-bash: environment:: command not found
+-bash: POSTGRES_DB:: command not found
+-bash: POSTGRES_USER:: command not found
+-bash: POSTGRES_PASSWORD:: command not found
+-bash: volumes:: command not found
+-bash: -: command not found
+-bash: ports:: command not found
+-bash: -: command not found
+-bash: healthcheck:: command not found
+-bash: test:: command not found
+-bash: interval:: command not found
+-bash: timeout:: command not found
+-bash: retries:: command not found
+-bash: api:: command not found
+-bash: build:: command not found
+-bash: context:: command not found
+-bash: dockerfile:: command not found
+-bash: restart:: command not found
+-bash: ports:: command not found
+-bash: -: command not found
+-bash: environment:: command not found
+-bash: NODE_ENV:: command not found
+-bash: PORT:: command not found
+-bash: DATABASE_URL:: command not found
+-bash: SESSION_SECRET:: command not found
+-bash: ADMIN_PASSWORD:: command not found
+-bash: TWILIO_ACCOUNT_SID:: command not found
+-bash: TWILIO_AUTH_TOKEN:: command not found
+-bash: TWILIO_PHONE_NUMBER:: command not found
+-bash: TWILIO_TWIML_APP_SID:: command not found
+-bash: depends_on:: command not found
+-bash: db:: command not found
+-bash: condition:: command not found
+-bash: volumes:: command not found
+-bash: postgres_data:: command not found
+-bash: [ec2-user@ip-172-31-22-79: command not found
+-bash: services:: command not found
+-bash: db:: command not found
+-bash: image:: command not found
+-bash: restart:: command not found
+-bash: environment:: command not found
+-bash: POSTGRES_DB:: command not found
+-bash: POSTGRES_USER:: command not found
+-bash: POSTGRES_PASSWORD:: command not found
+-bash: volumes:: command not found
+-bash: -: command not found
+-bash: healthcheck:: command not found
+-bash: test:: command not found
+-bash: interval:: command not found
+-bash: timeout:: command not found
+-bash: retries:: command not found
+-bash: api:: command not found
+-bash: build:: command not found
+-bash: context:: command not found
+-bash: dockerfile:: command not found
+-bash: restart:: command not found
+-bash: ports:: command not found
+-bash: -: command not found
+-bash: environment:: command not found
+-bash: NODE_ENV:: command not found
+-bash: PORT:: command not found
+-bash: DATABASE_URL:: command not found
+-bash: SESSION_SECRET:: command not found
+-bash: ADMIN_PASSWORD:: command not found
+-bash: TWILIO_ACCOUNT_SID:: command not found
+-bash: TWILIO_AUTH_TOKEN:: command not found
+-bash: TWILIO_PHONE_NUMBER:: command not found
+-bash: TWILIO_TWIML_APP_SID:: command not found
+-bash: AI_INTEGRATIONS_ANTHROPIC_BASE_URL:: command not found
+-bash: AI_INTEGRATIONS_ANTHROPIC_API_KEY:: command not found
+-bash: depends_on:: command not found
+-bash: db:: command not found
+-bash: condition:: command not found
+-bash: healthcheck:: command not found
+-bash: test:: command not found
+-bash: interval:: command not found
+-bash: timeout:: command not found
+-bash: retries:: command not found
+-bash: web:: command not found
+-bash: build:: command not found
+-bash: context:: command not found
+-bash: dockerfile:: command not found
+-bash: restart:: command not found
+-bash: ports:: command not found
+-bash: -: command not found
+-bash: -: command not found
+-bash: depends_on:: command not found
+-bash: -: command not found
+-bash: volumes:: command not found
+-bash: -: command not found
+-bash: volumes:: command not found
+-bash: postgres_data:: command not found
+-bash: [ec2-user@ip-172-31-22-79: command not found
+[ec2-user@ip-172-31-22-79 deploy]$ 
