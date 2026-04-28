@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { users, passwordResetTokens, companies } from "@workspace/db/schema";
+import { users, passwordResetTokens, companies, pipelineStages } from "@workspace/db/schema";
 import { eq, or, and, gt, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -147,6 +147,18 @@ router.post("/auth/signup", signupLimiter, async (req, res) => {
       initials,
       isActive: true,
     }).returning();
+
+    // Create default pipeline stages for new company
+    await db.insert(pipelineStages).values([
+      { companyId: company.id, name: "New Inquiry", order: 1, color: "#3B82F6", description: "New patient inquiry received" },
+      { companyId: company.id, name: "Initial Contact", order: 2, color: "#8B5CF6", description: "Initial contact made with patient or family" },
+      { companyId: company.id, name: "Insurance Verification", order: 3, color: "#F59E0B", description: "Verifying insurance coverage" },
+      { companyId: company.id, name: "Pre-Assessment", order: 4, color: "#F97316", description: "Clinical pre-assessment scheduled or completed" },
+      { companyId: company.id, name: "Scheduled to Admit", order: 5, color: "#10B981", description: "Patient scheduled for admission" },
+      { companyId: company.id, name: "Admitted", order: 6, color: "#22C55E", description: "Patient confirmed for admission" },
+      { companyId: company.id, name: "Discharged", order: 7, color: "#6B7280", description: "Patient has been discharged" },
+      { companyId: company.id, name: "Did Not Admit", order: 8, color: "#EF4444", description: "Patient did not admit" },
+    ]);
 
     // Auto-login
     const sess = req.session as any;
