@@ -1,0 +1,98 @@
+ame _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # API proxy
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $server_name;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+        proxy_hide_header X-Powered-By;
+    }
+
+    location /api/events {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $server_name;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+        proxy_cache off;
+    }
+
+    # CRM app at /app/ — SPA fallback to /app/index.html
+    location /app/ {
+        alias /usr/share/nginx/html/app/;
+        try_files $uri $uri/ /app/index.html;
+    }
+
+    # Static assets for CRM (content-hashed, long cache)
+    location ~* ^/app/assets/ {
+        alias /usr/share/nginx/html/app/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Marketing site at root — SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Static assets for marketing site
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+[ec2-user@ip-172-31-22-79 deploy]$ ls /etc/nginx/conf.d/
+admititsimple.conf.bak  admitltsimple.conf  default.conf
+[ec2-user@ip-172-31-22-79 deploy]$ sudo tee /etc/nginx/conf.d/admitltsimple.conf > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name admitsimple.com www.admitsimple.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name admitsimple.com www.admitsimple.com;
+
+    ssl_certificate /etc/letsencrypt/live/admitsimple.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admitsimple.com/privkey.pem;
+
+    # API
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Cookie $http_cookie;
+        proxy_read_timeout 300s;
+    }
+
+    # Everything else → Docker web container
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+sudo nginx -t && sudo systemctl reload nginxscheme;_x_forwarded_for;
+nginx: [warn] conflicting server name "_" on 0.0.0.0:80, ignored
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[ec2-user@ip-172-31-22-79 deploy]$ 
