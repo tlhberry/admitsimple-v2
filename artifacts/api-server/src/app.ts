@@ -13,7 +13,7 @@ import { main as runDemoSeedPatients } from "./demoSeedPatients";
 
 const PgSession = ConnectPgSimple(session);
 
-const SESSION_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours
+const SESSION_MAX_AGE = 30 * 60 * 1000; // 30 minutes (HIPAA idle timeout)
 
 // Allowed origins: same replit domains + localhost for dev
 const ALLOWED_ORIGINS = [

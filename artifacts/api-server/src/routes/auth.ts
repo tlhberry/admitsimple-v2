@@ -6,7 +6,38 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import sgMail from "@sendgrid/mail";
 import rateLimit from "express-rate-limit";
+import * as OTPAuth from "otpauth";
+import QRCode from "qrcode";
 import { logAudit, getClientIp } from "../lib/audit";
+
+// ── TOTP helpers ─────────────────────────────────────────────────────────────
+function generateTotpSecret(): string {
+  return new OTPAuth.Secret().base32;
+}
+
+function verifyTotp(token: string, secretBase32: string): boolean {
+  const totp = new OTPAuth.TOTP({
+    issuer: "AdmitSimple",
+    algorithm: "SHA1",
+    digits: 6,
+    period: 30,
+    secret: OTPAuth.Secret.fromBase32(secretBase32),
+  });
+  const delta = totp.validate({ token: token.replace(/\s/g, ""), window: 1 });
+  return delta !== null;
+}
+
+function getTotpUri(email: string, secretBase32: string): string {
+  const totp = new OTPAuth.TOTP({
+    issuer: "AdmitSimple",
+    label: email,
+    algorithm: "SHA1",
+    digits: 6,
+    period: 30,
+    secret: OTPAuth.Secret.fromBase32(secretBase32),
+  });
+  return totp.toString();
+}
 
 const router = Router();
 
@@ -48,6 +79,18 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       return;
     }
     const sess = req.session as any;
+
+    // If MFA is enabled, hold a pending state — don't set a full session yet
+    if (user.totpEnabled) {
+      sess.pendingUserId = user.id;
+      sess.pendingExpiry = Date.now() + 5 * 60 * 1000; // 5 minute window to complete MFA
+      await new Promise<void>((resolve, reject) =>
+        req.session.save((err) => (err ? reject(err) : resolve()))
+      );
+      res.json({ mfaRequired: true });
+      return;
+    }
+
     sess.userId = user.id;
     sess.username = user.username;
     sess.name = user.name;
@@ -59,7 +102,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       req.session.save((err) => (err ? reject(err) : resolve()))
     );
     await logAudit({ userId: user.id, action: "LOGIN_SUCCESS", ipAddress: ip });
-    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, createdAt: user.createdAt });
+    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, companyId: user.companyId ?? 1, createdAt: user.createdAt });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -358,6 +401,138 @@ router.post("/auth/reset-password", async (req, res) => {
 
     await logAudit({ userId: resetToken.userId, action: "PASSWORD_RESET_SUCCESS", ipAddress: ip });
     res.json({ message: "Password reset successfully. You can now log in." });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── MFA: confirm login with TOTP (completes pending login) ───────────────────
+const mfaLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many MFA attempts. Please wait 5 minutes." },
+  keyGenerator: (req) => getClientIp(req as any),
+});
+
+router.post("/auth/mfa/confirm", mfaLimiter, async (req, res) => {
+  const ip = getClientIp(req as any);
+  const sess = req.session as any;
+  try {
+    if (!sess?.pendingUserId || !sess?.pendingExpiry || Date.now() > sess.pendingExpiry) {
+      res.status(401).json({ error: "MFA session expired. Please log in again." });
+      return;
+    }
+    const { token } = req.body;
+    if (!token) { res.status(400).json({ error: "MFA code required" }); return; }
+
+    const [user] = await db.select().from(users).where(eq(users.id, sess.pendingUserId)).limit(1);
+    if (!user || !user.totpEnabled || !user.totpSecret) {
+      res.status(401).json({ error: "Invalid MFA state" });
+      return;
+    }
+    const valid = verifyTotp(String(token), user.totpSecret!);
+    if (!valid) {
+      await logAudit({ userId: user.id, action: "MFA_FAILED", ipAddress: ip });
+      res.status(401).json({ error: "Invalid authentication code. Please try again." });
+      return;
+    }
+    delete sess.pendingUserId;
+    delete sess.pendingExpiry;
+    sess.userId = user.id;
+    sess.username = user.username;
+    sess.name = user.name;
+    sess.email = user.email;
+    sess.role = user.role;
+    sess.initials = user.initials;
+    sess.companyId = user.companyId ?? 1;
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
+    await logAudit({ userId: user.id, action: "LOGIN_SUCCESS", details: "MFA verified", ipAddress: ip });
+    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, companyId: user.companyId ?? 1 });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── MFA: generate new TOTP secret + QR code (does not enable yet) ────────────
+router.post("/auth/mfa/setup", async (req, res) => {
+  const sess = req.session as any;
+  if (!sess?.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, sess.userId)).limit(1);
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+    const secret = generateTotpSecret();
+    const otpAuthUrl = getTotpUri(user.email, secret);
+    const qrDataUrl = await QRCode.toDataURL(otpAuthUrl);
+    res.json({ secret, qrDataUrl });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── MFA: verify TOTP token + enable MFA (save secret) ────────────────────────
+router.post("/auth/mfa/enable", mfaLimiter, async (req, res) => {
+  const sess = req.session as any;
+  const ip = getClientIp(req as any);
+  if (!sess?.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const { token, secret } = req.body;
+    if (!token || !secret) { res.status(400).json({ error: "Token and secret required" }); return; }
+    const valid = verifyTotp(String(token), secret);
+    if (!valid) {
+      res.status(401).json({ error: "Invalid code. Please scan the QR code again and try a fresh 6-digit code." });
+      return;
+    }
+    await db.update(users).set({ totpSecret: secret, totpEnabled: true }).where(eq(users.id, sess.userId));
+    await logAudit({ userId: sess.userId, action: "MFA_ENABLED", ipAddress: ip });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── MFA: verify current TOTP + disable MFA ────────────────────────────────────
+router.post("/auth/mfa/disable", mfaLimiter, async (req, res) => {
+  const sess = req.session as any;
+  const ip = getClientIp(req as any);
+  if (!sess?.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const { token } = req.body;
+    if (!token) { res.status(400).json({ error: "MFA code required to disable" }); return; }
+    const [user] = await db.select({ totpSecret: users.totpSecret, totpEnabled: users.totpEnabled }).from(users).where(eq(users.id, sess.userId)).limit(1);
+    if (!user?.totpEnabled || !user.totpSecret) {
+      res.status(400).json({ error: "MFA is not currently enabled" });
+      return;
+    }
+    const valid = verifyTotp(String(token), user.totpSecret!);
+    if (!valid) {
+      res.status(401).json({ error: "Invalid authentication code" });
+      return;
+    }
+    await db.update(users).set({ totpSecret: null, totpEnabled: false }).where(eq(users.id, sess.userId));
+    await logAudit({ userId: sess.userId, action: "MFA_DISABLED", ipAddress: ip });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── MFA: get current MFA status for logged-in user ───────────────────────────
+router.get("/auth/mfa/status", async (req, res) => {
+  const sess = req.session as any;
+  if (!sess?.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [user] = await db.select({ totpEnabled: users.totpEnabled }).from(users).where(eq(users.id, sess.userId)).limit(1);
+    res.json({ totpEnabled: user?.totpEnabled ?? false });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { AiStageSuggestionsBanner } from "@/components/AiStageSuggestionsBanner";
+import { IdleLogoutGuard } from "@/components/IdleLogoutGuard";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -34,6 +35,8 @@ export function Layout({ children }: { children: ReactNode }) {
       <IncomingCallBanner />
       {/* AI stage advancement suggestions */}
       <AiStageSuggestionsBanner />
+      {/* HIPAA: auto-logout after 30 min idle */}
+      <IdleLogoutGuard />
     </div>
   );
 }

@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).notNull().default("admissions"),
   initials: varchar("initials", { length: 10 }),
   isActive: boolean("is_active").notNull().default(true),
+  totpSecret: varchar("totp_secret", { length: 255 }),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

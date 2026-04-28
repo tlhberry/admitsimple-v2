@@ -14,7 +14,7 @@ import {
   Loader2, Building, Bell, Brain, Shield, Save, Phone, Copy, Check,
   RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff, UserPlus, Mail,
   Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
-  MessageSquare, Globe, Bot, LogOut,
+  MessageSquare, Globe, Bot, LogOut, ShieldCheck, Smartphone, ShieldOff,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -147,6 +147,79 @@ export default function Settings() {
   const [showPwNew, setShowPwNew] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
 
+  // MFA state
+  const [mfaSetupMode, setMfaSetupMode] = useState(false);
+  const [mfaQrDataUrl, setMfaQrDataUrl] = useState("");
+  const [mfaSecret, setMfaSecret] = useState("");
+  const [mfaEnableCode, setMfaEnableCode] = useState("");
+  const [mfaDisableCode, setMfaDisableCode] = useState("");
+  const [savingMfa, setSavingMfa] = useState(false);
+  const [showDisableMfa, setShowDisableMfa] = useState(false);
+
+  const { data: mfaStatus, refetch: refetchMfaStatus } = useQuery<{ totpEnabled: boolean }>({
+    queryKey: ["/api/auth/mfa/status"],
+    queryFn: () => fetch("/api/auth/mfa/status", { credentials: "include" }).then(r => r.json()),
+  });
+
+  const startMfaSetup = async () => {
+    try {
+      const res = await fetch("/api/auth/mfa/setup", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      setMfaQrDataUrl(data.qrDataUrl);
+      setMfaSecret(data.secret);
+      setMfaEnableCode("");
+      setMfaSetupMode(true);
+    } catch {
+      toast({ title: "Failed to start MFA setup", variant: "destructive" });
+    }
+  };
+
+  const enableMfa = async () => {
+    if (mfaEnableCode.length !== 6) return;
+    setSavingMfa(true);
+    try {
+      const res = await fetch("/api/auth/mfa/enable", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: mfaEnableCode, secret: mfaSecret }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast({ title: data.error, variant: "destructive" }); return; }
+      toast({ title: "MFA enabled", description: "Your account is now protected with two-factor authentication." });
+      setMfaSetupMode(false);
+      setMfaQrDataUrl("");
+      setMfaSecret("");
+      setMfaEnableCode("");
+      refetchMfaStatus();
+    } catch {
+      toast({ title: "Failed to enable MFA", variant: "destructive" });
+    } finally {
+      setSavingMfa(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    if (mfaDisableCode.length !== 6) return;
+    setSavingMfa(true);
+    try {
+      const res = await fetch("/api/auth/mfa/disable", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: mfaDisableCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast({ title: data.error, variant: "destructive" }); return; }
+      toast({ title: "MFA disabled" });
+      setShowDisableMfa(false);
+      setMfaDisableCode("");
+      refetchMfaStatus();
+    } catch {
+      toast({ title: "Failed to disable MFA", variant: "destructive" });
+    } finally {
+      setSavingMfa(false);
+    }
+  };
+
   // Derived: are Twilio keys already saved in DB?
   const twilioSidSaved   = !!values["twilio_api_key_sid"];
   const twilioSecretSaved = !!values["twilio_api_key_secret"];
@@ -225,6 +298,7 @@ export default function Settings() {
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "ai",            label: "AI Settings",   icon: Brain },
     { id: "password",      label: "Change Password", icon: KeyRound },
+    { id: "security",      label: "Security (MFA)",  icon: ShieldCheck },
     ...(isAdmin ? [
       { id: "facility",     label: "Facility",     icon: Building },
       { id: "integrations", label: "Integrations", icon: Phone },
@@ -516,6 +590,116 @@ export default function Settings() {
               </Card>
             );
           })()}
+
+          {activeTab === "security" && (
+            <Card className="rounded-2xl border-border">
+              <CardHeader className="border-b border-border pb-4">
+                <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                  <ShieldCheck className="w-4 h-4 text-primary" /> Two-Factor Authentication (MFA)
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add an extra layer of security to your account. Required each time you sign in.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6 max-w-md">
+                <div className={cn(
+                  "flex items-center gap-3 rounded-xl px-4 py-3 border",
+                  mfaStatus?.totpEnabled
+                    ? "bg-emerald-500/10 border-emerald-500/25"
+                    : "bg-muted border-border"
+                )}>
+                  {mfaStatus?.totpEnabled
+                    ? <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                    : <ShieldOff className="w-5 h-5 text-muted-foreground shrink-0" />
+                  }
+                  <div className="flex-1">
+                    <p className={cn("text-sm font-medium", mfaStatus?.totpEnabled ? "text-emerald-400" : "text-foreground")}>
+                      {mfaStatus?.totpEnabled ? "MFA is enabled" : "MFA is not enabled"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {mfaStatus?.totpEnabled
+                        ? "Your account requires a code from your authenticator app at each login."
+                        : "Enable MFA to protect your account with Google Authenticator or Authy."}
+                    </p>
+                  </div>
+                </div>
+
+                {!mfaStatus?.totpEnabled && !mfaSetupMode && (
+                  <Button onClick={startMfaSetup} className="gap-2 rounded-xl">
+                    <Smartphone className="w-4 h-4" />
+                    Set up MFA
+                  </Button>
+                )}
+
+                {!mfaStatus?.totpEnabled && mfaSetupMode && (
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">1. Scan this QR code</p>
+                      <p className="text-xs text-muted-foreground">Use Google Authenticator, Authy, or any TOTP app.</p>
+                      {mfaQrDataUrl && (
+                        <div className="bg-white rounded-xl p-3 inline-block">
+                          <img src={mfaQrDataUrl} alt="MFA QR Code" className="w-44 h-44" />
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Can't scan? Manual key:{" "}
+                        <span className="font-mono text-foreground text-xs break-all">{mfaSecret}</span>
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">2. Enter the 6-digit code from the app</p>
+                      <Input
+                        value={mfaEnableCode}
+                        onChange={(e) => setMfaEnableCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                        className="h-12 text-2xl tracking-[0.4em] text-center font-mono bg-muted border-border max-w-[180px]"
+                        placeholder="000000"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={enableMfa} disabled={savingMfa || mfaEnableCode.length !== 6} className="gap-2 rounded-xl">
+                        {savingMfa ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        {savingMfa ? "Enabling..." : "Enable MFA"}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setMfaSetupMode(false); setMfaQrDataUrl(""); setMfaSecret(""); }} className="rounded-xl">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {mfaStatus?.totpEnabled && !showDisableMfa && (
+                  <Button variant="outline" onClick={() => setShowDisableMfa(true)} className="gap-2 rounded-xl border-destructive/50 text-destructive hover:bg-destructive/10">
+                    <ShieldOff className="w-4 h-4" />
+                    Disable MFA
+                  </Button>
+                )}
+
+                {mfaStatus?.totpEnabled && showDisableMfa && (
+                  <div className="space-y-4 border border-destructive/25 rounded-xl p-4 bg-destructive/5">
+                    <p className="text-sm text-foreground font-medium">Enter your current MFA code to disable</p>
+                    <Input
+                      value={mfaDisableCode}
+                      onChange={(e) => setMfaDisableCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                      className="h-12 text-2xl tracking-[0.4em] text-center font-mono bg-muted border-border max-w-[180px]"
+                      placeholder="000000"
+                      inputMode="numeric"
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={disableMfa} disabled={savingMfa || mfaDisableCode.length !== 6} variant="destructive" className="gap-2 rounded-xl">
+                        {savingMfa ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldOff className="w-4 h-4" />}
+                        {savingMfa ? "Disabling..." : "Disable MFA"}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setShowDisableMfa(false); setMfaDisableCode(""); }} className="rounded-xl">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {activeTab === "integrations" && (
             <Card className="rounded-2xl border-border">
