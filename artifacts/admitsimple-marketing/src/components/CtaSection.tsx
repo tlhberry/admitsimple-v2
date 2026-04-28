@@ -1,122 +1,71 @@
-import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { ArrowRight, ShieldCheck, Clock, CreditCard } from "lucide-react";
 
 export default function CtaSection() {
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const form = e.currentTarget;
-    const name = (form.querySelector("#name") as HTMLInputElement).value;
-    const facility = (form.querySelector("#facility") as HTMLInputElement).value;
-    const email = (form.querySelector("#email") as HTMLInputElement).value;
-    const phone = (form.querySelector("#phone") as HTMLInputElement).value;
-    const notes = (form.querySelector("#notes") as HTMLTextAreaElement).value;
-
-    try {
-      const res = await fetch("/api/demo-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, facility, email, phone, notes }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setSubmitted(true);
-    } catch {
-      setError("Something went wrong. Please email us at austin@admitsimple.com.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <section id="demo" className="py-24 bg-white border-t border-gray-100">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="max-w-4xl mx-auto bg-[#2d3748] rounded-3xl overflow-hidden shadow-2xl">
-          <div className="grid md:grid-cols-2">
-            <div className="p-10 md:p-12 text-white flex flex-col justify-center relative">
-              <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
-              <div className="relative z-10">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Let's find the right fit for your facility.</h2>
-                <p className="text-white/70 mb-8">
-                  Whether you want to own the platform outright, subscribe, or have us set it up for you — we'll walk through the options and figure out what makes sense for your team.
-                </p>
-                <div className="space-y-4 text-sm text-white/80">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Full platform walkthrough</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Review your current admissions workflow</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Ownership, SaaS, and done-for-you pricing</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">&#x2713;</div>
-                    <span>Enterprise and multi-site options</span>
-                  </div>
-                </div>
-                <p className="mt-8 text-xs text-white/40">
-                  Or email us directly at austin@admitsimple.com
-                </p>
-              </div>
-            </div>
+    <section className="py-20 bg-white border-t border-gray-100 overflow-x-hidden">
+      <div className="w-full px-4 md:px-6 max-w-2xl mx-auto text-center">
 
-            <div className="p-10 md:p-12 bg-white">
-              {submitted ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Request Received!</h3>
-                  <p className="text-gray-600 text-sm">We'll reach out to schedule your call shortly.</p>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" required placeholder="John Doe" className="bg-gray-50 border-gray-200" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="facility">Facility Name</Label>
-                    <Input id="facility" required placeholder="Recovery Center" className="bg-gray-50 border-gray-200" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Work Email</Label>
-                    <Input id="email" type="email" required placeholder="john@facility.com" className="bg-gray-50 border-gray-200" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" type="tel" required placeholder="(555) 000-0000" className="bg-gray-50 border-gray-200" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Which model interests you most?</Label>
-                    <Textarea id="notes" placeholder="Own it outright, hosted SaaS, done-for-you, or multi-site..." className="bg-gray-50 border-gray-200 resize-none" rows={3} />
-                  </div>
-                  {error && <p className="text-sm text-red-500">{error}</p>}
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
-                  >
-                    {loading ? "Sending..." : "Request a Call"}
-                  </Button>
-                </form>
-              )}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Your admissions team deserves better tools.
+          </h2>
+          <p className="text-gray-500 text-base md:text-lg mb-10 max-w-md mx-auto">
+            Get your team set up in minutes. No IT department, no long contracts, no credit card needed to start.
+          </p>
+
+          <Button
+            asChild
+            size="lg"
+            className="bg-[#5BC8DC] text-[#1a2233] hover:bg-[#4ab5ca] font-bold h-14 px-10 text-lg rounded-xl shadow-xl shadow-[#5BC8DC]/20 w-full sm:w-auto"
+          >
+            <a href="/app/signup">
+              Start Free for 30 Days
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </a>
+          </Button>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-5 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-[#5BC8DC]" />
+              <span>No credit card required</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#5BC8DC]" />
+              <span>Set up in under 5 minutes</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#5BC8DC]" />
+              <span>HIPAA-compliant from day one</span>
             </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Perpetual license — quiet footnote for the right buyer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-16 pt-10 border-t border-gray-100"
+        >
+          <p className="text-gray-400 text-sm">
+            Need full customization — your code, your servers, your rules?{" "}
+            <a
+              href="mailto:austin@admitsimple.com"
+              className="text-gray-600 font-medium hover:text-[#5BC8DC] underline underline-offset-2 transition-colors"
+            >
+              Ask us about our perpetual license →
+            </a>
+          </p>
+        </motion.div>
+
       </div>
     </section>
   );
