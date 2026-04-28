@@ -1,0 +1,83 @@
+r deploy-api-1 Running                                                
+ ✔ Image deploy-api       Built                                                                                                                                    1.5sntainer deploy-web-1 Starting                                               
+ ✔ Image deploy-web       Built                                                                                                                                    1.5s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                  0.7s
+ ✔ Container deploy-api-1 Running                                                                                                                                  0.0s
+ ⠼ Container deploy-web-1 Starting                                                                                                                                 0.9s
+Error response from daemon: driver failed programming external connectivity on endpoint deploy-web-1 (298226150f5568e1a25dc07690a62d55542c300cfea417738ebd0ea0e5c403fd): Error starting userland proxy: listen tcp4 0.0.0.0:443: bind: address already in use
+[ec2-user@ip-172-31-22-79 deploy]$ sed -i 's/- "80:80"/- "8080:80"/' ~/new-app/deploy/docker-compose.ec2.yml        sed -i 's/- "80:80"/- "8080:80"/' ~/new-app/deploy/docker-compose.ec2.ymlew-app/deploy/docker-compose.ec2.yml
+sed -i '/- "443:443"/d' ~/new-app/deploy/docker-compose.ec2.yml
+sed -i '/ssl:/d' ~/new-app/deploy/docker-compose.ec2.ymll
+grep -A3 "ports:" ~/new-app/deploy/docker-compose.ec2.yml
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+--
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+--
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+[ec2-user@ip-172-31-22-79 deploy]$ docker-compose -f docker-compose.ec2.yml up -d --build                           docker-compose -f docker-compose.ec2.yml up -d --build
+validating /home/ec2-user/new-app/deploy/docker-compose.ec2.yml: services.web.volumes must be a array
+[ec2-user@ip-172-31-22-79 deploy]$ sed -i '/^\s*- \.\/ssl/d' ~/new-app/deploy/docker-compose.ec2.yml                sed -i '/^\s*- \.\/ssl/d' ~/new-app/deploy/docker-compose.ec2.ymls:/{N;/ssl/d}' ~/new-app/deploy/docker-compose.ec2.yml
+sed -i '/^\s*volumes:/{N;/ssl/d}' ~/new-app/deploy/docker-compose.ec2.yml
+cat ~/new-app/deploy/docker-compose.ec2.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admitsimple
+      POSTGRES_USER: admitsimple
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://admitsimple:${DB_PASSWORD}@db:5432/admitsimple
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      TWILIO_TWIML_APP_SID: ${TWILIO_TWIML_APP_SID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    volumes:
+
+volumes:
+  postgres_data:
+[ec2-user@ip-172-31-22-79 deploy]$ 
