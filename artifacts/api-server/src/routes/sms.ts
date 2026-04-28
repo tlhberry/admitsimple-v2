@@ -4,7 +4,7 @@ import { db } from "@workspace/db";
 import { smsMessages, inquiries, activities } from "@workspace/db/schema";
 import { eq, desc, sql, isNull, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
-import { broadcastSSE } from "../lib/sse";
+import { broadcastSSEToCompany } from "../lib/sse";
 import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
@@ -136,7 +136,7 @@ router.post("/sms/send", requireAuth, async (req, res) => {
       } catch { /* best-effort */ }
     }
 
-    broadcastSSE("sms_message", { message: saved, phone: to, direction: "outbound" });
+    broadcastSSEToCompany(companyId, "sms_message", { message: saved, phone: to, direction: "outbound" });
     res.json({ ok: true, sid: msg.sid, message: saved });
   } catch (err) {
     console.error(err);
@@ -222,7 +222,7 @@ router.post("/webhooks/twilio/sms", async (req, res) => {
       });
     } catch { /* best-effort */ }
 
-    broadcastSSE("sms_message", {
+    broadcastSSEToCompany(companyId, "sms_message", {
       message: saved,
       phone: from,
       direction: "inbound",

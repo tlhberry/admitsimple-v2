@@ -6,7 +6,7 @@ import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt, sql } from
 import { requireAuth } from "../lib/requireAuth";
 import { isBdRep } from "../lib/requireAdmin";
 import { logAudit } from "../lib/logAudit";
-import { broadcastSSE, sendSSEToUser } from "../lib/sse";
+import { broadcastSSEToCompany, sendSSEToUser } from "../lib/sse";
 import { runAiStageCheck } from "./aiStageSuggestions";
 import { getCompanyId } from "../lib/getCompanyId";
 import archiver from "archiver";
@@ -675,7 +675,7 @@ router.post("/inquiries/:id/claim", async (req, res) => {
     await db.update(inquiries).set({ assignedTo: userId, isLocked: true, lockedAt: new Date(), callStatus: "active", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
 
     const [rep] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
-    broadcastSSE("call_claimed", { inquiryId: id, repId: userId, repName: rep?.name ?? "A rep" });
+    broadcastSSEToCompany(companyId, "call_claimed", { inquiryId: id, repId: userId, repName: rep?.name ?? "A rep" });
 
     const callSid = inqData?.ctmCallId;
     if (callSid) {
@@ -702,7 +702,7 @@ router.post("/inquiries/:id/complete-call", async (req, res) => {
     const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     await db.update(inquiries).set({ callStatus: "completed", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
-    broadcastSSE("call_status", { inquiryId: id, status: "completed" });
+    broadcastSSEToCompany(companyId, "call_status", { inquiryId: id, status: "completed" });
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);

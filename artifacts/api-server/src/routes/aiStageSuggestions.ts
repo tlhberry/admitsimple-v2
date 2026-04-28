@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { inquiries, aiStageSuggestions, pipelineStages, users, activities } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
-import { broadcastSSE } from "../lib/sse";
+import { broadcastSSEToCompany } from "../lib/sse";
 import { getAnthropicClient } from "../lib/anthropicClient";
 import { getCompanyId } from "../lib/getCompanyId";
 
@@ -54,7 +54,7 @@ router.post("/ai-suggestions/:id/accept", async (req, res) => {
       description: `AI suggested stage advanced: ${suggestion.currentStage} → ${suggestion.suggestedStage}`,
     } as any);
 
-    broadcastSSE("ai_suggestion_resolved", { suggestionId: id, inquiryId: suggestion.inquiryId, action: "accepted", newStage: suggestion.suggestedStage });
+    broadcastSSEToCompany(companyId, "ai_suggestion_resolved", { suggestionId: id, inquiryId: suggestion.inquiryId, action: "accepted", newStage: suggestion.suggestedStage });
     res.json({ success: true });
   } catch (err) {
     req.log.error(err);
@@ -74,7 +74,7 @@ router.post("/ai-suggestions/:id/dismiss", async (req, res) => {
       .set({ status: "dismissed", resolvedAt: new Date(), resolvedBy: sess.userId })
       .where(eq(aiStageSuggestions.id, id));
 
-    broadcastSSE("ai_suggestion_resolved", { suggestionId: id, inquiryId: suggestion.inquiryId, action: "dismissed" });
+    broadcastSSEToCompany(companyId, "ai_suggestion_resolved", { suggestionId: id, inquiryId: suggestion.inquiryId, action: "dismissed" });
     res.json({ success: true });
   } catch (err) {
     req.log.error(err);
@@ -172,7 +172,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside the JSON):
       status: "pending",
     }).returning();
 
-    broadcastSSE("ai_stage_suggestion", {
+    broadcastSSEToCompany(companyId, "ai_stage_suggestion", {
       suggestion: {
         ...suggestion,
         inquiry: { id: inquiry.id, firstName: inquiry.firstName, lastName: inquiry.lastName, status: inquiry.status },

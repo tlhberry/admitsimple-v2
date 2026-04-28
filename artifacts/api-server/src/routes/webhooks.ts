@@ -482,11 +482,19 @@ router.post("/webhooks/twilio/status", async (req, res) => {
     const update: Record<string, unknown> = { callStatus: mappedStatus, updatedAt: new Date() };
     if (CallDuration) update.callDurationSeconds = parseInt(CallDuration, 10);
 
+    const [affected] = await db
+      .select({ id: inquiries.id, companyId: inquiries.companyId })
+      .from(inquiries)
+      .where(eq(inquiries.ctmCallId, CallSid))
+      .limit(1);
+
     await db.update(inquiries)
       .set(update)
       .where(eq(inquiries.ctmCallId, CallSid));
 
-    broadcastSSE("call_status", { callSid: CallSid, status: mappedStatus });
+    if (affected?.companyId) {
+      broadcastSSEToCompany(affected.companyId, "call_status", { callSid: CallSid, status: mappedStatus });
+    }
 
     res.status(204).send();
   } catch (err) {

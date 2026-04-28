@@ -4,7 +4,7 @@ import twilio from "twilio";
 import { db } from "@workspace/db";
 import { inquiries, activities, settings, chatbotSessions } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { broadcastSSE } from "../lib/sse";
+import { broadcastSSEToCompany } from "../lib/sse";
 import { requireAuth } from "../lib/requireAuth";
 
 const router = Router();
@@ -170,7 +170,7 @@ router.post("/chatbot/submit", async (req, res) => {
       body: notes,
     });
 
-    broadcastSSE("inquiry_created", { id: inquiryId, inquiryNumber, firstName, lastName, source: "Website Chatbot" });
+    broadcastSSEToCompany(1, "inquiry_created", { id: inquiryId, inquiryNumber, firstName, lastName, source: "Website Chatbot" });
 
     res.json({ ok: true, inquiryId, inquiryNumber });
   } catch (err) {
