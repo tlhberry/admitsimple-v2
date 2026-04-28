@@ -1,0 +1,116 @@
+
+[+] up 4/5er deploy-api-1 Running                                                
+ ✔ Image deploy-api       Built                                                                                                                                    1.2sntainer deploy-web-1 Starting                                               
+ ✔ Image deploy-web       Built                                                                                                                                    1.2s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                  0.7s
+[+] up 5/5er deploy-api-1 Running                                                
+ ✔ Image deploy-api       Built                                                                                                                                    1.2sntainer deploy-web-1 Starting                                               
+ ✔ Image deploy-web       Built                                                                                                                                    1.2s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                  0.7s
+ ✔ Container deploy-api-1 Running                                                                                                                                  0.0s
+ ✔ Container deploy-web-1 Started                                                                                                                                  1.4s
+[ec2-user@ip-172-31-22-79 deploy]$ docker ps
+CONTAINER ID   IMAGE                COMMAND                  CREATED          STATUS                    PORTS                                       NAMES
+8b4aa550d889   deploy-web           "/docker-entrypoint.…"   2 minutes ago    Up 2 minutes              0.0.0.0:8080->80/tcp, :::8080->80/tcp       deploy-web-1
+ecf19fa98440   deploy-api           "docker-entrypoint.s…"   16 minutes ago   Up 16 minutes             0.0.0.0:3001->3001/tcp, :::3001->3001/tcp   deploy-api-1
+14da24026445   postgres:16-alpine   "docker-entrypoint.s…"   31 minutes ago   Up 31 minutes (healthy)   0.0.0.0:5433->5432/tcp, :::5433->5432/tcp   deploy-db-1
+2d44fe4b9f28   postgres:16-alpine   "docker-entrypoint.s…"   13 days ago      Up 13 days                0.0.0.0:5432->5432/tcp, :::5432->5432/tcp   admitsimple-db
+[ec2-user@ip-172-31-22-79 deploy]$ sudo cat /etc/nginx/conf.d/*.conf 2>/dev/null || sudo cat /etc/nginx/sites-enabled/* 2sudo cat /etc/nginx/conf.d/*.conf 2>/dev/null || sudo cat /etc/nginx/sites-enabled/* 2>/dev/null || sudo nginx -T 2>/dev/null | head -80
+server {
+    listen 80;
+    server_name admitsimple.com www.admitsimple.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name admitsimple.com www.admitsimple.com;
+
+    ssl_certificate /etc/letsencrypt/live/admitsimple.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admitsimple.com/privkey.pem;
+
+    # API proxy
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Cookie $http_cookie;
+    }
+
+    # CRM app at /app/
+    location /app/ {
+        alias /usr/share/nginx/html/app/;
+        try_files $uri $uri/ /app/index.html;
+    }
+
+    # Marketing site at root
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # API proxy
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $server_name;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+        proxy_hide_header X-Powered-By;
+    }
+
+    location /api/events {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $server_name;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+        proxy_cache off;
+    }
+
+    # CRM app at /app/ — SPA fallback to /app/index.html
+    location /app/ {
+        alias /usr/share/nginx/html/app/;
+        try_files $uri $uri/ /app/index.html;
+    }
+
+    # Static assets for CRM (content-hashed, long cache)
+    location ~* ^/app/assets/ {
+        alias /usr/share/nginx/html/app/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Marketing site at root — SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Static assets for marketing site
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+[ec2-user@ip-172-31-22-79 deploy]$ 
