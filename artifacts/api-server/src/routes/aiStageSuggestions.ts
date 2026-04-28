@@ -143,7 +143,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside the JSON):
   "reasoning": "1-2 sentence explanation of why or why not"
 }`;
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 300,

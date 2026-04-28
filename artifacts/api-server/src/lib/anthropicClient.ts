@@ -1,14 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@workspace/db";
 import { settings } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-export async function getAnthropicClient(): Promise<Anthropic> {
-  const [row] = await db.select().from(settings).where(eq(settings.key, "anthropic_api_key"));
-  const dbKey = row?.value?.trim();
-
-  if (dbKey) {
-    return new Anthropic({ apiKey: dbKey });
+export async function getAnthropicClient(companyId?: number): Promise<Anthropic> {
+  if (companyId) {
+    const [row] = await db.select().from(settings).where(
+      and(eq(settings.key, "anthropic_api_key"), eq(settings.companyId, companyId))
+    );
+    const dbKey = row?.value?.trim();
+    if (dbKey) {
+      return new Anthropic({ apiKey: dbKey });
+    }
   }
 
   return new Anthropic({

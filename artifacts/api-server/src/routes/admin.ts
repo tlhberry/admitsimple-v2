@@ -63,7 +63,7 @@ const TARGET_FIELDS = [
 type TargetField = typeof TARGET_FIELDS[number];
 type FieldMapping = Partial<Record<TargetField, string>>;
 
-async function aiMapColumns(headers: string[], sampleRows: Record<string, string>[]): Promise<FieldMapping> {
+async function aiMapColumns(headers: string[], sampleRows: Record<string, string>[], companyId: number): Promise<FieldMapping> {
   const sampleJson = JSON.stringify(sampleRows.slice(0, 5), null, 2);
   const prompt = `You are a data import assistant. Given these spreadsheet column headers and sample data, map each column to the most appropriate field.
 
@@ -91,7 +91,7 @@ Return ONLY a valid JSON object mapping target field names to the column header 
 }`;
 
   try {
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(companyId);
     const response = await anthropic.messages.create({
       model: "claude-3-5-haiku-20241022",
       max_tokens: 500,
@@ -111,7 +111,8 @@ router.post("/admin/referral-import", requireAdmin, upload.single("file"), async
     if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
     const { headers, rows } = parseFile(req.file.buffer, req.file.originalname);
     if (rows.length === 0) { res.status(400).json({ error: "File is empty or has no data rows" }); return; }
-    const mapping = await aiMapColumns(headers, rows.slice(0, 20));
+    const companyId = getCompanyId(req);
+    const mapping = await aiMapColumns(headers, rows.slice(0, 20), companyId);
     res.json({ headers, mapping, preview: rows.slice(0, 20), allRows: rows.slice(0, 1000), totalRows: rows.length });
   } catch (err: any) {
     req.log.error(err);

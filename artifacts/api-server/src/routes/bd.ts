@@ -383,7 +383,7 @@ Please provide:
 4. Key opportunities or risks to be aware of
 5. Recommended contact frequency for this account type`;
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 1024,

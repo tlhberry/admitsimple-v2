@@ -22,7 +22,7 @@ router.post("/ai/parse-intake", upload.single("document"), async (req, res) => {
     const base64Image = req.file.buffer.toString("base64");
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 2000,
@@ -109,7 +109,7 @@ Return ONLY valid JSON with these exact field names. Use null for fields not fou
 Do not include any explanation, only the JSON object.`,
     });
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 500,
@@ -151,7 +151,7 @@ router.post("/ai/insights", async (req, res) => {
       statusBreakdown: statusCounts.map(s => ({ status: s.status, count: Number(s.count) })),
     };
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
@@ -193,7 +193,7 @@ router.post("/ai/referral-insights", async (req, res) => {
       };
     }));
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
@@ -235,7 +235,7 @@ router.post("/ai/pipeline-optimize", async (req, res) => {
       pipelineData.inquiriesByStatus.push({ status, count: Number(c.count) });
     }
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
@@ -296,7 +296,7 @@ router.post("/ai/reports", async (req, res) => {
       statusBreakdown: statusCounts.map(s => ({ status: s.status, count: Number(s.count) })),
     };
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
@@ -341,7 +341,7 @@ router.post("/ai/summarize-inquiry", async (req, res) => {
       status: inq.status, priority: inq.priority, referralSource: inq.referralSource,
     };
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
@@ -382,7 +382,7 @@ router.post("/ai/custom-query", async (req, res) => {
       conversionRate: Number(totalInquiries.count) > 0 ? Math.round((Number(admitted.count) / Number(totalInquiries.count)) * 100) : 0,
     };
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
@@ -455,7 +455,7 @@ Return ONLY the JSON object. No markdown, no explanation.`;
       messageContent.push({ type: "text", text: "Extract all VOB information from this image." });
     }
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const aiResponse = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 800,
@@ -521,7 +521,7 @@ ${context}
 
 Return ONLY valid JSON. No markdown. No explanation.`;
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const aiResponse = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 500,
@@ -600,7 +600,7 @@ NAVIGATION RULE (very important):
 
 Return ONLY the SQL query. No explanation. No markdown. No code fences.`;
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const sqlResponse = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 1000,
@@ -735,7 +735,7 @@ Return ONLY valid JSON with no other text:
   "ready_to_admit": [{"inquiry_id": 4, "patient_name": "Alice M", "task_type": "ready_to_admit", "last_activity_time": "ISO timestamp"}]
 }`;
 
-      const anthropic = await getAnthropicClient();
+      const anthropic = await getAnthropicClient(getCompanyId(req));
       const aiResp = await anthropic.messages.create({
         model: "claude-haiku-4-5",
         max_tokens: 2000,
@@ -834,7 +834,7 @@ router.post("/search", async (req, res) => {
     const { query } = req.body as { query: string };
     if (!query?.trim()) { res.json({ results: [], intent: null }); return; }
 
-    const anthropic = await getAnthropicClient();
+    const anthropic = await getAnthropicClient(getCompanyId(req));
     const filterResp = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 500,
