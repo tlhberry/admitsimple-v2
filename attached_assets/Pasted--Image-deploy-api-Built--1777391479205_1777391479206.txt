@@ -1,0 +1,112 @@
+
+ ✔ Image deploy-api       Built                                                                                                                                    0.4s
+ ✔ Container deploy-db-1  Healthy                                                                                                                                  0.5s
+ ✔ Container deploy-api-1 Started                                                                                                                                  0.4s
+[ec2-user@ip-172-31-22-79 deploy]$ docker ps
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS                   PORTS                                       NAMES
+66bafdf252b2   deploy-api           "docker-entrypoint.s…"   6 minutes ago   Up 52 seconds            0.0.0.0:3001->3001/tcp, :::3001->3001/tcp   deploy-api-1
+14da24026445   postgres:16-alpine   "docker-entrypoint.s…"   6 minutes ago   Up 6 minutes (healthy)   0.0.0.0:5433->5432/tcp, :::5433->5432/tcp   deploy-db-1
+2d44fe4b9f28   postgres:16-alpine   "docker-entrypoint.s…"   13 days ago     Up 13 days               0.0.0.0:5432->5432/tcp, :::5432->5432/tcp   admitsimple-db
+[ec2-user@ip-172-31-22-79 deploy]$ cat ~/new-app/deploy/docker-compose.ec2.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admitsimple
+      POSTGRES_USER: admitsimple
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://admitsimple:${DB_PASSWORD}@db:5432/admitsimple
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      TWILIO_TWIML_APP_SID: ${TWILIO_TWIML_APP_SID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+[ec2-user@ip-172-31-22-79 deploy]$ cat ~/new-app/deploy/docker-compose.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admitsimple
+      POSTGRES_USER: admitsimple
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://admitsimple:${DB_PASSWORD:-changeme_in_production}@db:5432/admitsimple
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      TWILIO_TWIML_APP_SID: ${TWILIO_TWIML_APP_SID}
+      AI_INTEGRATIONS_ANTHROPIC_BASE_URL: ${AI_INTEGRATIONS_ANTHROPIC_BASE_URL}
+      AI_INTEGRATIONS_ANTHROPIC_API_KEY: ${AI_INTEGRATIONS_ANTHROPIC_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
+
+volumes:
+  postgres_data:
+[ec2-user@ip-172-31-22-79 deploy]$ 
