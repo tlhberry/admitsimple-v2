@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { auditLogs, users } from "@workspace/db/schema";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/audit-logs", async (req, res) => {
   try {
-    const { limit = "50", resourceType, since } = req.query;
+    const companyId = getCompanyId(req);
+    const { limit = "50" } = req.query;
 
     const rows = await db
       .select({
@@ -23,6 +25,7 @@ router.get("/audit-logs", async (req, res) => {
       })
       .from(auditLogs)
       .leftJoin(users, eq(auditLogs.userId, users.id))
+      .where(eq(auditLogs.companyId, companyId))
       .orderBy(desc(auditLogs.createdAt))
       .limit(parseInt(limit as string));
 

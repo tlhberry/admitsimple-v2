@@ -192,7 +192,7 @@ export async function main() {
     { username: "lisa.chen", name: "Lisa Chen", email: "lisa@sunriserecovery.com", role: "admissions", initials: "LC" },
   ];
   const insertedStaff = await db.insert(users).values(
-    staffData.map(s => ({ ...s, password: defaultPw, isActive: true }))
+    staffData.map(s => ({ ...s, companyId: 1, password: defaultPw, isActive: true }))
   ).returning();
   const allUsers = [{ id: 1, name: "Administrator" }, ...insertedStaff];
   const admissionsUsers = insertedStaff.filter(u => ["jake.torres","megan.park","tom.hawkins","lisa.chen"].includes(u.username));
@@ -219,7 +219,7 @@ export async function main() {
     { name: "Psychology Today", type: "Online", contact: "", phone: "" },
   ];
   const insertedRefSources = await db.insert(referralSources).values(
-    refSourceData.map(r => ({ ...r, isActive: true, ownedByUserId: pick(admissionsUsers).id }))
+    refSourceData.map(r => ({ ...r, companyId: 1, isActive: true, ownedByUserId: pick(admissionsUsers).id }))
   ).returning();
 
   // ── 4. Referral accounts (BD module) ─────────────────────────────────────
@@ -250,6 +250,7 @@ export async function main() {
   const insertedAccounts = await db.insert(referralAccounts).values(
     bdAccounts.map((a, i) => ({
       ...a,
+      companyId: 1,
       assignedBdRepId: pick(bdReps).id,
       createdBy: pick(allUsers).id,
     }))
@@ -263,6 +264,7 @@ export async function main() {
     const numContacts = randomBetween(1, 3);
     await db.insert(referralContacts).values(
       Array.from({ length: numContacts }, () => ({
+        companyId: 1,
         accountId: acc.id,
         name: `${pick(contactFirstNames)} ${pick(contactLastNames)}`,
         position: pick(positions),
@@ -295,6 +297,7 @@ export async function main() {
   const bdActivityLogData = [];
   for (let i = 0; i < 280; i++) {
     bdActivityLogData.push({
+      companyId: 1,
       accountId: pick(insertedAccounts).id,
       userId: pick(bdReps).id,
       activityType: pick(bdActivityTypesArr),
@@ -311,6 +314,7 @@ export async function main() {
   for (let i = 1; i <= 12; i++) bedData.push({ name: `M-${String(i).padStart(2,"0")}`, unit: "Men's Residential", status: i <= 10 ? "occupied" : "available", gender: "Male" });
   for (let i = 1; i <= 10; i++) bedData.push({ name: `W-${String(i).padStart(2,"0")}`, unit: "Women's Residential", status: i <= 8 ? "occupied" : "available", gender: "Female" });
   const insertedBeds = await db.insert(beds).values(bedData.map(b => ({
+    companyId: 1,
     name: b.name,
     unit: b.unit,
     status: b.status,
@@ -347,6 +351,7 @@ export async function main() {
       const assignedUser = pick(admissionsUsers);
 
       const row: Record<string, unknown> = {
+        companyId: 1,
         firstName,
         lastName,
         phone: phoneNumbers(),
@@ -422,6 +427,7 @@ export async function main() {
     const numActivities = randomBetween(1, 6);
     for (let a = 0; a < numActivities; a++) {
       activityData.push({
+        companyId: 1,
         inquiryId: inqId,
         userId: pick(admissionsUsers).id,
         type: pick(activityTypes),
@@ -446,6 +452,7 @@ export async function main() {
     return ["Insurance Verification","Pre-Assessment","Scheduled to Admit","Admitted","Discharged"].includes(stage);
   });
   const vobData = verifiedInquiries.map(inqId => ({
+    companyId: 1,
     inquiryId: inqId,
     provider: pick(insuranceProviders).name,
     memberId: `MBR${randomBetween(100000,999999)}`,
@@ -476,6 +483,7 @@ export async function main() {
     const dischargeDate = isDischarge ? daysAgo(randomBetween(0, admitDaysAgo - 5)) : undefined;
 
     const [p] = await db.insert(patients).values({
+      companyId: 1,
       inquiryId: inqId,
       firstName: inq.firstName,
       lastName: inq.lastName,
@@ -501,6 +509,7 @@ export async function main() {
       if (availableBeds.length > 0) {
         const bed = pick(availableBeds);
         await db.insert(patientStays).values({
+          companyId: 1,
           inquiryId: inqId,
           patientName: `${inq.firstName} ${inq.lastName}`,
           bedId: bed.id,
@@ -513,6 +522,7 @@ export async function main() {
     // Discharge record
     if (isDischarge && p) {
       await db.insert(discharges).values({
+        companyId: 1,
         patientId: p.id,
         dischargeType: pick(["Completed Program","AMA (Against Medical Advice)","Clinical Step-Down","Transfer to Higher Level","Successful Completion"]),
         levelOfCare: pick(["PHP (Partial Hospitalization)","IOP (Intensive Outpatient)","Outpatient","Home with support services"]),
@@ -539,6 +549,7 @@ export async function main() {
     for (let m = 0; m < numMessages; m++) {
       const isInbound = m % 2 === 0;
       smsData.push({
+        companyId: 1,
         phone: inq.phone,
         direction: isInbound ? "inbound" : "outbound",
         body: isInbound ? pick(smsInbound) : pick(smsOutbound),
@@ -568,6 +579,7 @@ export async function main() {
   const suggestionData = suggestionInquiries.map(inqId => {
     const [current, suggested] = pick(stagePairs);
     return {
+      companyId: 1,
       inquiryId: inqId,
       currentStage: current,
       suggestedStage: suggested,

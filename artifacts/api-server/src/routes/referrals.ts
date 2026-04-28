@@ -4,12 +4,14 @@ import { referralSources, inquiries, users, referralAccounts, referralContacts }
 import { eq, count, and, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { logAudit } from "../lib/logAudit";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/referrals", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sources = await db
       .select({
         id: referralSources.id,
@@ -27,18 +29,15 @@ router.get("/referrals", async (req, res) => {
       })
       .from(referralSources)
       .leftJoin(users, eq(referralSources.ownedByUserId, users.id))
+      .where(eq(referralSources.companyId, companyId))
       .orderBy(referralSources.name);
 
     const result = await Promise.all(sources.map(async (s) => {
-      const [inqCount] = await db.select({ count: count() }).from(inquiries).where(eq(inquiries.referralSource, s.name));
-      const [admittedCount] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.referralSource, s.name), eq(inquiries.status, "admitted")));
+      const [inqCount] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), eq(inquiries.referralSource, s.name)));
+      const [admittedCount] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), eq(inquiries.referralSource, s.name), eq(inquiries.status, "admitted")));
       const total = inqCount?.count || 0;
       const admitted = admittedCount?.count || 0;
-      return {
-        ...s,
-        inquiryCount: Number(total),
-        conversionRate: total > 0 ? Math.round((Number(admitted) / Number(total)) * 100) : 0,
-      };
+      return { ...s, inquiryCount: Number(total), conversionRate: total > 0 ? Math.round((Number(admitted) / Number(total)) * 100) : 0 };
     }));
     res.json(result);
   } catch (err) {
@@ -49,9 +48,11 @@ router.get("/referrals", async (req, res) => {
 
 router.post("/referrals", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const data = req.body;
     const sess = req.session as any;
     const [row] = await db.insert(referralSources).values({
+      companyId,
       name: data.name,
       type: data.type,
       contact: data.contact,
@@ -71,21 +72,18 @@ router.post("/referrals", async (req, res) => {
 
 router.put("/referrals/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const data = req.body;
     const sess = req.session as any;
     const isAdmin = sess?.role === "admin";
-
     const update: any = {};
     const fields = ["name","type","contact","phone","email","address","notes","isActive"];
     fields.forEach(f => { if (data[f] !== undefined) update[f] = data[f]; });
-
-    // Only admins can change ownership
     if (data.ownedByUserId !== undefined && isAdmin) {
       update.ownedByUserId = data.ownedByUserId ? parseInt(data.ownedByUserId) : null;
     }
-
-    const [row] = await db.update(referralSources).set(update).where(eq(referralSources.id, id)).returning();
+    const [row] = await db.update(referralSources).set(update).where(and(eq(referralSources.id, id), eq(referralSources.companyId, companyId))).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     await logAudit(req, "Updated Referral Source", "referral_source", id);
     res.json({ ...row, inquiryCount: 0, conversionRate: 0 });
@@ -97,8 +95,9 @@ router.put("/referrals/:id", async (req, res) => {
 
 router.delete("/referrals/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.delete(referralSources).where(eq(referralSources.id, id));
+    await db.delete(referralSources).where(and(eq(referralSources.id, id), eq(referralSources.companyId, companyId)));
     await logAudit(req, "Deleted Referral Source", "referral_source", id);
     res.json({ message: "Deleted" });
   } catch (err) {
@@ -107,16 +106,16 @@ router.delete("/referrals/:id", async (req, res) => {
   }
 });
 
-// ── Combined referral suggestions for autocomplete ────────────────────────────
 router.get("/referral-suggestions", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const [sources, accounts, pastInquiries] = await Promise.all([
       db.select({ name: referralSources.name, contact: referralSources.contact, phone: referralSources.phone })
-        .from(referralSources).orderBy(referralSources.name),
-      db.select({ name: referralAccounts.name }).from(referralAccounts).orderBy(referralAccounts.name),
+        .from(referralSources).where(eq(referralSources.companyId, companyId)).orderBy(referralSources.name),
+      db.select({ name: referralAccounts.name }).from(referralAccounts).where(eq(referralAccounts.companyId, companyId)).orderBy(referralAccounts.name),
       db.selectDistinct({ name: inquiries.referralSource })
         .from(inquiries)
-        .where(sql`${inquiries.referralSource} IS NOT NULL AND ${inquiries.referralSource} != ''`),
+        .where(and(eq(inquiries.companyId, companyId), sql`${inquiries.referralSource} IS NOT NULL AND ${inquiries.referralSource} != ''`)),
     ]);
 
     const seen = new Set<string>();
@@ -148,36 +147,32 @@ router.get("/referral-suggestions", async (req, res) => {
   }
 });
 
-// ── Contact suggestions for a specific referral source ────────────────────────
 router.get("/referral-contact-suggestions", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sourceName = (req.query.source as string || "").trim();
     if (!sourceName) { res.json([]); return; }
 
     const [rsContacts, bdContacts] = await Promise.all([
-      // From referralSources table (the contact person field)
       db.select({ name: referralSources.contact, phone: referralSources.phone })
         .from(referralSources)
-        .where(sql`LOWER(${referralSources.name}) = LOWER(${sourceName})`)
+        .where(and(eq(referralSources.companyId, companyId), sql`LOWER(${referralSources.name}) = LOWER(${sourceName})`))
         .limit(5),
-      // From BD referral accounts contacts
       db.select({ name: referralContacts.name, phone: referralContacts.phone })
         .from(referralContacts)
         .leftJoin(referralAccounts, eq(referralContacts.accountId, referralAccounts.id))
-        .where(sql`LOWER(${referralAccounts.name}) = LOWER(${sourceName})`)
+        .where(and(eq(referralAccounts.companyId, companyId), sql`LOWER(${referralAccounts.name}) = LOWER(${sourceName})`))
         .orderBy(referralContacts.name),
     ]);
 
     const seen = new Set<string>();
     const results: { name: string; phone?: string }[] = [];
-
     for (const c of [...rsContacts, ...bdContacts]) {
       if (c.name && !seen.has(c.name.toLowerCase())) {
         seen.add(c.name.toLowerCase());
         results.push({ name: c.name, phone: c.phone || undefined });
       }
     }
-
     res.json(results);
   } catch (err) {
     req.log.error(err);

@@ -8,12 +8,12 @@ import { isBdRep } from "../lib/requireAdmin";
 import { logAudit } from "../lib/logAudit";
 import { broadcastSSE, sendSSEToUser } from "../lib/sse";
 import { runAiStageCheck } from "./aiStageSuggestions";
+import { getCompanyId } from "../lib/getCompanyId";
 import archiver from "archiver";
 
 const router = Router();
 router.use(requireAuth);
 
-// Helper: build the full inquiry select object (includes pre-assessment columns)
 const fullInquirySelect = {
   id: inquiries.id,
   firstName: inquiries.firstName,
@@ -64,7 +64,6 @@ const fullInquirySelect = {
   calendarEventId: inquiries.calendarEventId,
   referralDestination: inquiries.referralDestination,
   inquiryNumber: inquiries.inquiryNumber,
-  // CTM fields
   ctmCallId: inquiries.ctmCallId,
   ctmTrackingNumber: inquiries.ctmTrackingNumber,
   ctmSource: inquiries.ctmSource,
@@ -77,22 +76,20 @@ const fullInquirySelect = {
   transcription: inquiries.transcription,
   aiExtractedData: inquiries.aiExtractedData,
   callSummary: inquiries.callSummary,
-  // Call ownership
   callStatus: inquiries.callStatus,
   isLocked: inquiries.isLocked,
   lockedAt: inquiries.lockedAt,
 };
 
-// Constants for tab filtering
 const INACTIVE_STATUSES = ["Admitted", "Discharged", "Did Not Admit", "Non-Viable"];
 const ACTIVE_STATUSES_EXCLUSION = INACTIVE_STATUSES;
 
 router.get("/inquiries", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { search, status, assignedTo, levelOfCare, priority, startDate, endDate, tab } = req.query;
-    const filters: any[] = [];
+    const filters: any[] = [eq(inquiries.companyId, companyId)];
 
-    // Tab-based filtering (overrides status filter when present)
     if (tab && typeof tab === "string") {
       const now = new Date();
       const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -111,7 +108,6 @@ router.get("/inquiries", async (req, res) => {
       } else if (tab === "did_not_admit") {
         filters.push(inArray(inquiries.status, ["Did Not Admit", "Non-Viable"]));
       }
-      // "all" = no extra filter
     } else if (status && typeof status === "string") {
       filters.push(eq(inquiries.status, status));
     }
@@ -135,7 +131,7 @@ router.get("/inquiries", async (req, res) => {
       .select(fullInquirySelect)
       .from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
-      .where(filters.length > 0 ? and(...filters) : undefined)
+      .where(and(...filters))
       .orderBy(desc(inquiries.createdAt));
 
     res.json(rows);
@@ -147,13 +143,14 @@ router.get("/inquiries", async (req, res) => {
 
 router.post("/inquiries", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const data = req.body;
     const sess = req.session as any;
     const sessionUserId = sess?.userId;
-    // Auto-assign creator as owner if not explicitly set
     const assignedTo = data.assignedTo ? parseInt(data.assignedTo) : (sessionUserId || null);
 
     const [row] = await db.insert(inquiries).values({
+      companyId,
       firstName: data.firstName,
       lastName: data.lastName,
       phone: data.phone,
@@ -175,7 +172,6 @@ router.post("/inquiries", async (req, res) => {
       notes: data.notes,
     }).returning();
 
-    // Generate unique inquiry number after insert (uses the serial ID)
     const inquiryNum = `INQ-${row.id.toString().padStart(6, "0")}`;
     await db.update(inquiries).set({ inquiryNumber: inquiryNum }).where(eq(inquiries.id, row.id));
 
@@ -195,11 +191,12 @@ router.post("/inquiries", async (req, res) => {
 
 router.get("/inquiries/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const rows = await db.select(fullInquirySelect)
       .from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
-      .where(eq(inquiries.id, id));
+      .where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
     res.json(rows[0]);
   } catch (err) {
@@ -210,14 +207,15 @@ router.get("/inquiries/:id", async (req, res) => {
 
 router.put("/inquiries/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const data = req.body;
     if (isBdRep(req) && data.status !== undefined) {
       res.status(403).json({ error: "BD reps cannot change inquiry pipeline status" }); return;
     }
 
-    // Fetch current state before updating so we can diff changes
-    const [before] = await db.select().from(inquiries).where(eq(inquiries.id, id));
+    const [before] = await db.select().from(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
+    if (!before) { res.status(404).json({ error: "Not found" }); return; }
 
     const update: any = { updatedAt: new Date() };
     const fields = [
@@ -225,16 +223,14 @@ router.put("/inquiries/:id", async (req, res) => {
       "primaryDiagnosis","substanceHistory","medicalHistory","mentalHealthHistory","levelOfCare",
       "referralSource","referralContact","searchKeywords","status","priority","notes",
       "preAssessmentCompleted","preAssessmentNotes","calendarEventId","referralDestination",
-      // Live call intake fields
       "presentingProblem","primarySubstance","callerIsNotPatient","callerName","callerRelationship","patientPhone",
     ];
     fields.forEach(f => { if (data[f] !== undefined) update[f] = data[f]; });
     if (data.assignedTo !== undefined) update.assignedTo = data.assignedTo ? parseInt(data.assignedTo) : null;
     if (data.preAssessmentDate !== undefined) update.preAssessmentDate = data.preAssessmentDate ? new Date(data.preAssessmentDate) : null;
     if (data.appointmentDate !== undefined) update.appointmentDate = data.appointmentDate ? new Date(data.appointmentDate) : null;
-    await db.update(inquiries).set(update).where(eq(inquiries.id, id));
+    await db.update(inquiries).set(update).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
 
-    // Build human-readable labels for changed fields
     const FIELD_LABELS: Record<string, string> = {
       firstName: "First Name", lastName: "Last Name", phone: "Phone", email: "Email",
       dob: "Date of Birth", insuranceProvider: "Insurance Provider", insuranceMemberId: "Member ID",
@@ -276,12 +272,11 @@ router.put("/inquiries/:id", async (req, res) => {
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
     res.json(rows[0]);
 
-    // Fire AI stage check in background after meaningful updates (non-blocking)
     const meaningfulChange = data.notes !== undefined || data.status !== undefined ||
       data.insuranceProvider !== undefined || data.primaryDiagnosis !== undefined ||
       data.substanceHistory !== undefined || data.preAssessmentCompleted !== undefined;
     if (meaningfulChange) {
-      setImmediate(() => runAiStageCheck(id, req.log));
+      setImmediate(() => runAiStageCheck(id, companyId, req.log));
     }
   } catch (err) {
     req.log.error(err);
@@ -291,8 +286,9 @@ router.put("/inquiries/:id", async (req, res) => {
 
 router.delete("/inquiries/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.delete(inquiries).where(eq(inquiries.id, id));
+    await db.delete(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     res.json({ message: "Deleted" });
   } catch (err) {
     req.log.error(err);
@@ -302,16 +298,17 @@ router.delete("/inquiries/:id", async (req, res) => {
 
 router.post("/inquiries/:id/convert", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { admitDate, levelOfCare, assignedClinician, notes } = req.body;
-    const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, id));
+    const [inq] = await db.select().from(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     if (!inq) { res.status(404).json({ error: "Inquiry not found" }); return; }
 
     const sess = req.session as any;
-    // Credit goes to inquiry owner by default; fallback to session user
     const creditUserId = inq.assignedTo || sess?.userId || null;
 
     const [patient] = await db.insert(patients).values({
+      companyId,
       inquiryId: id,
       firstName: inq.firstName,
       lastName: inq.lastName,
@@ -328,7 +325,7 @@ router.post("/inquiries/:id/convert", async (req, res) => {
       notes: notes || inq.notes,
     }).returning();
 
-    await db.update(inquiries).set({ status: "admitted", updatedAt: new Date() }).where(eq(inquiries.id, id));
+    await db.update(inquiries).set({ status: "admitted", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     await logAudit(req, "Converted to Patient", "inquiry", id);
 
     const rows = await db.select({
@@ -352,10 +349,7 @@ router.post("/inquiries/:id/convert", async (req, res) => {
       notes: patients.notes,
       createdAt: patients.createdAt,
       updatedAt: patients.updatedAt,
-    })
-    .from(patients)
-    .leftJoin(users, eq(patients.assignedClinician, users.id))
-    .where(eq(patients.id, patient.id));
+    }).from(patients).leftJoin(users, eq(patients.assignedClinician, users.id)).where(eq(patients.id, patient.id));
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -364,16 +358,11 @@ router.post("/inquiries/:id/convert", async (req, res) => {
   }
 });
 
-// ─── Pre-Assessment Form Routes ───────────────────────────────────────────────
-
-// Form 1: RB Pre-Cert / Clinical
 router.get("/inquiries/:id/pre-cert-form", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    const [row] = await db.select({
-      formData: inquiries.preCertFormData,
-      isComplete: inquiries.preCertFormComplete,
-    }).from(inquiries).where(eq(inquiries.id, id));
+    const [row] = await db.select({ formData: inquiries.preCertFormData, isComplete: inquiries.preCertFormComplete }).from(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json({ formData: row.formData || {}, isComplete: row.isComplete || "no" });
   } catch (err) {
@@ -384,13 +373,10 @@ router.get("/inquiries/:id/pre-cert-form", async (req, res) => {
 
 router.put("/inquiries/:id/pre-cert-form", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { formData, isComplete } = req.body;
-    await db.update(inquiries).set({
-      preCertFormData: formData,
-      preCertFormComplete: isComplete || "no",
-      updatedAt: new Date(),
-    }).where(eq(inquiries.id, id));
+    await db.update(inquiries).set({ preCertFormData: formData, preCertFormComplete: isComplete || "no", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     res.json({ formData, isComplete: isComplete || "no" });
   } catch (err) {
     req.log.error(err);
@@ -398,14 +384,11 @@ router.put("/inquiries/:id/pre-cert-form", async (req, res) => {
   }
 });
 
-// Form 2: Nursing Assessment
 router.get("/inquiries/:id/nursing-assessment", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    const [row] = await db.select({
-      formData: inquiries.nursingAssessmentData,
-      isComplete: inquiries.nursingAssessmentComplete,
-    }).from(inquiries).where(eq(inquiries.id, id));
+    const [row] = await db.select({ formData: inquiries.nursingAssessmentData, isComplete: inquiries.nursingAssessmentComplete }).from(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json({ formData: row.formData || {}, isComplete: row.isComplete || "no" });
   } catch (err) {
@@ -416,13 +399,10 @@ router.get("/inquiries/:id/nursing-assessment", async (req, res) => {
 
 router.put("/inquiries/:id/nursing-assessment", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { formData, isComplete } = req.body;
-    await db.update(inquiries).set({
-      nursingAssessmentData: formData,
-      nursingAssessmentComplete: isComplete || "no",
-      updatedAt: new Date(),
-    }).where(eq(inquiries.id, id));
+    await db.update(inquiries).set({ nursingAssessmentData: formData, nursingAssessmentComplete: isComplete || "no", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     res.json({ formData, isComplete: isComplete || "no" });
   } catch (err) {
     req.log.error(err);
@@ -430,14 +410,11 @@ router.put("/inquiries/:id/nursing-assessment", async (req, res) => {
   }
 });
 
-// Form 3: Pre-Screening
 router.get("/inquiries/:id/pre-screening", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    const [row] = await db.select({
-      formData: inquiries.preScreeningData,
-      isComplete: inquiries.preScreeningComplete,
-    }).from(inquiries).where(eq(inquiries.id, id));
+    const [row] = await db.select({ formData: inquiries.preScreeningData, isComplete: inquiries.preScreeningComplete }).from(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json({ formData: row.formData || {}, isComplete: row.isComplete || "no" });
   } catch (err) {
@@ -448,13 +425,10 @@ router.get("/inquiries/:id/pre-screening", async (req, res) => {
 
 router.put("/inquiries/:id/pre-screening", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { formData, isComplete } = req.body;
-    await db.update(inquiries).set({
-      preScreeningData: formData,
-      preScreeningComplete: isComplete || "no",
-      updatedAt: new Date(),
-    }).where(eq(inquiries.id, id));
+    await db.update(inquiries).set({ preScreeningData: formData, preScreeningComplete: isComplete || "no", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     res.json({ formData, isComplete: isComplete || "no" });
   } catch (err) {
     req.log.error(err);
@@ -462,28 +436,20 @@ router.put("/inquiries/:id/pre-screening", async (req, res) => {
   }
 });
 
-// Download: ZIP of all three forms as JSON
 router.get("/inquiries/:id/download-pre-assessment-forms", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const [row] = await db.select({
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      preCertFormData: inquiries.preCertFormData,
-      preCertFormComplete: inquiries.preCertFormComplete,
-      nursingAssessmentData: inquiries.nursingAssessmentData,
-      nursingAssessmentComplete: inquiries.nursingAssessmentComplete,
-      preScreeningData: inquiries.preScreeningData,
-      preScreeningComplete: inquiries.preScreeningComplete,
-    }).from(inquiries).where(eq(inquiries.id, id));
+      firstName: inquiries.firstName, lastName: inquiries.lastName,
+      preCertFormData: inquiries.preCertFormData, preCertFormComplete: inquiries.preCertFormComplete,
+      nursingAssessmentData: inquiries.nursingAssessmentData, nursingAssessmentComplete: inquiries.nursingAssessmentComplete,
+      preScreeningData: inquiries.preScreeningData, preScreeningComplete: inquiries.preScreeningComplete,
+    }).from(inquiries).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
 
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
-
     const hasAnyData = row.preCertFormData || row.nursingAssessmentData || row.preScreeningData;
-    if (!hasAnyData) {
-      res.status(400).json({ error: "No forms have been completed yet." });
-      return;
-    }
+    if (!hasAnyData) { res.status(400).json({ error: "No forms have been completed yet." }); return; }
 
     const name = `${row.firstName}-${row.lastName}`.replace(/\s+/g, "-");
     const date = new Date().toISOString().split("T")[0];
@@ -491,23 +457,11 @@ router.get("/inquiries/:id/download-pre-assessment-forms", async (req, res) => {
 
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
-
-    archive.append(
-      JSON.stringify({ generatedAt: new Date().toISOString(), patient: `${row.firstName} ${row.lastName}`, status: row.preCertFormComplete, data: row.preCertFormData || {} }, null, 2),
-      { name: "01-RB-PreCert-Clinical.json" }
-    );
-    archive.append(
-      JSON.stringify({ generatedAt: new Date().toISOString(), patient: `${row.firstName} ${row.lastName}`, status: row.nursingAssessmentComplete, data: row.nursingAssessmentData || {} }, null, 2),
-      { name: "02-Nursing-Assessment.json" }
-    );
-    archive.append(
-      JSON.stringify({ generatedAt: new Date().toISOString(), patient: `${row.firstName} ${row.lastName}`, status: row.preScreeningComplete, data: row.preScreeningData || {} }, null, 2),
-      { name: "03-Pre-Screening.json" }
-    );
-
+    archive.append(JSON.stringify({ generatedAt: new Date().toISOString(), patient: `${row.firstName} ${row.lastName}`, status: row.preCertFormComplete, data: row.preCertFormData || {} }, null, 2), { name: "01-RB-PreCert-Clinical.json" });
+    archive.append(JSON.stringify({ generatedAt: new Date().toISOString(), patient: `${row.firstName} ${row.lastName}`, status: row.nursingAssessmentComplete, data: row.nursingAssessmentData || {} }, null, 2), { name: "02-Nursing-Assessment.json" });
+    archive.append(JSON.stringify({ generatedAt: new Date().toISOString(), patient: `${row.firstName} ${row.lastName}`, status: row.preScreeningComplete, data: row.preScreeningData || {} }, null, 2), { name: "03-Pre-Screening.json" });
     await archive.finalize();
   } catch (err) {
     req.log.error(err);
@@ -515,9 +469,9 @@ router.get("/inquiries/:id/download-pre-assessment-forms", async (req, res) => {
   }
 });
 
-// ─── VOB Save ─────────────────────────────────────────────────────────────────
 router.put("/inquiries/:id/vob", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { vobData, costAcceptance } = req.body;
     const update: any = { updatedAt: new Date() };
     if (vobData !== undefined) update.vobData = vobData;
@@ -525,7 +479,7 @@ router.put("/inquiries/:id/vob", async (req, res) => {
       update.costAcceptance = costAcceptance;
       if (costAcceptance === "cannot_pay") update.status = "Non-Viable";
     }
-    const [row] = await db.update(inquiries).set(update).where(eq(inquiries.id, parseInt(req.params.id))).returning();
+    const [row] = await db.update(inquiries).set(update).where(and(eq(inquiries.id, parseInt(req.params.id)), eq(inquiries.companyId, companyId))).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     await logAudit(req, costAcceptance ? `cost_acceptance:${costAcceptance}` : "vob_saved", "inquiry", row.id);
     res.json(row);
@@ -535,9 +489,9 @@ router.put("/inquiries/:id/vob", async (req, res) => {
   }
 });
 
-// ─── Non-Admit / Did Not Admit ────────────────────────────────────────────────
 router.put("/inquiries/:id/non-admit", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     if (isBdRep(req)) { res.status(403).json({ error: "BD reps cannot record non-admit decisions" }); return; }
     const { reason, notes } = req.body;
     if (!reason) { res.status(400).json({ error: "reason is required" }); return; }
@@ -547,7 +501,7 @@ router.put("/inquiries/:id/non-admit", async (req, res) => {
       nonAdmitReason: reason,
       nonAdmitNotes: notes || null,
       updatedAt: new Date(),
-    }).where(eq(inquiries.id, parseInt(req.params.id))).returning();
+    }).where(and(eq(inquiries.id, parseInt(req.params.id)), eq(inquiries.companyId, companyId))).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     await logAudit(req, "Did Not Admit", "inquiry", row.id, { inquiryId: row.id, details: { reason, notes } });
     res.json(row);
@@ -557,9 +511,9 @@ router.put("/inquiries/:id/non-admit", async (req, res) => {
   }
 });
 
-// ─── Refer Out ────────────────────────────────────────────────────────────────
 router.post("/inquiries/:id/refer-out", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     if (isBdRep(req)) { res.status(403).json({ error: "BD reps cannot record refer-out decisions" }); return; }
     const { type, message } = req.body;
     if (!type || !message) { res.status(400).json({ error: "type and message are required" }); return; }
@@ -568,7 +522,7 @@ router.post("/inquiries/:id/refer-out", async (req, res) => {
       referralOutType: type,
       referralOutMessage: message,
       updatedAt: new Date(),
-    }).where(eq(inquiries.id, parseInt(req.params.id))).returning();
+    }).where(and(eq(inquiries.id, parseInt(req.params.id)), eq(inquiries.companyId, companyId))).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     await logAudit(req, `Referred Out: ${type}`, "inquiry", row.id, { inquiryId: row.id, details: { type } });
     res.json(row);
@@ -578,22 +532,15 @@ router.post("/inquiries/:id/refer-out", async (req, res) => {
   }
 });
 
-// ─── Audit Log for a specific inquiry ─────────────────────────────────────────
 router.get("/inquiries/:id/audit-log", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const rows = await db
-      .select({
-        id: auditLogs.id,
-        action: auditLogs.action,
-        details: auditLogs.details,
-        createdAt: auditLogs.createdAt,
-        userName: users.name,
-        userId: auditLogs.userId,
-      })
+      .select({ id: auditLogs.id, action: auditLogs.action, details: auditLogs.details, createdAt: auditLogs.createdAt, userName: users.name, userId: auditLogs.userId })
       .from(auditLogs)
       .leftJoin(users, eq(auditLogs.userId, users.id))
-      .where(eq(auditLogs.inquiryId, id))
+      .where(and(eq(auditLogs.inquiryId, id), eq(auditLogs.companyId, companyId)))
       .orderBy(desc(auditLogs.createdAt));
     res.json(rows);
   } catch (err) {
@@ -602,34 +549,29 @@ router.get("/inquiries/:id/audit-log", async (req, res) => {
   }
 });
 
-// ── GET /api/calls/token — Twilio Voice access token for browser SDK ─────────
 router.get("/calls/token", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sess = req.session as any;
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken  = process.env.TWILIO_AUTH_TOKEN;
     const appSid     = process.env.TWILIO_TWIML_APP_SID;
 
     if (!accountSid || !authToken || !appSid) {
-      res.status(503).json({ error: "Twilio not configured" });
-      return;
+      res.status(503).json({ error: "Twilio not configured" }); return;
     }
 
-    // Check settings table for API key credentials (set via admin Settings → Integrations)
-    const [keySidRow]    = await db.select().from(settings).where(eq(settings.key, "twilio_api_key_sid"));
-    const [keySecretRow] = await db.select().from(settings).where(eq(settings.key, "twilio_api_key_secret"));
+    const [keySidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_sid"), eq(settings.companyId, companyId)));
+    const [keySecretRow] = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_secret"), eq(settings.companyId, companyId)));
 
     const AccessToken = twilio.jwt.AccessToken;
     const VoiceGrant  = AccessToken.VoiceGrant;
-
     const identity = String(sess.userId ?? `guest-${Date.now()}`);
-    // Prefer settings-table values → env vars → accountSid/authToken fallback
     const apiKeySid    = (keySidRow?.value    || process.env.TWILIO_API_KEY_SID)    ?? accountSid;
     const apiKeySecret = (keySecretRow?.value || process.env.TWILIO_API_KEY_SECRET) ?? authToken;
     const accessToken = new AccessToken(accountSid, apiKeySid, apiKeySecret, { identity, ttl: 3600 } as any);
     const voiceGrant  = new VoiceGrant({ outgoingApplicationSid: appSid, incomingAllow: true });
     accessToken.addGrant(voiceGrant);
-
     res.json({ token: accessToken.toJwt(), identity });
   } catch (err) {
     req.log.error(err);
@@ -637,27 +579,19 @@ router.get("/calls/token", async (req, res) => {
   }
 });
 
-// ── GET /api/calls/active — live & ringing calls (admin view) ──────────────
 router.get("/calls/active", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const rows = await db
       .select({
-        id: inquiries.id,
-        firstName: inquiries.firstName,
-        lastName: inquiries.lastName,
-        phone: inquiries.phone,
-        callStatus: inquiries.callStatus,
-        isLocked: inquiries.isLocked,
-        lockedAt: inquiries.lockedAt,
-        assignedTo: inquiries.assignedTo,
-        assignedToName: users.name,
-        callDateTime: inquiries.callDateTime,
-        ctmSource: inquiries.ctmSource,
-        ctmCallId: inquiries.ctmCallId,
+        id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName, phone: inquiries.phone,
+        callStatus: inquiries.callStatus, isLocked: inquiries.isLocked, lockedAt: inquiries.lockedAt,
+        assignedTo: inquiries.assignedTo, assignedToName: users.name, callDateTime: inquiries.callDateTime,
+        ctmSource: inquiries.ctmSource, ctmCallId: inquiries.ctmCallId,
       })
       .from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
-      .where(sql`${inquiries.callStatus} IN ('ringing', 'active')`)
+      .where(and(eq(inquiries.companyId, companyId), sql`${inquiries.callStatus} IN ('ringing', 'active')`))
       .orderBy(desc(inquiries.callDateTime));
     res.json(rows);
   } catch (err) {
@@ -666,27 +600,18 @@ router.get("/calls/active", async (req, res) => {
   }
 });
 
-// ── GET /api/calls/log — today summary + missed + recent 30 calls ────────────
 router.get("/calls/log", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    // All calls today (have a callDateTime today)
     const todayCalls = await db.select({
-      id: inquiries.id,
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      phone: inquiries.phone,
-      callStatus: inquiries.callStatus,
-      callDurationSeconds: inquiries.callDurationSeconds,
-      callDateTime: inquiries.callDateTime,
-      ctmSource: inquiries.ctmSource,
+      id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName, phone: inquiries.phone,
+      callStatus: inquiries.callStatus, callDurationSeconds: inquiries.callDurationSeconds,
+      callDateTime: inquiries.callDateTime, ctmSource: inquiries.ctmSource,
     }).from(inquiries)
-      .where(and(
-        sql`${inquiries.callDateTime} IS NOT NULL`,
-        gte(inquiries.callDateTime, todayStart),
-      ))
+      .where(and(eq(inquiries.companyId, companyId), sql`${inquiries.callDateTime} IS NOT NULL`, gte(inquiries.callDateTime, todayStart)))
       .orderBy(desc(inquiries.callDateTime));
 
     const total     = todayCalls.length;
@@ -694,29 +619,18 @@ router.get("/calls/log", async (req, res) => {
     const answered  = todayCalls.filter(c => c.callStatus === "completed" || c.callStatus === "active").length;
     const answerRate = total > 0 ? Math.round((answered / total) * 100) : 100;
 
-    // Recent calls — last 30 with any callDateTime, for the full log
     const recentRows = await db.select({
-      id: inquiries.id,
-      firstName: inquiries.firstName,
-      lastName: inquiries.lastName,
-      phone: inquiries.phone,
-      callStatus: inquiries.callStatus,
-      callDurationSeconds: inquiries.callDurationSeconds,
-      callDateTime: inquiries.callDateTime,
-      ctmSource: inquiries.ctmSource,
+      id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName, phone: inquiries.phone,
+      callStatus: inquiries.callStatus, callDurationSeconds: inquiries.callDurationSeconds,
+      callDateTime: inquiries.callDateTime, ctmSource: inquiries.ctmSource,
     }).from(inquiries)
-      .where(sql`${inquiries.callDateTime} IS NOT NULL`)
+      .where(and(eq(inquiries.companyId, companyId), sql`${inquiries.callDateTime} IS NOT NULL`))
       .orderBy(desc(inquiries.callDateTime))
       .limit(30);
 
     const format = (r: typeof recentRows[number]) => ({
-      id: r.id,
-      name: `${r.firstName} ${r.lastName}`.trim(),
-      phone: r.phone,
-      status: r.callStatus,
-      duration: r.callDurationSeconds,
-      callDateTime: r.callDateTime,
-      source: r.ctmSource,
+      id: r.id, name: `${r.firstName} ${r.lastName}`.trim(), phone: r.phone,
+      status: r.callStatus, duration: r.callDurationSeconds, callDateTime: r.callDateTime, source: r.ctmSource,
     });
 
     res.json({
@@ -730,69 +644,32 @@ router.get("/calls/log", async (req, res) => {
   }
 });
 
-// ── POST /api/inquiries/:id/claim — atomically claim an inquiry for this rep ─
 router.post("/inquiries/:id/claim", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const sess = req.session as any;
     const userId: number = sess?.userId;
+    if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-    if (!userId) {
-      res.status(401).json({ error: "Not authenticated" });
-      return;
-    }
-
-    // Fetch current state
     const [current] = await db
       .select({ isLocked: inquiries.isLocked, assignedTo: inquiries.assignedTo })
       .from(inquiries)
-      .where(eq(inquiries.id, id));
+      .where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
+    if (!current) { res.status(404).json({ error: "Inquiry not found" }); return; }
 
-    if (!current) {
-      res.status(404).json({ error: "Inquiry not found" });
-      return;
-    }
-
-    // Already locked by someone else?
     if (current.isLocked && current.assignedTo !== userId) {
-      const [owner] = await db
-        .select({ name: users.name })
-        .from(users)
-        .where(eq(users.id, current.assignedTo!));
-      res.status(409).json({
-        error: "already_claimed",
-        message: `Already claimed by ${owner?.name ?? "another rep"}`,
-        claimedBy: owner?.name ?? "another rep",
-      });
+      const [owner] = await db.select({ name: users.name }).from(users).where(eq(users.id, current.assignedTo!));
+      res.status(409).json({ error: "already_claimed", message: `Already claimed by ${owner?.name ?? "another rep"}`, claimedBy: owner?.name ?? "another rep" });
       return;
     }
 
-    // Fetch ctmCallId before updating so we can redirect the live call
-    const [inqData] = await db
-      .select({ ctmCallId: inquiries.ctmCallId })
-      .from(inquiries)
-      .where(eq(inquiries.id, id));
+    const [inqData] = await db.select({ ctmCallId: inquiries.ctmCallId }).from(inquiries).where(eq(inquiries.id, id));
+    await db.update(inquiries).set({ assignedTo: userId, isLocked: true, lockedAt: new Date(), callStatus: "active", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
 
-    // Atomic claim
-    await db.update(inquiries).set({
-      assignedTo: userId,
-      isLocked: true,
-      lockedAt: new Date(),
-      callStatus: "active",
-      updatedAt: new Date(),
-    }).where(eq(inquiries.id, id));
-
-    // Fetch rep name
     const [rep] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
+    broadcastSSE("call_claimed", { inquiryId: id, repId: userId, repName: rep?.name ?? "A rep" });
 
-    // Broadcast to all so other reps dismiss their notification
-    broadcastSSE("call_claimed", {
-      inquiryId: id,
-      repId: userId,
-      repName: rep?.name ?? "A rep",
-    });
-
-    // ── Redirect the live Twilio call to this agent's browser ─────────────────
     const callSid = inqData?.ctmCallId;
     if (callSid) {
       const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -800,7 +677,6 @@ router.post("/inquiries/:id/claim", async (req, res) => {
       if (accountSid && authToken) {
         const twilioClient = twilio(accountSid, authToken);
         const dialTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="30"><Client>${userId}</Client></Dial></Response>`;
-        console.log(`[Claim] Redirecting CallSid=${callSid} to Client:${userId} via Twilio REST API`);
         twilioClient.calls(callSid).update({ twiml: dialTwiml }).catch((err: Error) => {
           console.error(`[Claim] Failed to redirect call ${callSid}:`, err.message);
         });
@@ -814,15 +690,11 @@ router.post("/inquiries/:id/claim", async (req, res) => {
   }
 });
 
-// ── POST /api/inquiries/:id/complete-call — mark call completed ────────────
 router.post("/inquiries/:id/complete-call", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.update(inquiries).set({
-      callStatus: "completed",
-      updatedAt: new Date(),
-    }).where(eq(inquiries.id, id));
-
+    await db.update(inquiries).set({ callStatus: "completed", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
     broadcastSSE("call_status", { inquiryId: id, status: "completed" });
     res.json({ ok: true });
   } catch (err) {
@@ -831,74 +703,29 @@ router.post("/inquiries/:id/complete-call", async (req, res) => {
   }
 });
 
-// ── POST /api/inquiries/:id/call-outcome — post-call automation ────────────
 router.post("/inquiries/:id/call-outcome", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { action, reason, referralSourceName, levelOfCare, location } = req.body;
     const userId = (req as any).session?.userId;
 
     if (action === "vob_sent") {
-      // Move to Insurance Verification stage
-      await db.update(inquiries).set({
-        status: "Insurance Verification",
-        updatedAt: new Date(),
-      }).where(eq(inquiries.id, id));
-
-      // Get billing email from settings (fall back to facility email)
-      const [billingRow] = await db.select().from(settings).where(eq(settings.key, "billing_email"));
-      const [facilityRow] = await db.select().from(settings).where(eq(settings.key, "facility_email"));
+      await db.update(inquiries).set({ status: "Insurance Verification", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
+      const [billingRow] = await db.select().from(settings).where(and(eq(settings.key, "billing_email"), eq(settings.companyId, companyId)));
+      const [facilityRow] = await db.select().from(settings).where(and(eq(settings.key, "facility_email"), eq(settings.companyId, companyId)));
       const billingEmail = billingRow?.value || facilityRow?.value || "";
-
-      // Log audit
-      await db.insert(auditLogs).values({
-        userId,
-        action: "vob_sent",
-        resourceType: "inquiry",
-        resourceId: id,
-        inquiryId: id,
-        details: "VOB request initiated from post-call flow",
-      });
-
+      await db.insert(auditLogs).values({ companyId, userId, action: "vob_sent", resourceType: "inquiry", resourceId: id, inquiryId: id, details: "VOB request initiated from post-call flow" });
       res.json({ ok: true, billingEmail });
 
     } else if (action === "referred_out") {
-      // Mark as referred out
-      await db.update(inquiries).set({
-        referralOutAt: new Date(),
-        referralOutType: "external",
-        referralOutMessage: referralSourceName || "",
-        status: "Did Not Admit",
-        updatedAt: new Date(),
-      }).where(eq(inquiries.id, id));
-
-      await db.insert(auditLogs).values({
-        userId,
-        action: "referred_out",
-        resourceType: "inquiry",
-        resourceId: id,
-        inquiryId: id,
-        details: JSON.stringify({ referralSourceName, levelOfCare, location }),
-      });
-
+      await db.update(inquiries).set({ referralOutAt: new Date(), referralOutType: "external", referralOutMessage: referralSourceName || "", status: "Did Not Admit", updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
+      await db.insert(auditLogs).values({ companyId, userId, action: "referred_out", resourceType: "inquiry", resourceId: id, inquiryId: id, details: JSON.stringify({ referralSourceName, levelOfCare, location }) });
       res.json({ ok: true });
 
     } else if (action === "did_not_admit") {
-      await db.update(inquiries).set({
-        status: "Did Not Admit",
-        nonAdmitReason: reason || null,
-        updatedAt: new Date(),
-      }).where(eq(inquiries.id, id));
-
-      await db.insert(auditLogs).values({
-        userId,
-        action: "did_not_admit",
-        resourceType: "inquiry",
-        resourceId: id,
-        inquiryId: id,
-        details: JSON.stringify({ reason }),
-      });
-
+      await db.update(inquiries).set({ status: "Did Not Admit", nonAdmitReason: reason || null, updatedAt: new Date() }).where(and(eq(inquiries.id, id), eq(inquiries.companyId, companyId)));
+      await db.insert(auditLogs).values({ companyId, userId, action: "did_not_admit", resourceType: "inquiry", resourceId: id, inquiryId: id, details: JSON.stringify({ reason }) });
       res.json({ ok: true });
 
     } else {
@@ -910,36 +737,24 @@ router.post("/inquiries/:id/call-outcome", async (req, res) => {
   }
 });
 
-// NOTE: POST /api/sms/send is handled by sms.ts router (mounted first)
-
-// ── POST /api/calls/log — log an outbound call to an inquiry ──────────────────
 router.post("/calls/log", async (req, res) => {
   try {
-    const { to, name, duration, inquiryId: rawInquiryId } = req.body as {
-      to?: string; name?: string; duration?: number; inquiryId?: number;
-    };
+    const companyId = getCompanyId(req);
+    const { to, name, duration, inquiryId: rawInquiryId } = req.body as { to?: string; name?: string; duration?: number; inquiryId?: number };
 
     let resolvedInquiryId = rawInquiryId ?? null;
     if (!resolvedInquiryId && to) {
-      const [found] = await db
-        .select({ id: inquiries.id })
-        .from(inquiries)
-        .where(eq(inquiries.phone, to))
-        .orderBy(desc(inquiries.createdAt))
-        .limit(1);
+      const [found] = await db.select({ id: inquiries.id }).from(inquiries)
+        .where(and(eq(inquiries.phone, to), eq(inquiries.companyId, companyId)))
+        .orderBy(desc(inquiries.createdAt)).limit(1);
       if (found) resolvedInquiryId = found.id;
     }
 
-    if (!resolvedInquiryId) {
-      res.json({ ok: true, logged: false });
-      return;
-    }
+    if (!resolvedInquiryId) { res.json({ ok: true, logged: false }); return; }
 
-    const durationLabel = duration != null
-      ? `${Math.floor(duration / 60)}m ${duration % 60}s`
-      : null;
-
+    const durationLabel = duration != null ? `${Math.floor(duration / 60)}m ${duration % 60}s` : null;
     await db.insert(activities).values({
+      companyId,
       inquiryId: resolvedInquiryId,
       userId: (req as any).session?.userId ?? null,
       type: "call",

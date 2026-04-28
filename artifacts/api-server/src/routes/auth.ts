@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { users, passwordResetTokens } from "@workspace/db/schema";
+import { users, passwordResetTokens, companies } from "@workspace/db/schema";
 import { eq, or, and, gt, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -28,7 +28,6 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       res.status(400).json({ error: "Username and password required" });
       return;
     }
-    // Accept login by username OR email
     const [user] = await db.select().from(users).where(
       or(eq(users.username, username), eq(users.email, username))
     ).limit(1);
@@ -55,9 +54,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     sess.email = user.email;
     sess.role = user.role;
     sess.initials = user.initials;
-    // Explicitly save the session before responding to avoid a race condition
-    // where subsequent requests arrive at the server before the async Postgres
-    // write completes (particularly problematic in production).
+    sess.companyId = user.companyId ?? 1;
     await new Promise<void>((resolve, reject) =>
       req.session.save((err) => (err ? reject(err) : resolve()))
     );
@@ -85,10 +82,108 @@ router.get("/auth/me", (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  res.json({ id: sess.userId, username: sess.username, name: sess.name, email: sess.email, role: sess.role, initials: sess.initials });
+  res.json({ id: sess.userId, username: sess.username, name: sess.name, email: sess.email, role: sess.role, initials: sess.initials, companyId: sess.companyId });
 });
 
-// ── Change own password (requires current password) ──────────────────────────
+// ── Self-serve signup: create company + admin user atomically ─────────────────
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many signup attempts. Please try again later." },
+  keyGenerator: (req) => getClientIp(req as any),
+});
+
+router.post("/auth/signup", signupLimiter, async (req, res) => {
+  const ip = getClientIp(req as any);
+  try {
+    const { facilityName, adminName, email, password, username } = req.body;
+
+    if (!facilityName || !adminName || !email || !password) {
+      res.status(400).json({ error: "Facility name, admin name, email and password are required" });
+      return;
+    }
+
+    // Password complexity
+    if (password.length < 8) { res.status(400).json({ error: "Password must be at least 8 characters" }); return; }
+    if (!/[A-Z]/.test(password)) { res.status(400).json({ error: "Password must contain at least one uppercase letter" }); return; }
+    if (!/[0-9]/.test(password)) { res.status(400).json({ error: "Password must contain at least one number" }); return; }
+
+    // Derive slug from facility name
+    const slug = facilityName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) + "-" + crypto.randomBytes(3).toString("hex");
+
+    // Derive username from email if not provided
+    const derivedUsername = (username || email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "")).slice(0, 100);
+
+    // Check username uniqueness
+    const [existing] = await db.select({ id: users.id }).from(users).where(
+      or(eq(users.username, derivedUsername), eq(users.email, email.toLowerCase().trim()))
+    ).limit(1);
+    if (existing) {
+      res.status(409).json({ error: "An account with that email or username already exists" });
+      return;
+    }
+
+    const hashed = await bcrypt.hash(password, 12);
+    const parts = adminName.trim().split(/\s+/);
+    const initials = parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+
+    // Atomic: create company then admin user
+    const [company] = await db.insert(companies).values({
+      name: facilityName.trim(),
+      slug,
+      plan: "trial",
+      isActive: true,
+    }).returning();
+
+    const [user] = await db.insert(users).values({
+      companyId: company.id,
+      username: derivedUsername,
+      password: hashed,
+      name: adminName.trim(),
+      email: email.toLowerCase().trim(),
+      role: "admin",
+      initials,
+      isActive: true,
+    }).returning();
+
+    // Auto-login
+    const sess = req.session as any;
+    sess.userId = user.id;
+    sess.username = user.username;
+    sess.name = user.name;
+    sess.email = user.email;
+    sess.role = user.role;
+    sess.initials = user.initials;
+    sess.companyId = company.id;
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
+
+    await logAudit({ userId: user.id, action: "SIGNUP", details: `Company: ${company.name} (id=${company.id})`, ipAddress: ip });
+
+    res.status(201).json({
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      initials: user.initials,
+      companyId: company.id,
+      companyName: company.name,
+    });
+  } catch (err: any) {
+    req.log.error(err);
+    if (err.code === "23505") {
+      res.status(409).json({ error: "An account with that email or username already exists" });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Change own password ───────────────────────────────────────────────────────
 const changePwLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -111,24 +206,13 @@ router.post("/auth/change-password", changePwLimiter, async (req, res) => {
       res.status(400).json({ error: "Current password and new password are required" });
       return;
     }
-    // Validate new password complexity
-    if (newPassword.length < 8) {
-      res.status(400).json({ error: "New password must be at least 8 characters" });
-      return;
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      res.status(400).json({ error: "New password must contain at least one uppercase letter" });
-      return;
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      res.status(400).json({ error: "New password must contain at least one number" });
-      return;
-    }
+    if (newPassword.length < 8) { res.status(400).json({ error: "New password must be at least 8 characters" }); return; }
+    if (!/[A-Z]/.test(newPassword)) { res.status(400).json({ error: "New password must contain at least one uppercase letter" }); return; }
+    if (!/[0-9]/.test(newPassword)) { res.status(400).json({ error: "New password must contain at least one number" }); return; }
+
     const [user] = await db.select().from(users).where(eq(users.id, sess.userId)).limit(1);
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
     const valid = await bcrypt.compare(currentPassword, user.password);
     if (!valid) {
       await logAudit({ userId: user.id, action: "PASSWORD_CHANGE_FAILED", details: "Incorrect current password", ipAddress: ip });
@@ -145,7 +229,7 @@ router.post("/auth/change-password", changePwLimiter, async (req, res) => {
   }
 });
 
-// ── Forgot password rate limiter: 5 per 15 min per IP ───────────────────────
+// ── Forgot password ───────────────────────────────────────────────────────────
 const forgotPwLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -159,24 +243,16 @@ router.post("/auth/forgot-password", forgotPwLimiter, async (req, res) => {
   const ip = getClientIp(req as any);
   try {
     const { email } = req.body;
-    if (!email) {
-      res.status(400).json({ error: "Email is required" });
-      return;
-    }
+    if (!email) { res.status(400).json({ error: "Email is required" }); return; }
 
     const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim())).limit(1);
-
-    // Always respond with success to prevent email enumeration
     if (!user || user.isActive === false) {
       res.json({ message: "If that email is on file, a reset link has been sent." });
       return;
     }
 
-    // Generate a secure token
     const token = crypto.randomBytes(48).toString("hex");
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    // Invalidate old tokens for this user and insert new one
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
     await db.insert(passwordResetTokens).values({ userId: user.id, token, expiresAt });
 
@@ -185,32 +261,20 @@ router.post("/auth/forgot-password", forgotPwLimiter, async (req, res) => {
       sgMail.setApiKey(apiKey);
       const appUrl = process.env.APP_URL || "https://admitsimple.com/app";
       const resetLink = `${appUrl}/reset-password?token=${token}`;
-
       try {
         const [sgResponse] = await sgMail.send({
           to: user.email,
           from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
           subject: "Reset your AdmitSimple password",
           text: `Hi ${user.name},\n\nClick the link below to reset your password. This link expires in 1 hour.\n\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n— AdmitSimple`,
-          html: `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
-              <h2 style="color:#5BC8DC;">Reset your password</h2>
-              <p>Hi ${user.name},</p>
-              <p>Click the button below to reset your AdmitSimple password. This link expires in <strong>1 hour</strong>.</p>
-              <p style="margin:32px 0;">
-                <a href="${resetLink}" style="background:#5BC8DC;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Reset Password</a>
-              </p>
-              <p style="color:#888;font-size:13px;">If the button doesn't work, copy this link:<br/><a href="${resetLink}" style="color:#5BC8DC;">${resetLink}</a></p>
-              <p style="color:#888;font-size:13px;">If you didn't request a password reset, you can safely ignore this email.</p>
-            </div>
-          `,
+          html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;"><h2 style="color:#5BC8DC;">Reset your password</h2><p>Hi ${user.name},</p><p>Click the button below to reset your AdmitSimple password. This link expires in <strong>1 hour</strong>.</p><p style="margin:32px 0;"><a href="${resetLink}" style="background:#5BC8DC;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Reset Password</a></p><p style="color:#888;font-size:13px;">If you didn't request a password reset, you can safely ignore this email.</p></div>`,
         });
-        req.log.info({ statusCode: sgResponse.statusCode, to: user.email }, "Password reset email sent via SendGrid");
+        req.log.info({ statusCode: sgResponse.statusCode, to: user.email }, "Password reset email sent");
       } catch (sgErr: any) {
-        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message ?? sgErr }, "SendGrid failed to send password reset email");
+        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message }, "SendGrid failed");
       }
     } else {
-      req.log.warn("SENDGRID_API_KEY not set — password reset email not sent");
+      req.log.warn("SENDGRID_API_KEY not set");
     }
 
     await logAudit({ userId: user.id, action: "PASSWORD_RESET_REQUESTED", ipAddress: ip });
@@ -225,31 +289,14 @@ router.post("/auth/reset-password", async (req, res) => {
   const ip = getClientIp(req as any);
   try {
     const { token, newPassword } = req.body;
-    if (!token || !newPassword) {
-      res.status(400).json({ error: "Token and new password are required" });
-      return;
-    }
-    if (newPassword.length < 8) {
-      res.status(400).json({ error: "Password must be at least 8 characters" });
-      return;
-    }
+    if (!token || !newPassword) { res.status(400).json({ error: "Token and new password are required" }); return; }
+    if (newPassword.length < 8) { res.status(400).json({ error: "Password must be at least 8 characters" }); return; }
 
     const [resetToken] = await db
-      .select()
-      .from(passwordResetTokens)
-      .where(
-        and(
-          eq(passwordResetTokens.token, token),
-          gt(passwordResetTokens.expiresAt, new Date()),
-          isNull(passwordResetTokens.usedAt),
-        ),
-      )
+      .select().from(passwordResetTokens)
+      .where(and(eq(passwordResetTokens.token, token), gt(passwordResetTokens.expiresAt, new Date()), isNull(passwordResetTokens.usedAt)))
       .limit(1);
-
-    if (!resetToken) {
-      res.status(400).json({ error: "This reset link is invalid or has expired. Please request a new one." });
-      return;
-    }
+    if (!resetToken) { res.status(400).json({ error: "This reset link is invalid or has expired. Please request a new one." }); return; }
 
     const hashed = await bcrypt.hash(newPassword, 12);
     await db.update(users).set({ password: hashed }).where(eq(users.id, resetToken.userId));

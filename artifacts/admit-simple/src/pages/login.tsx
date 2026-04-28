@@ -94,6 +94,16 @@ export default function Login() {
             </Button>
 
             <p className="text-xs text-center text-muted-foreground pt-2">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/signup")}
+                className="text-primary hover:underline font-medium"
+              >
+                Sign up free
+              </button>
+            </p>
+            <p className="text-xs text-center text-muted-foreground">
               Authorized personnel only. All access is logged and monitored.
             </p>
           </form>

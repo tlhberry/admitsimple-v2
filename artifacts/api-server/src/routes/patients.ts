@@ -4,13 +4,10 @@ import { patients, users } from "@workspace/db/schema";
 import { eq, ilike, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { logAudit } from "../lib/logAudit";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
-
-const creditUser = db.$with("credit_user").as(
-  db.select({ id: users.id, name: users.name }).from(users)
-);
 
 const patientSelect = {
   id: patients.id,
@@ -41,20 +38,17 @@ const patientSelect = {
 
 router.get("/patients", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { levelOfCare, status, assignedClinician, search } = req.query;
-    const filters: any[] = [];
+    const filters: any[] = [eq(patients.companyId, companyId)];
     if (levelOfCare) filters.push(eq(patients.levelOfCare, levelOfCare as string));
     if (status) filters.push(eq(patients.status, status as string));
     if (assignedClinician) filters.push(eq(patients.assignedClinician, parseInt(assignedClinician as string)));
-    if (search) {
-      filters.push(
-        ilike(patients.firstName, `%${search}%`)
-      );
-    }
+    if (search) filters.push(ilike(patients.firstName, `%${search}%`));
     const rows = await db.select(patientSelect)
       .from(patients)
       .leftJoin(users, eq(patients.assignedClinician, users.id))
-      .where(filters.length > 0 ? and(...filters) : undefined);
+      .where(and(...filters));
     res.json(rows);
   } catch (err) {
     req.log.error(err);
@@ -64,8 +58,10 @@ router.get("/patients", async (req, res) => {
 
 router.post("/patients", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const data = req.body;
     const [patient] = await db.insert(patients).values({
+      companyId,
       inquiryId: data.inquiryId ? parseInt(data.inquiryId) : null,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -90,8 +86,9 @@ router.post("/patients", async (req, res) => {
 
 router.get("/patients/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    const rows = await db.select(patientSelect).from(patients).leftJoin(users, eq(patients.assignedClinician, users.id)).where(eq(patients.id, id));
+    const rows = await db.select(patientSelect).from(patients).leftJoin(users, eq(patients.assignedClinician, users.id)).where(and(eq(patients.id, id), eq(patients.companyId, companyId)));
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
     res.json(rows[0]);
   } catch (err) {
@@ -102,6 +99,7 @@ router.get("/patients/:id", async (req, res) => {
 
 router.put("/patients/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const data = req.body;
     const update: any = { updatedAt: new Date() };
@@ -111,7 +109,7 @@ router.put("/patients/:id", async (req, res) => {
     if (data.dischargeDate !== undefined) update.dischargeDate = data.dischargeDate ? new Date(data.dischargeDate) : null;
     if (data.assignedClinician !== undefined) update.assignedClinician = data.assignedClinician ? parseInt(data.assignedClinician) : null;
     if (data.assignedAdmissions !== undefined) update.assignedAdmissions = data.assignedAdmissions ? parseInt(data.assignedAdmissions) : null;
-    await db.update(patients).set(update).where(eq(patients.id, id));
+    await db.update(patients).set(update).where(and(eq(patients.id, id), eq(patients.companyId, companyId)));
     const rows = await db.select(patientSelect).from(patients).leftJoin(users, eq(patients.assignedClinician, users.id)).where(eq(patients.id, id));
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
     res.json(rows[0]);
@@ -121,26 +119,20 @@ router.put("/patients/:id", async (req, res) => {
   }
 });
 
-// Admin-only: override admission credit for a patient
 router.patch("/patients/:id/credit", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sess = req.session as any;
-    if (sess?.role !== "admin") {
-      res.status(403).json({ error: "Admin access required" });
-      return;
-    }
+    if (sess?.role !== "admin") { res.status(403).json({ error: "Admin access required" }); return; }
     const id = parseInt(req.params.id);
     const { creditUserId } = req.body;
-    if (!creditUserId) {
-      res.status(400).json({ error: "creditUserId is required" });
-      return;
-    }
+    if (!creditUserId) { res.status(400).json({ error: "creditUserId is required" }); return; }
     await db.update(patients).set({
       creditUserId: parseInt(creditUserId),
       creditOverrideBy: sess.userId,
       creditOverriddenAt: new Date(),
       updatedAt: new Date(),
-    }).where(eq(patients.id, id));
+    }).where(and(eq(patients.id, id), eq(patients.companyId, companyId)));
     await logAudit(req, "Overrode Admissions Credit", "patient", id);
     const rows = await db.select(patientSelect).from(patients).leftJoin(users, eq(patients.assignedClinician, users.id)).where(eq(patients.id, id));
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
@@ -153,8 +145,9 @@ router.patch("/patients/:id/credit", async (req, res) => {
 
 router.delete("/patients/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.delete(patients).where(eq(patients.id, id));
+    await db.delete(patients).where(and(eq(patients.id, id), eq(patients.companyId, companyId)));
     res.json({ message: "Deleted" });
   } catch (err) {
     req.log.error(err);

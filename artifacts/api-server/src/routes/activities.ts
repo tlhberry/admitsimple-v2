@@ -4,14 +4,16 @@ import { activities, users } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { logAudit } from "../lib/logAudit";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/activities", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { inquiryId, patientId } = req.query;
-    const filters: any[] = [];
+    const filters: any[] = [eq(activities.companyId, companyId)];
     if (inquiryId) filters.push(eq(activities.inquiryId, parseInt(inquiryId as string)));
     if (patientId) filters.push(eq(activities.patientId, parseInt(patientId as string)));
     const rows = await db.select({
@@ -30,7 +32,7 @@ router.get("/activities", async (req, res) => {
     })
     .from(activities)
     .leftJoin(users, eq(activities.userId, users.id))
-    .where(filters.length > 0 ? and(...filters) : undefined)
+    .where(and(...filters))
     .orderBy(desc(activities.createdAt));
     res.json(rows);
   } catch (err) {
@@ -41,9 +43,11 @@ router.get("/activities", async (req, res) => {
 
 router.post("/activities", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sess = req.session as any;
     const data = req.body;
     const [row] = await db.insert(activities).values({
+      companyId,
       inquiryId: data.inquiryId ? parseInt(data.inquiryId) : null,
       patientId: data.patientId ? parseInt(data.patientId) : null,
       userId: sess.userId,
@@ -78,6 +82,7 @@ router.post("/activities", async (req, res) => {
 
 router.put("/activities/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const data = req.body;
     const update: any = {};
@@ -87,7 +92,7 @@ router.put("/activities/:id", async (req, res) => {
     if (data.outcome !== undefined) update.outcome = data.outcome;
     if (data.scheduledAt !== undefined) update.scheduledAt = data.scheduledAt ? new Date(data.scheduledAt) : null;
     if (data.completedAt !== undefined) update.completedAt = data.completedAt ? new Date(data.completedAt) : null;
-    await db.update(activities).set(update).where(eq(activities.id, id));
+    await db.update(activities).set(update).where(and(eq(activities.id, id), eq(activities.companyId, companyId)));
     const rows = await db.select({
       id: activities.id,
       inquiryId: activities.inquiryId,
@@ -111,8 +116,9 @@ router.put("/activities/:id", async (req, res) => {
 
 router.delete("/activities/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.delete(activities).where(eq(activities.id, id));
+    await db.delete(activities).where(and(eq(activities.id, id), eq(activities.companyId, companyId)));
     res.json({ message: "Deleted" });
   } catch (err) {
     req.log.error(err);

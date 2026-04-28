@@ -102,6 +102,7 @@ export async function main() {
       const dischargeDate = isDischarge ? daysAgo(randomBetween(0, admitDaysAgo - 5)) : undefined;
 
       const [p] = await db.insert(patients).values({
+        companyId: 1,
         inquiryId: inq.id,
         firstName: inq.firstName,
         lastName: inq.lastName,
@@ -125,6 +126,7 @@ export async function main() {
       // Bed assignment for currently admitted
       if (!isDischarge && occupiedBeds[bedIdx]) {
         await db.insert(patientStays).values({
+          companyId: 1,
           inquiryId: inq.id,
           patientName: `${inq.firstName} ${inq.lastName}`,
           bedId: occupiedBeds[bedIdx].id,
@@ -137,6 +139,7 @@ export async function main() {
       // Discharge record
       if (isDischarge && p) {
         await db.insert(discharges).values({
+          companyId: 1,
           patientId: p.id,
           dischargeType: pick(["Completed Program","AMA (Against Medical Advice)","Clinical Step-Down","Successful Completion"]),
           levelOfCare: pick(["PHP (Partial Hospitalization)","IOP (Intensive Outpatient)","Outpatient","Home with support services"]),
@@ -166,6 +169,7 @@ export async function main() {
       for (let m = 0; m < numMessages; m++) {
         const isInbound = m % 2 === 0;
         smsData.push({
+          companyId: 1,
           phone: inq.phone!,
           direction: isInbound ? "inbound" : "outbound",
           body: isInbound ? pick(smsInbound) : pick(smsOutbound),
@@ -194,6 +198,7 @@ export async function main() {
     const suggestionData = suggestionInquiries.map(inq => {
       const [current, suggested] = pick(stagePairs);
       return {
+        companyId: 1,
         inquiryId: inq.id,
         currentStage: current,
         suggestedStage: suggested,

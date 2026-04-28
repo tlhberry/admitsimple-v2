@@ -22,10 +22,10 @@ export default function Header() {
         </nav>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button asChild variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent font-medium text-sm h-9 px-3 md:px-4">
-            <a href="/login">Log In</a>
+            <a href="/app/login">Log In</a>
           </Button>
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 text-sm h-9 px-3 md:px-4">
-            <a href="#demo">Demo</a>
+            <a href="/app/signup">Get Started Free</a>
           </Button>
         </div>
       </div>

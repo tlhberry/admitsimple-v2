@@ -35,6 +35,7 @@ export async function main() {
     const dischargeDate = isDischarge ? daysAgo(rnd(0, admitDaysAgo - 5)) : undefined;
 
     const [p] = await db.insert(patients).values({
+      companyId: 1,
       inquiryId: inq.id,
       firstName: inq.firstName,
       lastName: inq.lastName,
@@ -55,12 +56,13 @@ export async function main() {
     patientCount++;
 
     if (!isDischarge && occupiedBeds[bedIdx]) {
-      await db.insert(patientStays).values({ inquiryId: inq.id, patientName: `${inq.firstName} ${inq.lastName}`, bedId: occupiedBeds[bedIdx].id, admitDate, status: "active" } as any);
+      await db.insert(patientStays).values({ companyId: 1, inquiryId: inq.id, patientName: `${inq.firstName} ${inq.lastName}`, bedId: occupiedBeds[bedIdx].id, admitDate, status: "active" } as any);
       bedIdx++;
     }
 
     if (isDischarge && p) {
       await db.insert(discharges).values({
+        companyId: 1,
         patientId: p.id,
         dischargeType: pick(["Completed Program","AMA (Against Medical Advice)","Clinical Step-Down","Successful Completion"]),
         levelOfCare: pick(["PHP (Partial Hospitalization)","IOP (Intensive Outpatient)","Outpatient"]),
@@ -84,7 +86,7 @@ export async function main() {
     let d = rnd(1, 90);
     for (let m = 0; m < n; m++) {
       const isInbound = m % 2 === 0;
-      smsData.push({ phone: inq.phone!, direction: isInbound ? "inbound" : "outbound", body: isInbound ? pick(smsInbound) : pick(smsOutbound), status: "delivered", inquiryId: inq.id, userId: isInbound ? undefined : pick(admissionsUsers).id, readAt: daysAgo(Math.max(0, d - 1)), createdAt: daysAgo(d) });
+      smsData.push({ companyId: 1, phone: inq.phone!, direction: isInbound ? "inbound" : "outbound", body: isInbound ? pick(smsInbound) : pick(smsOutbound), status: "delivered", inquiryId: inq.id, userId: isInbound ? undefined : pick(admissionsUsers).id, readAt: daysAgo(Math.max(0, d - 1)), createdAt: daysAgo(d) });
       d = Math.max(0, d - rnd(0, 3));
     }
   }

@@ -7,12 +7,29 @@ import {
   boolean,
   timestamp,
   jsonb,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+// ─── Companies (tenants) ──────────────────────────────────────────────────────
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  plan: varchar("plan", { length: 50 }).notNull().default("trial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+
+// ─── Users ────────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   username: varchar("username", { length: 100 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -36,8 +53,10 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Inquiries ────────────────────────────────────────────────────────────────
 export const inquiries = pgTable("inquiries", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 30 }),
@@ -65,7 +84,6 @@ export const inquiries = pgTable("inquiries", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   searchKeywords: text("search_keywords"),
-  // Pre-assessment forms
   preCertFormData: jsonb("pre_cert_form_data"),
   preCertFormComplete: varchar("pre_cert_form_complete", { length: 10 }).default("no"),
   nursingAssessmentData: jsonb("nursing_assessment_data"),
@@ -82,35 +100,26 @@ export const inquiries = pgTable("inquiries", {
   referralOutAt: timestamp("referral_out_at"),
   referralOutType: varchar("referral_out_type", { length: 20 }),
   referralOutMessage: text("referral_out_message"),
-  // Scheduled to Admit
   appointmentDate: timestamp("appointment_date"),
   calendarEventId: varchar("calendar_event_id", { length: 255 }),
   reminderSentAt: jsonb("reminder_sent_at"),
-  // Did Not Admit tracking
   referralDestination: varchar("referral_destination", { length: 255 }),
-  // Unique inquiry number (INQ-000001)
   inquiryNumber: varchar("inquiry_number", { length: 20 }),
-  // ── Call Tracking Metrics (CTM) fields ────────────────────────────────────
-  // Raw CTM data stored as-is
   ctmCallId: varchar("ctm_call_id", { length: 100 }),
   ctmTrackingNumber: varchar("ctm_tracking_number", { length: 50 }),
   ctmSource: varchar("ctm_source", { length: 100 }),
   callDurationSeconds: integer("call_duration_seconds"),
   callRecordingUrl: text("call_recording_url"),
   callDateTime: timestamp("call_date_time"),
-  // Profile fields derived from CTM data
   referralDetails: varchar("referral_details", { length: 255 }),
   onlineSource: varchar("online_source", { length: 100 }),
   referralOrigin: varchar("referral_origin", { length: 50 }),
-  // AI / transcription fields (populated after call)
   transcription: text("transcription"),
   aiExtractedData: text("ai_extracted_data"),
   callSummary: text("call_summary"),
-  // ── Call ownership / locking ───────────────────────────────────────────────
-  callStatus: varchar("call_status", { length: 20 }),     // ringing | active | completed | missed
-  isLocked: boolean("is_locked").notNull().default(false), // true = owned by one rep
-  lockedAt: timestamp("locked_at"),                        // when ownership was claimed
-  // ── Live call intake fields ────────────────────────────────────────────────
+  callStatus: varchar("call_status", { length: 20 }),
+  isLocked: boolean("is_locked").notNull().default(false),
+  lockedAt: timestamp("locked_at"),
   presentingProblem: text("presenting_problem"),
   primarySubstance: varchar("primary_substance", { length: 100 }),
   callerIsNotPatient: boolean("caller_is_not_patient").notNull().default(false),
@@ -123,8 +132,10 @@ export const insertInquirySchema = createInsertSchema(inquiries).omit({ id: true
 export type InsertInquiry = z.infer<typeof insertInquirySchema>;
 export type Inquiry = typeof inquiries.$inferSelect;
 
+// ─── Patients ─────────────────────────────────────────────────────────────────
 export const patients = pgTable("patients", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   inquiryId: integer("inquiry_id").references(() => inquiries.id),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
@@ -153,8 +164,10 @@ export const insertPatientSchema = createInsertSchema(patients).omit({ id: true,
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
 export type Patient = typeof patients.$inferSelect;
 
+// ─── Pipeline Stages ──────────────────────────────────────────────────────────
 export const pipelineStages = pgTable("pipeline_stages", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 100 }).notNull(),
   order: integer("order").notNull(),
   color: varchar("color", { length: 50 }).default("#3B82F6"),
@@ -166,8 +179,10 @@ export const insertPipelineStageSchema = createInsertSchema(pipelineStages).omit
 export type InsertPipelineStage = z.infer<typeof insertPipelineStageSchema>;
 export type PipelineStage = typeof pipelineStages.$inferSelect;
 
+// ─── Activities ───────────────────────────────────────────────────────────────
 export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   inquiryId: integer("inquiry_id").references(() => inquiries.id),
   patientId: integer("patient_id").references(() => patients.id),
   userId: integer("user_id").references(() => users.id),
@@ -184,8 +199,10 @@ export const insertActivitySchema = createInsertSchema(activities).omit({ id: tr
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 
+// ─── Reports ──────────────────────────────────────────────────────────────────
 export const reports = pgTable("reports", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 255 }).notNull(),
   type: varchar("type", { length: 100 }).notNull(),
   generatedBy: integer("generated_by").references(() => users.id),
@@ -201,18 +218,25 @@ export const insertReportSchema = createInsertSchema(reports).omit({ id: true, c
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
 
+// ─── Settings ─────────────────────────────────────────────────────────────────
+// key is unique per company (not globally)
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).notNull().unique(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
+  key: varchar("key", { length: 100 }).notNull(),
   value: text("value"),
   category: varchar("category", { length: 50 }),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (t) => ({
+  uniqueKeyPerCompany: unique().on(t.companyId, t.key),
+}));
 
 export type Setting = typeof settings.$inferSelect;
 
+// ─── Referral Sources ─────────────────────────────────────────────────────────
 export const referralSources = pgTable("referral_sources", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   type: varchar("type", { length: 100 }),
   contact: varchar("contact", { length: 255 }),
@@ -227,8 +251,10 @@ export const referralSources = pgTable("referral_sources", {
 
 export type ReferralSource = typeof referralSources.$inferSelect;
 
+// ─── Insurance Verifications ──────────────────────────────────────────────────
 export const insuranceVerifications = pgTable("insurance_verifications", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   inquiryId: integer("inquiry_id").references(() => inquiries.id),
   patientId: integer("patient_id").references(() => patients.id),
   provider: varchar("provider", { length: 255 }),
@@ -247,7 +273,6 @@ export const insuranceVerifications = pgTable("insurance_verifications", {
 export type InsuranceVerification = typeof insuranceVerifications.$inferSelect;
 
 // ─── BD Module ───────────────────────────────────────────────────────────────
-
 export const accountTypes = [
   "hospital", "private_practice", "mat_clinic", "outpatient_facility",
   "residential_facility", "attorneys", "ed_consultant", "community", "other"
@@ -281,6 +306,7 @@ export const bdActivityTypeDisplayNames: Record<string, string> = {
 
 export const referralAccounts = pgTable("referral_accounts", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   type: varchar("type", { length: 50 }),
   address: text("address"),
@@ -299,6 +325,7 @@ export type InsertReferralAccount = z.infer<typeof insertReferralAccountSchema>;
 
 export const referralContacts = pgTable("referral_contacts", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   accountId: integer("account_id").notNull().references(() => referralAccounts.id),
   name: varchar("name", { length: 255 }).notNull(),
   position: varchar("position", { length: 255 }),
@@ -313,6 +340,7 @@ export type ReferralContact = typeof referralContacts.$inferSelect;
 
 export const bdActivityLogs = pgTable("bd_activity_logs", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   accountId: integer("account_id").references(() => referralAccounts.id),
   userId: integer("user_id").references(() => users.id),
   activityType: varchar("activity_type", { length: 50 }).notNull(),
@@ -327,6 +355,7 @@ export type BdActivityLog = typeof bdActivityLogs.$inferSelect;
 // ─── Bed Board ───────────────────────────────────────────────────────────────
 export const beds = pgTable("beds", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 100 }).notNull(),
   unit: varchar("unit", { length: 100 }).notNull().default("general"),
   status: varchar("status", { length: 20 }).notNull().default("available"),
@@ -343,15 +372,20 @@ export type Bed = typeof beds.$inferSelect;
 export type InsertBed = z.infer<typeof insertBedSchema>;
 
 // ─── Daily AI Task Board ──────────────────────────────────────────────────────
+// task_date is unique per company
 export const dailyAiTasks = pgTable("daily_ai_tasks", {
   id: serial("id").primaryKey(),
-  taskDate: varchar("task_date", { length: 10 }).notNull().unique(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
+  taskDate: varchar("task_date", { length: 10 }).notNull(),
   tasksData: jsonb("tasks_data").notNull(),
   generatedAt: timestamp("generated_at").defaultNow(),
-});
+}, (t) => ({
+  uniqueDatePerCompany: unique().on(t.companyId, t.taskDate),
+}));
 
 export const dailyTaskCompletions = pgTable("daily_task_completions", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   taskDate: varchar("task_date", { length: 10 }).notNull(),
   userId: integer("user_id").references(() => users.id),
   inquiryId: integer("inquiry_id").references(() => inquiries.id),
@@ -362,6 +396,7 @@ export const dailyTaskCompletions = pgTable("daily_task_completions", {
 // ─── Patient Stays ────────────────────────────────────────────────────────────
 export const patientStays = pgTable("patient_stays", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   inquiryId: integer("inquiry_id").references(() => inquiries.id),
   patientName: varchar("patient_name", { length: 255 }).notNull(),
   bedId: integer("bed_id").references(() => beds.id),
@@ -379,6 +414,7 @@ export type PatientStay = typeof patientStays.$inferSelect;
 // ─── Saved Reports ────────────────────────────────────────────────────────────
 export const savedReports = pgTable("saved_reports", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   userId: integer("user_id").references(() => users.id),
   sqlQuery: text("sql_query").notNull(),
@@ -391,8 +427,9 @@ export const savedReports = pgTable("saved_reports", {
 // ─── SMS Messages ─────────────────────────────────────────────────────────────
 export const smsMessages = pgTable("sms_messages", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   phone: varchar("phone", { length: 50 }).notNull(),
-  direction: varchar("direction", { length: 10 }).notNull(), // "inbound" | "outbound"
+  direction: varchar("direction", { length: 10 }).notNull(),
   body: text("body").notNull(),
   twilioSid: varchar("twilio_sid", { length: 100 }),
   status: varchar("status", { length: 20 }).default("sent"),
@@ -406,6 +443,7 @@ export type SmsMessage = typeof smsMessages.$inferSelect;
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   userId: integer("user_id").references(() => users.id),
   action: varchar("action", { length: 100 }).notNull(),
   resourceType: varchar("resource_type", { length: 50 }),
@@ -419,6 +457,7 @@ export const auditLogs = pgTable("audit_logs", {
 // ─── Discharges ───────────────────────────────────────────────────────────────
 export const discharges = pgTable("discharges", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   patientId: integer("patient_id").notNull().references(() => patients.id),
   dischargeType: varchar("discharge_type", { length: 100 }).notNull(),
   levelOfCare: varchar("level_of_care", { length: 100 }),
@@ -441,18 +480,20 @@ export type InsertDischarge = z.infer<typeof insertDischargeSchema>;
 // ─── AI Stage Suggestions ─────────────────────────────────────────────────────
 export const aiStageSuggestions = pgTable("ai_stage_suggestions", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   inquiryId: integer("inquiry_id").notNull().references(() => inquiries.id),
   currentStage: varchar("current_stage", { length: 100 }).notNull(),
   suggestedStage: varchar("suggested_stage", { length: 100 }).notNull(),
   reasoning: text("reasoning"),
-  confidence: varchar("confidence", { length: 20 }), // low, medium, high
-  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, accepted, dismissed
+  confidence: varchar("confidence", { length: 20 }),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
   resolvedBy: integer("resolved_by").references(() => users.id),
 });
 export type AiStageSuggestion = typeof aiStageSuggestions.$inferSelect;
 
+// ─── Chatbot Sessions (public — no company isolation needed) ──────────────────
 export const chatbotSessions = pgTable("chatbot_sessions", {
   sessionId: varchar("session_id", { length: 100 }).primaryKey(),
   messages: jsonb("messages").default([]),

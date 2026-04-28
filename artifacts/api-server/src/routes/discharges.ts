@@ -1,18 +1,18 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { discharges, patients, referralSources } from "@workspace/db/schema";
-import { eq, ilike, desc } from "drizzle-orm";
+import { eq, ilike, desc, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
-// GET /api/discharges
 router.get("/discharges", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { patientId, dischargeType, startDate, endDate } = req.query;
-    const rows = await db.select().from(discharges).orderBy(desc(discharges.createdAt));
-    let result = rows;
+    let result = await db.select().from(discharges).where(eq(discharges.companyId, companyId)).orderBy(desc(discharges.createdAt));
     if (patientId) result = result.filter(r => r.patientId === parseInt(patientId as string));
     if (dischargeType) result = result.filter(r => r.dischargeType === dischargeType);
     if (startDate) result = result.filter(r => r.createdAt && r.createdAt >= new Date(startDate as string));
@@ -24,12 +24,12 @@ router.get("/discharges", async (req, res) => {
   }
 });
 
-// GET /api/discharges/:patientId/history
 router.get("/discharges/patient/:patientId", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const patientId = parseInt(req.params.patientId);
     const rows = await db.select().from(discharges)
-      .where(eq(discharges.patientId, patientId))
+      .where(and(eq(discharges.patientId, patientId), eq(discharges.companyId, companyId)))
       .orderBy(desc(discharges.createdAt));
     res.json(rows);
   } catch (err) {
@@ -38,22 +38,14 @@ router.get("/discharges/patient/:patientId", async (req, res) => {
   }
 });
 
-// POST /api/discharges
 router.post("/discharges", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sess = req.session as any;
     const {
-      patientId,
-      dischargeType,
-      levelOfCare,
-      levelOfCareOther,
-      destinationType,
-      referralSourceId,
-      referralSourceName,
-      hospitalName,
-      clinicalTransfer,
-      notes,
-      followUp,
+      patientId, dischargeType, levelOfCare, levelOfCareOther,
+      destinationType, referralSourceId, referralSourceName,
+      hospitalName, clinicalTransfer, notes, followUp,
     } = req.body;
 
     if (!patientId || !dischargeType) {
@@ -61,8 +53,8 @@ router.post("/discharges", async (req, res) => {
       return;
     }
 
-    // 1. Create the discharge record
     const [discharge] = await db.insert(discharges).values({
+      companyId,
       patientId: parseInt(patientId),
       dischargeType,
       levelOfCare: levelOfCare || null,
@@ -77,16 +69,12 @@ router.post("/discharges", async (req, res) => {
       createdBy: sess?.userId ?? null,
     }).returning();
 
-    // 2. Update the patient: status = discharged, discharge_date = now, is_alumni = true
     await db.update(patients).set({
       status: "discharged",
       dischargeDate: new Date(),
       isAlumni: true,
       updatedAt: new Date(),
-    }).where(eq(patients.id, parseInt(patientId)));
-
-    // 3. If referralSourceId exists, optionally we can track outbound — referralSources doesn't have a count column,
-    //    but we store the referral_source_name and id on the discharge record for analytics queries.
+    }).where(and(eq(patients.id, parseInt(patientId)), eq(patients.companyId, companyId)));
 
     res.status(201).json(discharge);
   } catch (err) {
@@ -95,10 +83,11 @@ router.post("/discharges", async (req, res) => {
   }
 });
 
-// GET /api/referral-sources/search?q=  (typeahead for discharge modal)
 router.get("/referral-sources/search", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const q = (req.query.q as string) || "";
+    const baseWhere = eq(referralSources.companyId, companyId);
     let rows;
     if (q.trim()) {
       rows = await db.select({
@@ -109,7 +98,7 @@ router.get("/referral-sources/search", async (req, res) => {
         phone: referralSources.phone,
       })
         .from(referralSources)
-        .where(ilike(referralSources.name, `%${q}%`))
+        .where(and(baseWhere, ilike(referralSources.name, `%${q}%`)))
         .limit(10);
     } else {
       rows = await db.select({
@@ -120,6 +109,7 @@ router.get("/referral-sources/search", async (req, res) => {
         phone: referralSources.phone,
       })
         .from(referralSources)
+        .where(baseWhere)
         .limit(20);
     }
     res.json(rows);

@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { auditLogs } from "@workspace/db/schema";
 
 interface AuditParams {
+  companyId?: number | null;
   userId?: number | null;
   action: string;
   resourceType?: string;
@@ -14,6 +15,7 @@ interface AuditParams {
 export async function logAudit(params: AuditParams): Promise<void> {
   try {
     await db.insert(auditLogs).values({
+      companyId: params.companyId ?? null,
       userId: params.userId ?? null,
       action: params.action,
       resourceType: params.resourceType ?? null,

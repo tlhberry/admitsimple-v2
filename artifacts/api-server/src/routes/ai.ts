@@ -5,22 +5,20 @@ import { eq, count, gte, lte, and, sql, desc, ne, or, isNull, max } from "drizzl
 import { requireAuth } from "../lib/requireAuth";
 import { logAudit, getClientIp } from "../lib/audit";
 import { getAnthropicClient } from "../lib/anthropicClient";
+import { getCompanyId } from "../lib/getCompanyId";
 import multer from "multer";
 
 const router = Router();
 router.use(requireAuth);
 
-
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.post("/ai/parse-intake", upload.single("document"), async (req, res) => {
   try {
-    if (!req.file) {
-      res.status(400).json({ error: "No file uploaded" });
-      return;
-    }
+    if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
     const sess = req.session as any;
-    await logAudit({ userId: sess.userId, action: "PHI_SENT_TO_AI", resourceType: "parse-intake", details: "Patient intake document sent to AI for parsing", ipAddress: getClientIp(req as any) });
+    const companyId = getCompanyId(req);
+    await logAudit({ companyId, userId: sess.userId, action: "PHI_SENT_TO_AI", resourceType: "parse-intake", details: "Patient intake document sent to AI for parsing", ipAddress: getClientIp(req as any) });
     const base64Image = req.file.buffer.toString("base64");
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
@@ -31,17 +29,10 @@ router.post("/ai/parse-intake", upload.single("document"), async (req, res) => {
       messages: [{
         role: "user",
         content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mediaType,
-              data: base64Image,
-            },
-          },
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64Image } },
           {
             type: "text",
-            text: `You are a medical intake specialist for an addiction treatment center. 
+            text: `You are a medical intake specialist for an addiction treatment center.
 Extract all patient information from this document/screenshot and return it as JSON.
 Extract these fields if present:
 - firstName, lastName
@@ -65,18 +56,13 @@ Do not include any explanation, only the JSON object.`,
     });
 
     const textContent = response.content.find(c => c.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      res.status(500).json({ error: "Failed to parse document" });
-      return;
-    }
+    if (!textContent || textContent.type !== "text") { res.status(500).json({ error: "Failed to parse document" }); return; }
 
     let parsed: any = {};
     try {
       const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
       if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-    } catch {
-      parsed = {};
-    }
+    } catch { parsed = {}; }
 
     const fieldsExtracted = Object.values(parsed).filter(v => v !== null && v !== undefined && v !== "").length;
     res.json({ ...parsed, fieldsExtracted });
@@ -86,7 +72,6 @@ Do not include any explanation, only the JSON object.`,
   }
 });
 
-// ── Insurance card scan (front + back) ───────────────────────────────────────
 const uploadInsuranceCard = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.post("/ai/parse-insurance-card", uploadInsuranceCard.fields([
@@ -97,30 +82,20 @@ router.post("/ai/parse-insurance-card", uploadInsuranceCard.fields([
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const front = files?.front?.[0];
     const back = files?.back?.[0];
-
-    if (!front && !back) {
-      res.status(400).json({ error: "At least one insurance card image is required" });
-      return;
-    }
+    if (!front && !back) { res.status(400).json({ error: "At least one insurance card image is required" }); return; }
     const sess2 = req.session as any;
-    await logAudit({ userId: sess2.userId, action: "PHI_SENT_TO_AI", resourceType: "parse-insurance-card", details: "Insurance card image sent to AI for parsing", ipAddress: getClientIp(req as any) });
+    const companyId = getCompanyId(req);
+    await logAudit({ companyId, userId: sess2.userId, action: "PHI_SENT_TO_AI", resourceType: "parse-insurance-card", details: "Insurance card image sent to AI for parsing", ipAddress: getClientIp(req as any) });
 
     const imageContent: any[] = [];
     if (front) {
-      imageContent.push({
-        type: "image",
-        source: { type: "base64", media_type: front.mimetype as any, data: front.buffer.toString("base64") },
-      });
+      imageContent.push({ type: "image", source: { type: "base64", media_type: front.mimetype as any, data: front.buffer.toString("base64") } });
       imageContent.push({ type: "text", text: "Above is the FRONT of the insurance card." });
     }
     if (back) {
-      imageContent.push({
-        type: "image",
-        source: { type: "base64", media_type: back.mimetype as any, data: back.buffer.toString("base64") },
-      });
+      imageContent.push({ type: "image", source: { type: "base64", media_type: back.mimetype as any, data: back.buffer.toString("base64") } });
       imageContent.push({ type: "text", text: "Above is the BACK of the insurance card." });
     }
-
     imageContent.push({
       type: "text",
       text: `You are a medical billing specialist. Extract all insurance information from this card and return it as JSON.
@@ -142,18 +117,13 @@ Do not include any explanation, only the JSON object.`,
     });
 
     const textContent = response.content.find(c => c.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      res.status(500).json({ error: "Failed to parse insurance card" });
-      return;
-    }
+    if (!textContent || textContent.type !== "text") { res.status(500).json({ error: "Failed to parse insurance card" }); return; }
 
     let parsed: any = {};
     try {
       const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
       if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-    } catch {
-      parsed = {};
-    }
+    } catch { parsed = {}; }
 
     const fieldsExtracted = Object.values(parsed).filter(v => v !== null && v !== undefined && v !== "").length;
     res.json({ ...parsed, fieldsExtracted });
@@ -165,11 +135,12 @@ Do not include any explanation, only the JSON object.`,
 
 router.post("/ai/insights", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
-    const [totalInquiries] = await db.select({ count: count() }).from(inquiries).where(gte(inquiries.createdAt, thirtyDaysAgo));
-    const [admitted] = await db.select({ count: count() }).from(inquiries).where(and(gte(inquiries.createdAt, thirtyDaysAgo), eq(inquiries.status, "admitted")));
-    const [census] = await db.select({ count: count() }).from(patients).where(eq(patients.status, "active"));
-    const statusCounts = await db.select({ status: inquiries.status, count: count() }).from(inquiries).where(gte(inquiries.createdAt, thirtyDaysAgo)).groupBy(inquiries.status);
+    const [totalInquiries] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), gte(inquiries.createdAt, thirtyDaysAgo)));
+    const [admitted] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), gte(inquiries.createdAt, thirtyDaysAgo), eq(inquiries.status, "admitted")));
+    const [census] = await db.select({ count: count() }).from(patients).where(and(eq(patients.companyId, companyId), eq(patients.status, "active")));
+    const statusCounts = await db.select({ status: inquiries.status, count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), gte(inquiries.createdAt, thirtyDaysAgo))).groupBy(inquiries.status);
 
     const aggregatedData = {
       period: "last_30_days",
@@ -184,9 +155,7 @@ router.post("/ai/insights", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `You are an admissions analytics expert for an addiction treatment center.
+      messages: [{ role: "user", content: `You are an admissions analytics expert for an addiction treatment center.
 Analyze this admissions data and provide actionable insights.
 
 Data: ${JSON.stringify(aggregatedData)}
@@ -198,8 +167,7 @@ Provide:
 4. 3-5 specific, actionable recommendations to improve admissions outcomes
 5. Any red flags or areas of concern
 
-Format your response with clear sections and bullet points. Be specific and data-driven.`,
-      }],
+Format your response with clear sections and bullet points. Be specific and data-driven.` }],
     });
 
     const text = response.content.find(c => c.type === "text");
@@ -212,16 +180,16 @@ Format your response with clear sections and bullet points. Be specific and data
 
 router.post("/ai/referral-insights", async (req, res) => {
   try {
-    const sources = await db.select().from(referralSources);
+    const companyId = getCompanyId(req);
+    const sources = await db.select().from(referralSources).where(eq(referralSources.companyId, companyId));
     const metrics = await Promise.all(sources.map(async s => {
-      const [total] = await db.select({ count: count() }).from(inquiries).where(eq(inquiries.referralSource, s.name));
-      const [admitted] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.referralSource, s.name), eq(inquiries.status, "admitted")));
+      const [total] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), eq(inquiries.referralSource, s.name)));
+      const [admittedRow] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), eq(inquiries.referralSource, s.name), eq(inquiries.status, "admitted")));
       return {
-        name: s.name,
-        type: s.type,
+        name: s.name, type: s.type,
         totalInquiries: Number(total.count),
-        admitted: Number(admitted.count),
-        conversionRate: Number(total.count) > 0 ? Math.round((Number(admitted.count) / Number(total.count)) * 100) : 0,
+        admitted: Number(admittedRow.count),
+        conversionRate: Number(total.count) > 0 ? Math.round((Number(admittedRow.count) / Number(total.count)) * 100) : 0,
       };
     }));
 
@@ -229,9 +197,7 @@ router.post("/ai/referral-insights", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `You are a referral relationship strategist for an addiction treatment center.
+      messages: [{ role: "user", content: `You are a referral relationship strategist for an addiction treatment center.
 Analyze these referral source metrics and provide strategic recommendations.
 
 Referral data: ${JSON.stringify(metrics)}
@@ -243,8 +209,7 @@ Provide:
 4. Specific outreach recommendations
 5. Which sources to prioritize for next quarter
 
-Format with clear headings and bullet points.`,
-      }],
+Format with clear headings and bullet points.` }],
     });
 
     const text = response.content.find(c => c.type === "text");
@@ -257,8 +222,8 @@ Format with clear headings and bullet points.`,
 
 router.post("/ai/pipeline-optimize", async (req, res) => {
   try {
-    const stages = await db.select().from(pipelineStages).orderBy(pipelineStages.order);
-    const now = new Date();
+    const companyId = getCompanyId(req);
+    const stages = await db.select().from(pipelineStages).where(eq(pipelineStages.companyId, companyId)).orderBy(pipelineStages.order);
     const pipelineData = {
       stages: stages.map(s => ({ id: s.id, name: s.name, order: s.order })),
       inquiriesByStatus: [] as any[],
@@ -266,7 +231,7 @@ router.post("/ai/pipeline-optimize", async (req, res) => {
 
     const statusGroups = ["new", "contacted", "qualified", "admitted", "declined", "lost"];
     for (const status of statusGroups) {
-      const [c] = await db.select({ count: count() }).from(inquiries).where(eq(inquiries.status, status));
+      const [c] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), eq(inquiries.status, status)));
       pipelineData.inquiriesByStatus.push({ status, count: Number(c.count) });
     }
 
@@ -274,9 +239,7 @@ router.post("/ai/pipeline-optimize", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `You are an admissions pipeline optimizer for an addiction treatment center.
+      messages: [{ role: "user", content: `You are an admissions pipeline optimizer for an addiction treatment center.
 Review this pipeline data and provide specific action recommendations.
 
 Pipeline data: ${JSON.stringify(pipelineData)}
@@ -293,8 +256,7 @@ Return your response as JSON with this structure:
   "processImprovements": ["...", "..."],
   "overallHealthScore": 85,
   "summary": "..."
-}`,
-      }],
+}` }],
     });
 
     const textContent = response.content.find(c => c.type === "text");
@@ -303,9 +265,7 @@ Return your response as JSON with this structure:
       try {
         const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) parsed = { ...parsed, ...JSON.parse(jsonMatch[0]) };
-      } catch {
-        parsed.summary = textContent.text;
-      }
+      } catch { parsed.summary = textContent.text; }
     }
 
     res.json({ ...parsed, generatedAt: new Date() });
@@ -317,14 +277,15 @@ Return your response as JSON with this structure:
 
 router.post("/ai/reports", async (req, res) => {
   try {
-    const { reportType, dateRangeStart, dateRangeEnd, levelOfCare } = req.body;
+    const companyId = getCompanyId(req);
+    const { reportType, dateRangeStart, dateRangeEnd } = req.body;
     const now = new Date();
     const start = dateRangeStart ? new Date(dateRangeStart) : new Date(now.getTime() - 30 * 86400000);
     const end = dateRangeEnd ? new Date(dateRangeEnd) : now;
 
-    const [total] = await db.select({ count: count() }).from(inquiries).where(and(gte(inquiries.createdAt, start), lte(inquiries.createdAt, end)));
-    const [admitted] = await db.select({ count: count() }).from(inquiries).where(and(gte(inquiries.createdAt, start), lte(inquiries.createdAt, end), eq(inquiries.status, "admitted")));
-    const statusCounts = await db.select({ status: inquiries.status, count: count() }).from(inquiries).where(and(gte(inquiries.createdAt, start), lte(inquiries.createdAt, end))).groupBy(inquiries.status);
+    const [total] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), gte(inquiries.createdAt, start), lte(inquiries.createdAt, end)));
+    const [admitted] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), gte(inquiries.createdAt, start), lte(inquiries.createdAt, end), eq(inquiries.status, "admitted")));
+    const statusCounts = await db.select({ status: inquiries.status, count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), gte(inquiries.createdAt, start), lte(inquiries.createdAt, end))).groupBy(inquiries.status);
 
     const data = {
       reportType,
@@ -339,9 +300,7 @@ router.post("/ai/reports", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `You are a healthcare admissions analyst for an addiction treatment center.
+      messages: [{ role: "user", content: `You are a healthcare admissions analyst for an addiction treatment center.
 Generate a professional ${reportType} report for the period ${dateRangeStart} to ${dateRangeEnd}.
 
 Aggregated data: ${JSON.stringify(data)}
@@ -355,16 +314,11 @@ Write a professional report with:
 6. Conclusion
 
 Use professional healthcare/clinical language. Be specific and cite the numbers from the data.
-Format with clear headings using markdown.`,
-      }],
+Format with clear headings using markdown.` }],
     });
 
     const textContent = response.content.find(c => c.type === "text");
-    res.json({
-      narrative: textContent?.type === "text" ? textContent.text : "Report generation failed.",
-      reportData: data,
-      generatedAt: new Date(),
-    });
+    res.json({ narrative: textContent?.type === "text" ? textContent.text : "Report generation failed.", reportData: data, generatedAt: new Date() });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "AI processing failed" });
@@ -373,30 +327,25 @@ Format with clear headings using markdown.`,
 
 router.post("/ai/summarize-inquiry", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { inquiryId } = req.body;
-    const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, parseInt(inquiryId)));
+    const [inq] = await db.select().from(inquiries).where(and(eq(inquiries.id, parseInt(inquiryId)), eq(inquiries.companyId, companyId)));
     if (!inq) { res.status(404).json({ error: "Inquiry not found" }); return; }
     const sess3 = req.session as any;
-    await logAudit({ userId: sess3.userId, action: "PHI_SENT_TO_AI", resourceType: "summarize-inquiry", resourceId: inq.id, inquiryId: inq.id, details: "Clinical inquiry data sent to AI for summary", ipAddress: getClientIp(req as any) });
+    await logAudit({ companyId, userId: sess3.userId, action: "PHI_SENT_TO_AI", resourceType: "summarize-inquiry", resourceId: inq.id, inquiryId: inq.id, details: "Clinical inquiry data sent to AI for summary", ipAddress: getClientIp(req as any) });
+
     const clinicalData = {
-      levelOfCare: inq.levelOfCare,
-      primaryDiagnosis: inq.primaryDiagnosis,
-      substanceHistory: inq.substanceHistory,
-      medicalHistory: inq.medicalHistory,
-      mentalHealthHistory: inq.mentalHealthHistory,
-      insuranceProvider: inq.insuranceProvider,
-      status: inq.status,
-      priority: inq.priority,
-      referralSource: inq.referralSource,
+      levelOfCare: inq.levelOfCare, primaryDiagnosis: inq.primaryDiagnosis,
+      substanceHistory: inq.substanceHistory, medicalHistory: inq.medicalHistory,
+      mentalHealthHistory: inq.mentalHealthHistory, insuranceProvider: inq.insuranceProvider,
+      status: inq.status, priority: inq.priority, referralSource: inq.referralSource,
     };
 
     const anthropic = await getAnthropicClient();
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `Summarize this addiction treatment inquiry for clinical review.
+      messages: [{ role: "user", content: `Summarize this addiction treatment inquiry for clinical review.
 Create a brief clinical summary suitable for treatment team review.
 
 Inquiry data: ${JSON.stringify(clinicalData)}
@@ -407,8 +356,7 @@ Write 2-3 paragraphs covering:
 - Recommended level of care and rationale
 - Next steps for the admissions team
 
-Use clinical language appropriate for a treatment team.`,
-      }],
+Use clinical language appropriate for a treatment team.` }],
     });
 
     const textContent = response.content.find(c => c.type === "text");
@@ -421,10 +369,11 @@ Use clinical language appropriate for a treatment team.`,
 
 router.post("/ai/custom-query", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { question } = req.body;
-    const [totalInquiries] = await db.select({ count: count() }).from(inquiries);
-    const [activePatients] = await db.select({ count: count() }).from(patients).where(eq(patients.status, "active"));
-    const [admitted] = await db.select({ count: count() }).from(inquiries).where(eq(inquiries.status, "admitted"));
+    const [totalInquiries] = await db.select({ count: count() }).from(inquiries).where(eq(inquiries.companyId, companyId));
+    const [activePatients] = await db.select({ count: count() }).from(patients).where(and(eq(patients.companyId, companyId), eq(patients.status, "active")));
+    const [admitted] = await db.select({ count: count() }).from(inquiries).where(and(eq(inquiries.companyId, companyId), eq(inquiries.status, "admitted")));
 
     const facilityStats = {
       totalInquiries: Number(totalInquiries.count),
@@ -437,17 +386,14 @@ router.post("/ai/custom-query", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `You are an AI assistant for an addiction treatment center admissions team.
+      messages: [{ role: "user", content: `You are an AI assistant for an addiction treatment center admissions team.
 You have access to the following aggregate facility data:
 ${JSON.stringify(facilityStats)}
 
 The user asks: "${question}"
 
 Answer their question using the data where relevant. If you cannot answer from the data provided,
-say so and explain what additional data would help. Always be helpful and actionable.`,
-      }],
+say so and explain what additional data would help. Always be helpful and actionable.` }],
     });
 
     const textContent = response.content.find(c => c.type === "text");
@@ -458,19 +404,15 @@ say so and explain what additional data would help. Always be helpful and action
   }
 });
 
-// ─── VOB AI Parse ─────────────────────────────────────────────────────────────
-
 router.post("/ai/vob-parse", upload.single("image"), async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const text = req.body?.text as string | undefined;
     const imageFile = req.file;
-
-    if (!text && !imageFile) {
-      res.status(400).json({ error: "Provide text or image" });
-      return;
-    }
+    if (!text && !imageFile) { res.status(400).json({ error: "Provide text or image" }); return; }
     const sess4 = req.session as any;
-    await logAudit({ userId: sess4.userId, action: "PHI_SENT_TO_AI", resourceType: "vob-parse", details: imageFile ? "VOB document image sent to AI for parsing" : "VOB text sent to AI for parsing", ipAddress: getClientIp(req as any) });
+    await logAudit({ companyId, userId: sess4.userId, action: "PHI_SENT_TO_AI", resourceType: "vob-parse", details: imageFile ? "VOB document image sent to AI for parsing" : "VOB text sent to AI for parsing", ipAddress: getClientIp(req as any) });
+
     const systemPrompt = `You are an insurance verification specialist for an addiction treatment center.
 Extract structured VOB (Verification of Benefits) data from the provided document.
 
@@ -504,18 +446,9 @@ Return ONLY valid JSON with this exact structure (use empty string "" for unknow
 Return ONLY the JSON object. No markdown, no explanation.`;
 
     const messageContent: any[] = [];
-
     if (imageFile) {
-      messageContent.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: imageFile.mimetype,
-          data: imageFile.buffer.toString("base64"),
-        },
-      });
+      messageContent.push({ type: "image", source: { type: "base64", media_type: imageFile.mimetype, data: imageFile.buffer.toString("base64") } });
     }
-
     if (text) {
       messageContent.push({ type: "text", text: `VOB Document:\n\n${text}` });
     } else {
@@ -532,11 +465,8 @@ Return ONLY the JSON object. No markdown, no explanation.`;
 
     const raw = (aiResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
     const clean = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
-
     let parsed: any;
-    try { parsed = JSON.parse(clean); }
-    catch { parsed = {}; }
-
+    try { parsed = JSON.parse(clean); } catch { parsed = {}; }
     res.json(parsed);
   } catch (err) {
     req.log.error(err);
@@ -544,34 +474,24 @@ Return ONLY the JSON object. No markdown, no explanation.`;
   }
 });
 
-// ─── Bed Board AI ────────────────────────────────────────────────────────────
-
 router.post("/ai/bedboard", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { prompt } = req.body;
-    if (!prompt || typeof prompt !== "string") {
-      res.status(400).json({ error: "prompt is required" });
-      return;
-    }
+    if (!prompt || typeof prompt !== "string") { res.status(400).json({ error: "prompt is required" }); return; }
 
-    const allBeds = await db.select().from(beds).orderBy(beds.unit, beds.name);
+    const allBeds = await db.select().from(beds).where(eq(beds.companyId, companyId)).orderBy(beds.unit, beds.name);
 
     const total = allBeds.length;
     const available = allBeds.filter(b => b.status === "available").length;
     const occupied = allBeds.filter(b => b.status === "occupied").length;
     const reserved = allBeds.filter(b => b.status === "reserved").length;
     const units = [...new Set(allBeds.map(b => b.unit))];
-    const upcomingDischarges = allBeds
-      .filter(b => b.expectedDischargeDate && b.status === "occupied")
-      .map(b => ({ name: b.name, unit: b.unit, patient: b.currentPatientName, date: b.expectedDischargeDate }));
+    const upcomingDischarges = allBeds.filter(b => b.expectedDischargeDate && b.status === "occupied").map(b => ({ name: b.name, unit: b.unit, patient: b.currentPatientName, date: b.expectedDischargeDate }));
 
     const context = JSON.stringify({
       summary: { total, available, occupied, reserved, units },
-      beds: allBeds.map(b => ({
-        id: b.id, name: b.name, unit: b.unit, status: b.status,
-        patient: b.currentPatientName, gender: b.gender,
-        expectedDischarge: b.expectedDischargeDate,
-      })),
+      beds: allBeds.map(b => ({ id: b.id, name: b.name, unit: b.unit, status: b.status, patient: b.currentPatientName, gender: b.gender, expectedDischarge: b.expectedDischargeDate })),
       upcomingDischarges,
     });
 
@@ -610,16 +530,9 @@ Return ONLY valid JSON. No markdown. No explanation.`;
     });
 
     const raw = (aiResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
-    // Strip markdown fences if present
     const clean = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
-
     let parsed: any;
-    try {
-      parsed = JSON.parse(clean);
-    } catch {
-      parsed = { type: "answer", answer: raw };
-    }
-
+    try { parsed = JSON.parse(clean); } catch { parsed = { type: "answer", answer: raw }; }
     res.json({ ...parsed, beds: allBeds });
   } catch (err) {
     req.log.error(err);
@@ -627,59 +540,56 @@ Return ONLY valid JSON. No markdown. No explanation.`;
   }
 });
 
-// ─── Natural language report builder ─────────────────────────────────────────
-
 const ALLOWED_TABLES = [
   "users", "inquiries", "patients", "activities",
   "referral_sources", "referral_accounts", "bd_activity_logs",
   "referral_contacts", "audit_logs", "pipeline_stages",
 ];
 
-const REPORT_SCHEMA_PROMPT = `You are a data analyst for an addiction treatment admissions CRM.
+router.post("/ai/report", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req);
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== "string") { res.status(400).json({ error: "prompt is required" }); return; }
+
+    const REPORT_SCHEMA_PROMPT = `You are a data analyst for an addiction treatment admissions CRM.
 Your job is to convert natural language into SQL queries for a PostgreSQL database.
 
 STRICT RULES:
 - ONLY return a SQL SELECT query — nothing else
 - NEVER use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, or any write operation
 - LIMIT results to 500 rows max (always add LIMIT 500 if not specified)
+- ALWAYS include WHERE company_id = ${companyId} (or the relevant alias.company_id = ${companyId}) in every query to isolate data to this company
 - Return ONLY the raw SQL query — no markdown, no explanation, no code fences
 
 TABLES AND COLUMNS (all column names are snake_case):
 
-users: id, name, email, role, created_at
+users: id, company_id, name, email, role, created_at
   role values: 'admin', 'staff', 'clinical', 'bd_rep'
 
-inquiries: id, first_name, last_name, phone, email, status, level_of_care,
+inquiries: id, company_id, first_name, last_name, phone, email, status, level_of_care,
   referral_source, assigned_to (FK → users.id), created_at, search_keywords
   status values: 'new', 'Initial Contact', 'Insurance Verification', 'Clinical Review', 'Admitted', 'Declined', 'Waitlist'
   level_of_care values: 'Detox', 'RTC', 'PHP', 'IOP', 'OP'
 
-patients: id, inquiry_id (FK → inquiries.id), first_name, last_name,
+patients: id, company_id, inquiry_id (FK → inquiries.id), first_name, last_name,
   level_of_care, admit_date, discharge_date, current_stage, status,
   credit_user_id (FK → users.id), assigned_admissions (FK → users.id),
   assigned_clinician (FK → users.id), created_at
 
-activities: id, inquiry_id (FK → inquiries.id), user_id (FK → users.id),
+activities: id, company_id, inquiry_id (FK → inquiries.id), user_id (FK → users.id),
   type, subject, body, created_at
   type values: 'call', 'email', 'note', 'meeting', 'face_to_face', 'other'
 
-bd_activity_logs: id, account_id (FK → referral_accounts.id),
+bd_activity_logs: id, company_id, account_id (FK → referral_accounts.id),
   user_id (FK → users.id), activity_type, notes, activity_date, created_at
   activity_type values: 'face_to_face', 'phone_call', 'email', 'meeting', 'lunch', 'presentation', 'other'
 
-referral_sources: id, name, type, contact, phone, email, is_active,
+referral_sources: id, company_id, name, type, contact, phone, email, is_active,
   owned_by_user_id (FK → users.id), created_at
 
-referral_accounts: id, name, type, address, phone, assigned_bd_rep_id (FK → users.id),
+referral_accounts: id, company_id, name, type, address, phone, assigned_bd_rep_id (FK → users.id),
   created_by (FK → users.id), created_at
-
-COMMON QUERY PATTERNS:
-- "admits by rep this month" → SELECT u.name, COUNT(p.id) as admits FROM patients p JOIN users u ON p.credit_user_id = u.id WHERE p.admit_date >= date_trunc('month', NOW()) GROUP BY u.name ORDER BY admits DESC LIMIT 500
-- "inquiries this week" → WHERE created_at >= date_trunc('week', NOW())
-- "last 30 days" → WHERE created_at >= NOW() - INTERVAL '30 days'
-- "face to face meetings" → FROM bd_activity_logs WHERE activity_type = 'face_to_face'
-- "top referral sources" → SELECT referral_source, COUNT(*) FROM inquiries GROUP BY referral_source ORDER BY count DESC
-- "by rep" → JOIN users on the relevant user FK, GROUP BY users.name
 
 NAVIGATION RULE (very important):
 - When the query returns individual patient or inquiry rows (not aggregates/counts), ALWAYS include the relevant inquiry ID so users can navigate to it.
@@ -690,15 +600,6 @@ NAVIGATION RULE (very important):
 
 Return ONLY the SQL query. No explanation. No markdown. No code fences.`;
 
-router.post("/ai/report", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    if (!prompt || typeof prompt !== "string") {
-      res.status(400).json({ error: "prompt is required" });
-      return;
-    }
-
-    // Step 1: Generate SQL from natural language
     const anthropic = await getAnthropicClient();
     const sqlResponse = await anthropic.messages.create({
       model: "claude-opus-4-5",
@@ -708,43 +609,32 @@ router.post("/ai/report", async (req, res) => {
     });
 
     const rawSql = (sqlResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "";
+    const cleanSql = rawSql.replace(/^```sql\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
 
-    // Strip markdown code fences if Claude added them
-    const cleanSql = rawSql
-      .replace(/^```sql\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```\s*$/, "")
-      .trim();
-
-    // Step 2: Validate — reject any write operations using whole-word matching
     const upperSql = cleanSql.toUpperCase();
     const forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE", "CREATE", "GRANT", "REVOKE"];
     for (const kw of forbidden) {
-      // Use word-boundary regex so "created_at" does not match "CREATE"
       if (new RegExp(`\\b${kw}\\b`).test(upperSql)) {
-        res.status(400).json({ error: `Query rejected: contains forbidden keyword '${kw}'` });
-        return;
+        res.status(400).json({ error: `Query rejected: contains forbidden keyword '${kw}'` }); return;
       }
     }
-
-    // Validate it starts with SELECT
     if (!upperSql.trimStart().startsWith("SELECT")) {
-      res.status(400).json({ error: "Only SELECT queries are allowed" });
-      return;
+      res.status(400).json({ error: "Only SELECT queries are allowed" }); return;
     }
 
-    // Step 3: Execute the query
+    // Safety: ensure company_id is referenced
+    if (!cleanSql.includes(`${companyId}`)) {
+      res.status(400).json({ error: "Query must include company_id filter" }); return;
+    }
+
     const result = await pool.query(cleanSql);
     const columns: string[] = result.fields.map((f: any) => f.name);
     const rows: any[][] = result.rows.map((row: any) => columns.map(col => row[col]));
 
-    // Step 4: Generate a human summary + chart suggestion
     const summaryResponse = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 300,
-      messages: [{
-        role: "user",
-        content: `You are a data analyst. Given this query result, return ONLY valid JSON (no markdown) with two fields:
+      messages: [{ role: "user", content: `You are a data analyst. Given this query result, return ONLY valid JSON (no markdown) with two fields:
 1. "summary": one short sentence describing the results for a business user. Be specific about the numbers.
 2. "chartSuggestion": null if the data is not chart-able, otherwise an object: { "type": "bar" or "line", "xKey": "<column name for x-axis>", "yKey": "<column name for y-axis>" }
    - Use "bar" for categorical comparisons (e.g. counts by name/source/rep)
@@ -752,8 +642,7 @@ router.post("/ai/report", async (req, res) => {
    - Only suggest a chart when there are exactly 2 meaningful columns (one category/date, one number)
    - For individual patient/inquiry rows (has inquiry_id column), always return null for chartSuggestion
 
-Query result: ${JSON.stringify({ columns, rowCount: rows.length, sample: rows.slice(0, 10) })}`,
-      }],
+Query result: ${JSON.stringify({ columns, rowCount: rows.length, sample: rows.slice(0, 10) })}` }],
     });
 
     const rawSummaryText = (summaryResponse.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
@@ -764,81 +653,56 @@ Query result: ${JSON.stringify({ columns, rowCount: rows.length, sample: rows.sl
       const parsed = JSON.parse(cleaned);
       summary = parsed.summary ?? "";
       chartSuggestion = parsed.chartSuggestion ?? null;
-    } catch {
-      summary = rawSummaryText;
-    }
+    } catch { summary = rawSummaryText; }
 
     res.json({ columns, rows, summary, rowCount: rows.length, sql: cleanSql, chartSuggestion });
   } catch (err: any) {
     req.log.error(err);
-    const msg = err?.message ?? "AI report generation failed";
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: err?.message ?? "AI report generation failed" });
   }
 });
 
-// ─── Daily Admissions Task Board ─────────────────────────────────────────────
-
 function todayStr() {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  return new Date().toISOString().slice(0, 10);
 }
 
 router.get("/ai/tasks", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const today = todayStr();
     const userId = (req.session as any).userId as number;
 
-    // 1. Check cache
-    const cached = await db.select().from(dailyAiTasks).where(eq(dailyAiTasks.taskDate, today));
+    const cached = await db.select().from(dailyAiTasks).where(and(eq(dailyAiTasks.companyId, companyId), eq(dailyAiTasks.taskDate, today)));
     let tasksData: any;
 
     if (cached.length > 0) {
       tasksData = cached[0].tasksData;
     } else {
-      // 2. Build inquiry context for AI
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-      const activeInquiries = await db
-        .select({
-          id: inquiries.id,
-          firstName: inquiries.firstName,
-          lastName: inquiries.lastName,
-          status: inquiries.status,
-          insuranceProvider: inquiries.insuranceProvider,
-          insuranceMemberId: inquiries.insuranceMemberId,
-          vobData: inquiries.vobData,
-          preCertFormComplete: inquiries.preCertFormComplete,
-          preScreeningData: inquiries.preScreeningData,
-          createdAt: inquiries.createdAt,
-          updatedAt: inquiries.updatedAt,
-        })
-        .from(inquiries)
-        .where(
-          and(
-            ne(inquiries.status, "Admitted"),
-            ne(inquiries.status, "Non-Viable"),
-            ne(inquiries.status, "Did Not Admit"),
-            ne(inquiries.status, "Referred Out"),
-          )
-        )
+      const activeInquiries = await db.select({
+        id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName,
+        status: inquiries.status, insuranceProvider: inquiries.insuranceProvider,
+        insuranceMemberId: inquiries.insuranceMemberId, vobData: inquiries.vobData,
+        preCertFormComplete: inquiries.preCertFormComplete, preScreeningData: inquiries.preScreeningData,
+        createdAt: inquiries.createdAt, updatedAt: inquiries.updatedAt,
+      }).from(inquiries)
+        .where(and(
+          eq(inquiries.companyId, companyId),
+          ne(inquiries.status, "Admitted"),
+          ne(inquiries.status, "Non-Viable"),
+          ne(inquiries.status, "Did Not Admit"),
+          ne(inquiries.status, "Referred Out"),
+        ))
         .orderBy(desc(inquiries.updatedAt))
         .limit(100);
 
-      // Get last activity per inquiry
-      const activityRows = await db
-        .select({
-          inquiryId: activities.inquiryId,
-          lastActivity: max(activities.createdAt),
-        })
-        .from(activities)
-        .groupBy(activities.inquiryId);
-
+      const activityRows = await db.select({ inquiryId: activities.inquiryId, lastActivity: max(activities.createdAt) }).from(activities).where(eq(activities.companyId, companyId)).groupBy(activities.inquiryId);
       const activityMap = new Map(activityRows.map(r => [r.inquiryId, r.lastActivity]));
 
       const enriched = activeInquiries.map(inq => ({
-        id: inq.id,
-        name: `${inq.firstName} ${inq.lastName}`,
-        status: inq.status,
+        id: inq.id, name: `${inq.firstName} ${inq.lastName}`, status: inq.status,
         hasInsurance: !!(inq.insuranceProvider || inq.insuranceMemberId),
         vobComplete: !!(inq.vobData && Object.keys(inq.vobData as any).length > 0),
         preCertComplete: inq.preCertFormComplete === "yes",
@@ -847,8 +711,7 @@ router.get("/ai/tasks", async (req, res) => {
         createdAt: inq.createdAt,
       }));
 
-      // 3. Call Claude
-      const prompt = `You are an admissions coordinator assistant for an addiction treatment center.
+      const taskPrompt = `You are an admissions coordinator assistant for an addiction treatment center.
 
 Analyze these active inquiries and categorize them into tasks for today.
 
@@ -876,30 +739,23 @@ Return ONLY valid JSON with no other text:
       const aiResp = await anthropic.messages.create({
         model: "claude-haiku-4-5",
         max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: taskPrompt }],
       });
 
       const raw = (aiResp.content.find(c => c.type === "text") as any)?.text?.trim() ?? "{}";
       const jsonStr = raw.replace(/^```json\n?|```$/g, "").trim();
       tasksData = JSON.parse(jsonStr);
 
-      // 4. Cache it
-      await db.insert(dailyAiTasks).values({ taskDate: today, tasksData }).onConflictDoUpdate({
-        target: dailyAiTasks.taskDate,
+      await db.insert(dailyAiTasks).values({ companyId, taskDate: today, tasksData }).onConflictDoUpdate({
+        target: [dailyAiTasks.companyId, dailyAiTasks.taskDate],
         set: { tasksData, generatedAt: new Date() },
       });
     }
 
-    // 5. Apply completions for today/user
-    const completions = await db
-      .select()
-      .from(dailyTaskCompletions)
-      .where(and(eq(dailyTaskCompletions.taskDate, today), eq(dailyTaskCompletions.userId, userId)));
-
+    const completions = await db.select().from(dailyTaskCompletions)
+      .where(and(eq(dailyTaskCompletions.companyId, companyId), eq(dailyTaskCompletions.taskDate, today), eq(dailyTaskCompletions.userId, userId)));
     const completedSet = new Set(completions.map(c => `${c.inquiryId}:${c.taskType}`));
-
-    const applyCompletions = (items: any[]) =>
-      items.map((t: any) => ({ ...t, completed: completedSet.has(`${t.inquiry_id}:${t.task_type}`) }));
+    const applyCompletions = (items: any[]) => items.map((t: any) => ({ ...t, completed: completedSet.has(`${t.inquiry_id}:${t.task_type}`) }));
 
     res.json({
       urgent_callbacks:  applyCompletions(tasksData.urgent_callbacks  ?? []),
@@ -916,23 +772,21 @@ Return ONLY valid JSON with no other text:
 
 router.post("/ai/tasks/complete", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const today = todayStr();
     const userId = (req.session as any).userId as number;
     const { inquiryId, taskType } = req.body as { inquiryId: number; taskType: string };
 
-    // Only insert if not already completed
-    const existing = await db.select().from(dailyTaskCompletions).where(
-      and(
-        eq(dailyTaskCompletions.taskDate, today),
-        eq(dailyTaskCompletions.userId, userId),
-        eq(dailyTaskCompletions.inquiryId, inquiryId),
-        eq(dailyTaskCompletions.taskType, taskType),
-      )
-    );
+    const existing = await db.select().from(dailyTaskCompletions).where(and(
+      eq(dailyTaskCompletions.companyId, companyId),
+      eq(dailyTaskCompletions.taskDate, today),
+      eq(dailyTaskCompletions.userId, userId),
+      eq(dailyTaskCompletions.inquiryId, inquiryId),
+      eq(dailyTaskCompletions.taskType, taskType),
+    ));
     if (existing.length === 0) {
-      await db.insert(dailyTaskCompletions).values({ taskDate: today, userId, inquiryId, taskType });
+      await db.insert(dailyTaskCompletions).values({ companyId, taskDate: today, userId, inquiryId, taskType });
     }
-
     res.json({ ok: true });
   } catch (err: any) {
     req.log.error(err);
@@ -942,20 +796,19 @@ router.post("/ai/tasks/complete", async (req, res) => {
 
 router.delete("/ai/tasks/complete/:inquiryId/:taskType", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const today = todayStr();
     const userId = (req.session as any).userId as number;
     const inquiryId = parseInt(req.params.inquiryId);
     const { taskType } = req.params;
 
-    await db.delete(dailyTaskCompletions).where(
-      and(
-        eq(dailyTaskCompletions.taskDate, today),
-        eq(dailyTaskCompletions.userId, userId),
-        eq(dailyTaskCompletions.inquiryId, inquiryId),
-        eq(dailyTaskCompletions.taskType, taskType),
-      )
-    );
-
+    await db.delete(dailyTaskCompletions).where(and(
+      eq(dailyTaskCompletions.companyId, companyId),
+      eq(dailyTaskCompletions.taskDate, today),
+      eq(dailyTaskCompletions.userId, userId),
+      eq(dailyTaskCompletions.inquiryId, inquiryId),
+      eq(dailyTaskCompletions.taskType, taskType),
+    ));
     res.json({ ok: true });
   } catch (err: any) {
     req.log.error(err);
@@ -963,11 +816,11 @@ router.delete("/ai/tasks/complete/:inquiryId/:taskType", async (req, res) => {
   }
 });
 
-// Force-regenerate tasks (clears cache for today)
 router.post("/ai/tasks/regenerate", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const today = todayStr();
-    await db.delete(dailyAiTasks).where(eq(dailyAiTasks.taskDate, today));
+    await db.delete(dailyAiTasks).where(and(eq(dailyAiTasks.companyId, companyId), eq(dailyAiTasks.taskDate, today)));
     res.json({ ok: true, message: "Cache cleared — next GET will regenerate" });
   } catch (err: any) {
     req.log.error(err);
@@ -975,18 +828,17 @@ router.post("/ai/tasks/regenerate", async (req, res) => {
   }
 });
 
-// ─── AI Global Search ──────────────────────────────────────────────────────────
 router.post("/search", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { query } = req.body as { query: string };
     if (!query?.trim()) { res.json({ results: [], intent: null }); return; }
 
-    // Step 1: Ask Claude to extract structured filters from the natural language query
     const anthropic = await getAnthropicClient();
     const filterResp = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 500,
-      system: `You are a search assistant for an addiction treatment admissions CRM. 
+      system: `You are a search assistant for an addiction treatment admissions CRM.
 Extract search filters from the user query and return ONLY valid JSON (no markdown).
 Fields you can extract:
 - nameQuery: string (first or last name fragment to search)
@@ -1017,12 +869,9 @@ Examples:
     try {
       const raw = (filterResp.content[0] as any).text.trim();
       filters = JSON.parse(raw);
-    } catch {
-      filters = { nameQuery: query };
-    }
+    } catch { filters = { nameQuery: query }; }
 
-    // Step 2: Build dynamic WHERE conditions
-    const conditions: any[] = [];
+    const conditions: any[] = [sql`i.company_id = ${companyId}`];
 
     if (filters.nameQuery) {
       const parts = String(filters.nameQuery).trim().split(/\s+/);
@@ -1032,32 +881,20 @@ Examples:
       ]);
       conditions.push(sql`(${sql.join(nameConds, sql` OR `)})`);
     }
-    if (filters.phone) {
-      conditions.push(sql`i.phone like ${"%" + filters.phone + "%"}`);
-    }
-    if (filters.email) {
-      conditions.push(sql`lower(i.email) like ${"%" + String(filters.email).toLowerCase() + "%"}`);
-    }
+    if (filters.phone) conditions.push(sql`i.phone like ${"%" + filters.phone + "%"}`);
+    if (filters.email) conditions.push(sql`lower(i.email) like ${"%" + String(filters.email).toLowerCase() + "%"}`);
     if (filters.status?.length) {
       const vals = (filters.status as string[]).map(s => sql`${s}`);
       conditions.push(sql`i.status IN (${sql.join(vals, sql`, `)})`);
     }
-    if (filters.insuranceProvider) {
-      conditions.push(sql`lower(i.insurance_provider) like ${"%" + String(filters.insuranceProvider).toLowerCase() + "%"}`);
-    }
+    if (filters.insuranceProvider) conditions.push(sql`lower(i.insurance_provider) like ${"%" + String(filters.insuranceProvider).toLowerCase() + "%"}`);
     if (filters.state) {
       const st = String(filters.state).trim();
       conditions.push(sql`(lower(i.state) = ${st.toLowerCase()} OR lower(i.state) like ${"%" + st.toLowerCase() + "%"})`);
     }
-    if (filters.levelOfCare) {
-      conditions.push(sql`lower(i.level_of_care) = ${String(filters.levelOfCare).toLowerCase()}`);
-    }
-    if (filters.priority) {
-      conditions.push(sql`i.priority = ${filters.priority}`);
-    }
-    if (filters.referralSource) {
-      conditions.push(sql`lower(i.referral_source) like ${"%" + String(filters.referralSource).toLowerCase() + "%"}`);
-    }
+    if (filters.levelOfCare) conditions.push(sql`lower(i.level_of_care) = ${String(filters.levelOfCare).toLowerCase()}`);
+    if (filters.priority) conditions.push(sql`i.priority = ${filters.priority}`);
+    if (filters.referralSource) conditions.push(sql`lower(i.referral_source) like ${"%" + String(filters.referralSource).toLowerCase() + "%"}`);
     if (filters.diagnosis) {
       const d = "%" + String(filters.diagnosis).toLowerCase() + "%";
       conditions.push(sql`(lower(i.primary_diagnosis) like ${d} OR lower(i.substance_history) like ${d})`);
@@ -1066,8 +903,7 @@ Examples:
       conditions.push(sql`i.assigned_to = ${(req as any).session.userId}`);
     }
 
-    // Fallback: if no conditions built, do a broad text search
-    if (conditions.length === 0) {
+    if (conditions.length === 1) {
       const q = "%" + query.toLowerCase() + "%";
       conditions.push(sql`(
         lower(i.first_name) like ${q} OR lower(i.last_name) like ${q} OR
@@ -1077,7 +913,6 @@ Examples:
     }
 
     const whereClause = sql.join(conditions, sql` AND `);
-
     const rows = await db.execute(sql`
       SELECT
         i.id, i.first_name, i.last_name, i.phone, i.email,
@@ -1092,19 +927,10 @@ Examples:
     `);
 
     const results = (rows as any[]).map(r => ({
-      id: r.id,
-      firstName: r.first_name,
-      lastName: r.last_name,
-      phone: r.phone,
-      email: r.email,
-      status: r.status,
-      priority: r.priority,
-      levelOfCare: r.level_of_care,
-      insuranceProvider: r.insurance_provider,
-      state: r.state,
-      referralSource: r.referral_source,
-      createdAt: r.created_at,
-      patientId: r.patient_id ?? null,
+      id: r.id, firstName: r.first_name, lastName: r.last_name, phone: r.phone, email: r.email,
+      status: r.status, priority: r.priority, levelOfCare: r.level_of_care,
+      insuranceProvider: r.insurance_provider, state: r.state, referralSource: r.referral_source,
+      createdAt: r.created_at, patientId: r.patient_id ?? null,
     }));
 
     res.json({ results, filters });

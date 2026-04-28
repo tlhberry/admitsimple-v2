@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [isLoginPage] = useRoute("/login");
-  const isPublicPage = isLoginPage || location.startsWith("/forgot-password") || location.startsWith("/reset-password");
+  const isPublicPage = isLoginPage || location.startsWith("/forgot-password") || location.startsWith("/reset-password") || location.startsWith("/signup");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 

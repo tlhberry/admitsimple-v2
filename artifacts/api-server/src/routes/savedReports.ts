@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { savedReports, users } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
@@ -18,10 +19,9 @@ function validateSql(sql: string): string | null {
   return null;
 }
 
-// List saved reports for current user (admin sees all)
 router.get("/saved-reports", async (req, res) => {
   try {
-    const sess = req.session as any;
+    const companyId = getCompanyId(req);
     const rows = await db
       .select({
         id: savedReports.id,
@@ -36,6 +36,7 @@ router.get("/saved-reports", async (req, res) => {
       })
       .from(savedReports)
       .leftJoin(users, eq(savedReports.userId, users.id))
+      .where(eq(savedReports.companyId, companyId))
       .orderBy(desc(savedReports.createdAt));
     res.json(rows);
   } catch (err) {
@@ -44,18 +45,17 @@ router.get("/saved-reports", async (req, res) => {
   }
 });
 
-// Save a new report
 router.post("/saved-reports", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const sess = req.session as any;
     const { name, sqlQuery, columns, visualizationType } = req.body;
-    if (!name || !sqlQuery) {
-      res.status(400).json({ error: "name and sqlQuery are required" }); return;
-    }
+    if (!name || !sqlQuery) { res.status(400).json({ error: "name and sqlQuery are required" }); return; }
     const err = validateSql(sqlQuery);
     if (err) { res.status(400).json({ error: err }); return; }
 
     const [row] = await db.insert(savedReports).values({
+      companyId,
       name,
       userId: sess.userId,
       sqlQuery,
@@ -69,11 +69,11 @@ router.post("/saved-reports", async (req, res) => {
   }
 });
 
-// Run a saved report (execute stored SQL, no AI)
 router.post("/saved-reports/:id/run", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id));
+    const [report] = await db.select().from(savedReports).where(and(eq(savedReports.id, id), eq(savedReports.companyId, companyId)));
     if (!report) { res.status(404).json({ error: "Not found" }); return; }
 
     const err = validateSql(report.sqlQuery);
@@ -89,11 +89,11 @@ router.post("/saved-reports/:id/run", async (req, res) => {
   }
 });
 
-// Delete a saved report
 router.delete("/saved-reports/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.delete(savedReports).where(eq(savedReports.id, id));
+    await db.delete(savedReports).where(and(eq(savedReports.id, id), eq(savedReports.companyId, companyId)));
     res.json({ message: "Deleted" });
   } catch (err) {
     req.log.error(err);

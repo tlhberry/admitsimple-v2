@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { requireAuth } from "../lib/requireAuth";
 import { requireAdmin } from "../lib/requireAdmin";
 import { logAudit, getClientIp } from "../lib/audit";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
@@ -37,7 +38,8 @@ const safeSelect = {
 
 router.get("/users", async (req, res) => {
   try {
-    const result = await db.select(safeSelect).from(users);
+    const companyId = getCompanyId(req);
+    const result = await db.select(safeSelect).from(users).where(eq(users.companyId, companyId));
     res.json(result);
   } catch (err) {
     req.log.error(err);
@@ -49,20 +51,16 @@ router.post("/users", requireAdmin, async (req, res) => {
   const ip = getClientIp(req as any);
   const sess = req.session as any;
   try {
+    const companyId = getCompanyId(req);
     const { username, password, name, email, role } = req.body;
-    if (!name || !email) {
-      res.status(400).json({ error: "Name and email are required" });
-      return;
-    }
+    if (!name || !email) { res.status(400).json({ error: "Name and email are required" }); return; }
     const pwError = validatePassword(password);
-    if (pwError) {
-      res.status(400).json({ error: pwError });
-      return;
-    }
+    if (pwError) { res.status(400).json({ error: pwError }); return; }
     const derivedUsername = username || email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
     const hashed = await bcrypt.hash(password, 12);
     const initials = makeInitials(name);
     const [user] = await db.insert(users).values({
+      companyId,
       username: derivedUsername,
       password: hashed,
       name,
@@ -79,10 +77,7 @@ router.post("/users", requireAdmin, async (req, res) => {
     });
   } catch (err: any) {
     req.log.error(err);
-    if (err.code === "23505") {
-      res.status(409).json({ error: "Username or email already exists" });
-      return;
-    }
+    if (err.code === "23505") { res.status(409).json({ error: "Username or email already exists" }); return; }
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -91,6 +86,7 @@ router.put("/users/:id", requireAdmin, async (req, res) => {
   const ip = getClientIp(req as any);
   const sess = req.session as any;
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { name, email, role, password } = req.body;
     const update: any = {};
@@ -99,62 +95,48 @@ router.put("/users/:id", requireAdmin, async (req, res) => {
     if (role) update.role = role;
     if (password) {
       const pwError = validatePassword(password);
-      if (pwError) {
-        res.status(400).json({ error: pwError }); return;
-      }
+      if (pwError) { res.status(400).json({ error: pwError }); return; }
       update.password = await bcrypt.hash(password, 12);
     }
-    const [user] = await db.update(users).set(update).where(eq(users.id, id)).returning();
+    const [user] = await db.update(users).set(update).where(and(eq(users.id, id), eq(users.companyId, companyId))).returning();
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
     await logAudit({ userId: sess.userId, action: "USER_UPDATED", resourceType: "user", resourceId: id, ipAddress: ip });
-    res.json({
-      id: user.id, username: user.username, name: user.name,
-      email: user.email, role: user.role, initials: user.initials,
-      isActive: user.isActive, createdAt: user.createdAt,
-    });
+    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, isActive: user.isActive, createdAt: user.createdAt });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Toggle active status
 router.patch("/users/:id/toggle-active", requireAdmin, async (req, res) => {
   const ip = getClientIp(req as any);
   const sess = req.session as any;
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    if (id === sess.userId) {
-      res.status(400).json({ error: "Cannot deactivate your own account" }); return;
-    }
-    const [current] = await db.select({ isActive: users.isActive }).from(users).where(eq(users.id, id));
+    if (id === sess.userId) { res.status(400).json({ error: "Cannot deactivate your own account" }); return; }
+    const [current] = await db.select({ isActive: users.isActive }).from(users).where(and(eq(users.id, id), eq(users.companyId, companyId)));
     if (!current) { res.status(404).json({ error: "User not found" }); return; }
-    const [user] = await db.update(users).set({ isActive: !current.isActive }).where(eq(users.id, id)).returning();
+    const [user] = await db.update(users).set({ isActive: !current.isActive }).where(and(eq(users.id, id), eq(users.companyId, companyId))).returning();
     await logAudit({ userId: sess.userId, action: current.isActive ? "USER_DEACTIVATED" : "USER_ACTIVATED", resourceType: "user", resourceId: id, ipAddress: ip });
-    res.json({
-      id: user.id, username: user.username, name: user.name,
-      email: user.email, role: user.role, initials: user.initials,
-      isActive: user.isActive, createdAt: user.createdAt,
-    });
+    res.json({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, initials: user.initials, isActive: user.isActive, createdAt: user.createdAt });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Reset password (admin only)
 router.patch("/users/:id/reset-password", requireAdmin, async (req, res) => {
   const ip = getClientIp(req as any);
   const sess = req.session as any;
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { password } = req.body;
     const pwError = validatePassword(password);
-    if (pwError) {
-      res.status(400).json({ error: pwError }); return;
-    }
+    if (pwError) { res.status(400).json({ error: pwError }); return; }
     const hashed = await bcrypt.hash(password, 12);
-    const [user] = await db.update(users).set({ password: hashed }).where(eq(users.id, id)).returning();
+    const [user] = await db.update(users).set({ password: hashed }).where(and(eq(users.id, id), eq(users.companyId, companyId))).returning();
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
     await logAudit({ userId: sess.userId, action: "PASSWORD_RESET", resourceType: "user", resourceId: id, ipAddress: ip });
     res.json({ message: "Password reset successfully" });
@@ -168,11 +150,10 @@ router.delete("/users/:id", requireAdmin, async (req, res) => {
   const ip = getClientIp(req as any);
   const sess = req.session as any;
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    if (id === sess.userId) {
-      res.status(400).json({ error: "Cannot delete your own account" }); return;
-    }
-    await db.delete(users).where(eq(users.id, id));
+    if (id === sess.userId) { res.status(400).json({ error: "Cannot delete your own account" }); return; }
+    await db.delete(users).where(and(eq(users.id, id), eq(users.companyId, companyId)));
     await logAudit({ userId: sess.userId, action: "USER_DELETED", resourceType: "user", resourceId: id, ipAddress: ip });
     res.json({ message: "User deleted" });
   } catch (err) {

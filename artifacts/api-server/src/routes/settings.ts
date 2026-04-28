@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { settings } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/settings", async (req, res) => {
   try {
-    const rows = await db.select().from(settings);
+    const companyId = getCompanyId(req);
+    const rows = await db.select().from(settings).where(eq(settings.companyId, companyId));
     res.json(rows);
   } catch (err) {
     req.log.error(err);
@@ -19,10 +21,11 @@ router.get("/settings", async (req, res) => {
 
 router.put("/settings", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { settings: settingsArr } = req.body;
     for (const s of settingsArr) {
-      await db.insert(settings).values({ key: s.key, value: s.value, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: settings.key, set: { value: s.value, updatedAt: new Date() } });
+      await db.insert(settings).values({ companyId, key: s.key, value: s.value, updatedAt: new Date() })
+        .onConflictDoUpdate({ target: [settings.companyId, settings.key], set: { value: s.value, updatedAt: new Date() } });
     }
     res.json({ message: "Updated" });
   } catch (err) {
@@ -33,7 +36,8 @@ router.put("/settings", async (req, res) => {
 
 router.get("/settings/:key", async (req, res) => {
   try {
-    const [row] = await db.select().from(settings).where(eq(settings.key, req.params.key));
+    const companyId = getCompanyId(req);
+    const [row] = await db.select().from(settings).where(and(eq(settings.key, req.params.key), eq(settings.companyId, companyId)));
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json(row);
   } catch (err) {
@@ -44,9 +48,10 @@ router.get("/settings/:key", async (req, res) => {
 
 router.put("/settings/:key", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { value } = req.body;
-    const result = await db.insert(settings).values({ key: req.params.key, value, updatedAt: new Date() })
-      .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } })
+    const result = await db.insert(settings).values({ companyId, key: req.params.key, value, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: [settings.companyId, settings.key], set: { value, updatedAt: new Date() } })
       .returning();
     res.json(result[0]);
   } catch (err) {

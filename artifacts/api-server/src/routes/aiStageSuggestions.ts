@@ -5,26 +5,22 @@ import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { broadcastSSE } from "../lib/sse";
 import { getAnthropicClient } from "../lib/anthropicClient";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
-// ─── Get pending AI stage suggestions ──────────────────────────────────────────
 router.get("/ai-suggestions", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const rows = await db
       .select({
         suggestion: aiStageSuggestions,
-        inquiry: {
-          id: inquiries.id,
-          firstName: inquiries.firstName,
-          lastName: inquiries.lastName,
-          status: inquiries.status,
-        },
+        inquiry: { id: inquiries.id, firstName: inquiries.firstName, lastName: inquiries.lastName, status: inquiries.status },
       })
       .from(aiStageSuggestions)
       .leftJoin(inquiries, eq(aiStageSuggestions.inquiryId, inquiries.id))
-      .where(eq(aiStageSuggestions.status, "pending"))
+      .where(and(eq(aiStageSuggestions.companyId, companyId), eq(aiStageSuggestions.status, "pending")))
       .orderBy(desc(aiStageSuggestions.createdAt));
     res.json(rows);
   } catch (err) {
@@ -33,24 +29,25 @@ router.get("/ai-suggestions", async (req, res) => {
   }
 });
 
-// ─── Accept a suggestion (move inquiry to next stage) ──────────────────────────
 router.post("/ai-suggestions/:id/accept", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const sess = req.session as any;
-    const [suggestion] = await db.select().from(aiStageSuggestions).where(eq(aiStageSuggestions.id, id));
+    const [suggestion] = await db.select().from(aiStageSuggestions).where(and(eq(aiStageSuggestions.id, id), eq(aiStageSuggestions.companyId, companyId)));
     if (!suggestion) { res.status(404).json({ error: "Not found" }); return; }
     if (suggestion.status !== "pending") { res.status(400).json({ error: "Already resolved" }); return; }
 
     await db.update(inquiries)
       .set({ status: suggestion.suggestedStage, updatedAt: new Date() })
-      .where(eq(inquiries.id, suggestion.inquiryId));
+      .where(and(eq(inquiries.id, suggestion.inquiryId), eq(inquiries.companyId, companyId)));
 
     await db.update(aiStageSuggestions)
       .set({ status: "accepted", resolvedAt: new Date(), resolvedBy: sess.userId })
       .where(eq(aiStageSuggestions.id, id));
 
     await db.insert(activities).values({
+      companyId,
       inquiryId: suggestion.inquiryId,
       userId: sess.userId,
       type: "stage_change",
@@ -65,12 +62,12 @@ router.post("/ai-suggestions/:id/accept", async (req, res) => {
   }
 });
 
-// ─── Dismiss a suggestion ──────────────────────────────────────────────────────
 router.post("/ai-suggestions/:id/dismiss", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const sess = req.session as any;
-    const [suggestion] = await db.select().from(aiStageSuggestions).where(eq(aiStageSuggestions.id, id));
+    const [suggestion] = await db.select().from(aiStageSuggestions).where(and(eq(aiStageSuggestions.id, id), eq(aiStageSuggestions.companyId, companyId)));
     if (!suggestion) { res.status(404).json({ error: "Not found" }); return; }
 
     await db.update(aiStageSuggestions)
@@ -85,19 +82,17 @@ router.post("/ai-suggestions/:id/dismiss", async (req, res) => {
   }
 });
 
-// ─── Core AI stage analysis function (exported for use in other routes) ────────
-export async function runAiStageCheck(inquiryId: number, log?: any): Promise<void> {
+export async function runAiStageCheck(inquiryId: number, companyId: number, log?: any): Promise<void> {
   try {
-    const [inquiry] = await db.select().from(inquiries).where(eq(inquiries.id, inquiryId));
+    const [inquiry] = await db.select().from(inquiries).where(and(eq(inquiries.id, inquiryId), eq(inquiries.companyId, companyId)));
     if (!inquiry) return;
 
-    const stages = await db.select().from(pipelineStages).orderBy(pipelineStages.order);
+    const stages = await db.select().from(pipelineStages).where(eq(pipelineStages.companyId, companyId)).orderBy(pipelineStages.order);
     const terminalStages = ["Admitted", "Discharged", "Did Not Admit"];
     if (terminalStages.includes(inquiry.status)) return;
 
-    // Check if there's already a pending suggestion for this inquiry
     const existing = await db.select().from(aiStageSuggestions)
-      .where(and(eq(aiStageSuggestions.inquiryId, inquiryId), eq(aiStageSuggestions.status, "pending")));
+      .where(and(eq(aiStageSuggestions.inquiryId, inquiryId), eq(aiStageSuggestions.companyId, companyId), eq(aiStageSuggestions.status, "pending")));
     if (existing.length > 0) return;
 
     const currentStageIndex = stages.findIndex(s => s.name === inquiry.status);
@@ -168,6 +163,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside the JSON):
     if (!parsed.shouldAdvance || parsed.confidence === "low") return;
 
     const [suggestion] = await db.insert(aiStageSuggestions).values({
+      companyId,
       inquiryId,
       currentStage: inquiry.status,
       suggestedStage: nextStage.name,
@@ -179,12 +175,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside the JSON):
     broadcastSSE("ai_stage_suggestion", {
       suggestion: {
         ...suggestion,
-        inquiry: {
-          id: inquiry.id,
-          firstName: inquiry.firstName,
-          lastName: inquiry.lastName,
-          status: inquiry.status,
-        },
+        inquiry: { id: inquiry.id, firstName: inquiry.firstName, lastName: inquiry.lastName, status: inquiry.status },
       },
     });
   } catch (err) {

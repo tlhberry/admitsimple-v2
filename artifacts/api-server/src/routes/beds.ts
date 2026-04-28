@@ -1,17 +1,18 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { beds, patientStays, inquiries } from "@workspace/db/schema";
+import { beds, patientStays } from "@workspace/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
 
-// ── List beds ────────────────────────────────────────────────────────────────
 router.get("/beds", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { unit, status, gender } = req.query;
-    let rows = await db.select().from(beds).orderBy(beds.unit, beds.name);
+    let rows = await db.select().from(beds).where(eq(beds.companyId, companyId)).orderBy(beds.unit, beds.name);
     if (unit && typeof unit === "string") rows = rows.filter(b => b.unit.toLowerCase() === unit.toLowerCase());
     if (status && typeof status === "string") rows = rows.filter(b => b.status === status);
     if (gender && typeof gender === "string") rows = rows.filter(b => b.gender?.toLowerCase() === gender.toLowerCase());
@@ -24,7 +25,8 @@ router.get("/beds", async (req, res) => {
 
 router.get("/beds/:id", async (req, res) => {
   try {
-    const [bed] = await db.select().from(beds).where(eq(beds.id, parseInt(req.params.id)));
+    const companyId = getCompanyId(req);
+    const [bed] = await db.select().from(beds).where(and(eq(beds.id, parseInt(req.params.id)), eq(beds.companyId, companyId)));
     if (!bed) { res.status(404).json({ error: "Bed not found" }); return; }
     res.json(bed);
   } catch (err) {
@@ -35,9 +37,11 @@ router.get("/beds/:id", async (req, res) => {
 
 router.post("/beds", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { name, unit, status, currentPatientName, gender, expectedDischargeDate, notes } = req.body;
     if (!name || !unit) { res.status(400).json({ error: "name and unit are required" }); return; }
     const [bed] = await db.insert(beds).values({
+      companyId,
       name, unit,
       status: status || "available",
       currentPatientName: currentPatientName || null,
@@ -55,6 +59,7 @@ router.post("/beds", async (req, res) => {
 
 router.put("/beds/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { name, unit, status, currentPatientName, gender, expectedDischargeDate, notes } = req.body;
     const [bed] = await db.update(beds).set({
       ...(name !== undefined && { name }),
@@ -65,7 +70,7 @@ router.put("/beds/:id", async (req, res) => {
       expectedDischargeDate: expectedDischargeDate ? new Date(expectedDischargeDate) : null,
       ...(notes !== undefined && { notes }),
       updatedAt: new Date(),
-    }).where(eq(beds.id, parseInt(req.params.id))).returning();
+    }).where(and(eq(beds.id, parseInt(req.params.id)), eq(beds.companyId, companyId))).returning();
     if (!bed) { res.status(404).json({ error: "Bed not found" }); return; }
     res.json(bed);
   } catch (err) {
@@ -76,7 +81,8 @@ router.put("/beds/:id", async (req, res) => {
 
 router.delete("/beds/:id", async (req, res) => {
   try {
-    await db.delete(beds).where(eq(beds.id, parseInt(req.params.id)));
+    const companyId = getCompanyId(req);
+    await db.delete(beds).where(and(eq(beds.id, parseInt(req.params.id)), eq(beds.companyId, companyId)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -84,23 +90,21 @@ router.delete("/beds/:id", async (req, res) => {
   }
 });
 
-// ── Assign patient to a bed ───────────────────────────────────────────────────
-// Creates a patient_stay record and marks the bed as occupied
 router.post("/beds/:id/assign", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const bedId = parseInt(req.params.id);
     const { patientName, inquiryId, admitDate, expectedDischargeDate, gender, notes } = req.body;
     if (!patientName) { res.status(400).json({ error: "patientName is required" }); return; }
 
-    // Close any existing active stay for this bed
     await db.update(patientStays).set({
       status: "discharged",
       actualDischargeDate: new Date(),
       updatedAt: new Date(),
-    }).where(and(eq(patientStays.bedId, bedId), eq(patientStays.status, "active")));
+    }).where(and(eq(patientStays.bedId, bedId), eq(patientStays.status, "active"), eq(patientStays.companyId, companyId)));
 
-    // Create new stay record
     const [stay] = await db.insert(patientStays).values({
+      companyId,
       inquiryId: inquiryId ? parseInt(inquiryId) : null,
       patientName,
       bedId,
@@ -110,7 +114,6 @@ router.post("/beds/:id/assign", async (req, res) => {
       notes: notes || null,
     }).returning();
 
-    // Update bed
     const [bed] = await db.update(beds).set({
       status: "occupied",
       currentPatientName: patientName,
@@ -118,7 +121,7 @@ router.post("/beds/:id/assign", async (req, res) => {
       expectedDischargeDate: expectedDischargeDate ? new Date(expectedDischargeDate) : null,
       notes: notes || null,
       updatedAt: new Date(),
-    }).where(eq(beds.id, bedId)).returning();
+    }).where(and(eq(beds.id, bedId), eq(beds.companyId, companyId))).returning();
 
     res.json({ bed, stay });
   } catch (err) {
@@ -127,19 +130,17 @@ router.post("/beds/:id/assign", async (req, res) => {
   }
 });
 
-// ── Discharge patient from bed ────────────────────────────────────────────────
 router.post("/beds/:id/discharge", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const bedId = parseInt(req.params.id);
 
-    // Mark active stay as discharged
     await db.update(patientStays).set({
       status: "discharged",
       actualDischargeDate: new Date(),
       updatedAt: new Date(),
-    }).where(and(eq(patientStays.bedId, bedId), eq(patientStays.status, "active")));
+    }).where(and(eq(patientStays.bedId, bedId), eq(patientStays.status, "active"), eq(patientStays.companyId, companyId)));
 
-    // Free the bed
     const [bed] = await db.update(beds).set({
       status: "available",
       currentPatientName: null,
@@ -147,7 +148,7 @@ router.post("/beds/:id/discharge", async (req, res) => {
       expectedDischargeDate: null,
       notes: null,
       updatedAt: new Date(),
-    }).where(eq(beds.id, bedId)).returning();
+    }).where(and(eq(beds.id, bedId), eq(beds.companyId, companyId))).returning();
 
     if (!bed) { res.status(404).json({ error: "Bed not found" }); return; }
     res.json({ bed });
@@ -157,9 +158,9 @@ router.post("/beds/:id/discharge", async (req, res) => {
   }
 });
 
-// ── Reserve a bed ─────────────────────────────────────────────────────────────
 router.post("/beds/:id/reserve", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const bedId = parseInt(req.params.id);
     const { patientName, gender, scheduledAdmitDate, notes } = req.body;
 
@@ -170,7 +171,7 @@ router.post("/beds/:id/reserve", async (req, res) => {
       expectedDischargeDate: scheduledAdmitDate ? new Date(scheduledAdmitDate) : null,
       notes: notes || null,
       updatedAt: new Date(),
-    }).where(eq(beds.id, bedId)).returning();
+    }).where(and(eq(beds.id, bedId), eq(beds.companyId, companyId))).returning();
 
     if (!bed) { res.status(404).json({ error: "Bed not found" }); return; }
     res.json({ bed });
@@ -180,9 +181,9 @@ router.post("/beds/:id/reserve", async (req, res) => {
   }
 });
 
-// ── Quick status change ───────────────────────────────────────────────────────
 router.post("/beds/:id/status", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const bedId = parseInt(req.params.id);
     const { status } = req.body;
     if (!["available", "occupied", "reserved"].includes(status)) {
@@ -196,7 +197,7 @@ router.post("/beds/:id/status", async (req, res) => {
       updates.expectedDischargeDate = null;
     }
 
-    const [bed] = await db.update(beds).set(updates).where(eq(beds.id, bedId)).returning();
+    const [bed] = await db.update(beds).set(updates).where(and(eq(beds.id, bedId), eq(beds.companyId, companyId))).returning();
     if (!bed) { res.status(404).json({ error: "Bed not found" }); return; }
     res.json({ bed });
   } catch (err) {
@@ -205,18 +206,15 @@ router.post("/beds/:id/status", async (req, res) => {
   }
 });
 
-// ── Patient stays list ────────────────────────────────────────────────────────
 router.get("/patient-stays", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { bedId, status } = req.query;
-    let query = db.select().from(patientStays).orderBy(desc(patientStays.admitDate));
-    const rows = await query;
-    const filtered = rows.filter(s => {
-      if (bedId && s.bedId !== parseInt(bedId as string)) return false;
-      if (status && s.status !== status) return false;
-      return true;
-    });
-    res.json(filtered);
+    const filters: any[] = [eq(patientStays.companyId, companyId)];
+    if (bedId) filters.push(eq(patientStays.bedId, parseInt(bedId as string)));
+    if (status) filters.push(eq(patientStays.status, status as string));
+    const rows = await db.select().from(patientStays).where(and(...filters)).orderBy(desc(patientStays.admitDate));
+    res.json(rows);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to fetch patient stays" });

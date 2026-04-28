@@ -6,11 +6,10 @@ import {
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/requireAuth";
 import { getAnthropicClient } from "../lib/anthropicClient";
+import { getCompanyId } from "../lib/getCompanyId";
 
 const router = Router();
 router.use(requireAuth);
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const accountSelect = {
   id: referralAccounts.id,
@@ -27,39 +26,35 @@ const accountSelect = {
   updatedAt: referralAccounts.updatedAt,
 };
 
-// ── Referral Accounts ─────────────────────────────────────────────────────────
-
 router.get("/referral-accounts", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const user = (req as any).user;
     let rows;
     if (user?.role === "bd_rep") {
       rows = await db.select(accountSelect).from(referralAccounts)
         .leftJoin(users, eq(referralAccounts.assignedBdRepId, users.id))
-        .where(eq(referralAccounts.assignedBdRepId, user.id))
+        .where(and(eq(referralAccounts.companyId, companyId), eq(referralAccounts.assignedBdRepId, user.id)))
         .orderBy(desc(referralAccounts.updatedAt));
     } else {
       rows = await db.select(accountSelect).from(referralAccounts)
         .leftJoin(users, eq(referralAccounts.assignedBdRepId, users.id))
+        .where(eq(referralAccounts.companyId, companyId))
         .orderBy(desc(referralAccounts.updatedAt));
     }
 
-    // Attach last activity date to each account
     const accountIds = rows.map(r => r.id);
     const lastActivities: Record<number, Date | null> = {};
-    if (accountIds.length > 0) {
-      for (const id of accountIds) {
-        const [la] = await db.select({ activityDate: bdActivityLogs.activityDate })
-          .from(bdActivityLogs)
-          .where(eq(bdActivityLogs.accountId, id))
-          .orderBy(desc(bdActivityLogs.activityDate))
-          .limit(1);
-        lastActivities[id] = la?.activityDate ?? null;
-      }
+    for (const id of accountIds) {
+      const [la] = await db.select({ activityDate: bdActivityLogs.activityDate })
+        .from(bdActivityLogs)
+        .where(eq(bdActivityLogs.accountId, id))
+        .orderBy(desc(bdActivityLogs.activityDate))
+        .limit(1);
+      lastActivities[id] = la?.activityDate ?? null;
     }
 
-    const result = rows.map(r => ({ ...r, lastActivityDate: lastActivities[r.id] ?? null }));
-    res.json(result);
+    res.json(rows.map(r => ({ ...r, lastActivityDate: lastActivities[r.id] ?? null })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -68,12 +63,15 @@ router.get("/referral-accounts", async (req, res) => {
 
 router.post("/referral-accounts", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const user = (req as any).user;
+    const sess = req.session as any;
     const { name, type, address, phone, website, notes, assignedBdRepId } = req.body;
     const [row] = await db.insert(referralAccounts).values({
+      companyId,
       name, type, address, phone, website, notes,
       assignedBdRepId: assignedBdRepId ? parseInt(assignedBdRepId) : null,
-      createdBy: user?.id ?? null,
+      createdBy: user?.id ?? sess?.userId ?? null,
     }).returning();
     const full = await db.select(accountSelect).from(referralAccounts)
       .leftJoin(users, eq(referralAccounts.assignedBdRepId, users.id))
@@ -87,10 +85,11 @@ router.post("/referral-accounts", async (req, res) => {
 
 router.get("/referral-accounts/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const rows = await db.select(accountSelect).from(referralAccounts)
       .leftJoin(users, eq(referralAccounts.assignedBdRepId, users.id))
-      .where(eq(referralAccounts.id, id));
+      .where(and(eq(referralAccounts.id, id), eq(referralAccounts.companyId, companyId)));
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
     const [la] = await db.select({ activityDate: bdActivityLogs.activityDate })
       .from(bdActivityLogs).where(eq(bdActivityLogs.accountId, id))
@@ -104,6 +103,7 @@ router.get("/referral-accounts/:id", async (req, res) => {
 
 router.patch("/referral-accounts/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
     const { name, type, address, phone, website, notes, assignedBdRepId } = req.body;
     const update: any = { updatedAt: new Date() };
@@ -114,7 +114,7 @@ router.patch("/referral-accounts/:id", async (req, res) => {
     if (website !== undefined) update.website = website;
     if (notes !== undefined) update.notes = notes;
     if (assignedBdRepId !== undefined) update.assignedBdRepId = assignedBdRepId ? parseInt(assignedBdRepId) : null;
-    await db.update(referralAccounts).set(update).where(eq(referralAccounts.id, id));
+    await db.update(referralAccounts).set(update).where(and(eq(referralAccounts.id, id), eq(referralAccounts.companyId, companyId)));
     const rows = await db.select(accountSelect).from(referralAccounts)
       .leftJoin(users, eq(referralAccounts.assignedBdRepId, users.id))
       .where(eq(referralAccounts.id, id));
@@ -127,8 +127,9 @@ router.patch("/referral-accounts/:id", async (req, res) => {
 
 router.delete("/referral-accounts/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const id = parseInt(req.params.id);
-    await db.delete(referralAccounts).where(eq(referralAccounts.id, id));
+    await db.delete(referralAccounts).where(and(eq(referralAccounts.id, id), eq(referralAccounts.companyId, companyId)));
     res.json({ success: true });
   } catch (err) {
     req.log.error(err);
@@ -136,12 +137,12 @@ router.delete("/referral-accounts/:id", async (req, res) => {
   }
 });
 
-// ── Contacts ──────────────────────────────────────────────────────────────────
-
 router.get("/referral-accounts/:id/contacts", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
+    const accountId = parseInt(req.params.id);
     const rows = await db.select().from(referralContacts)
-      .where(eq(referralContacts.accountId, parseInt(req.params.id)))
+      .where(and(eq(referralContacts.accountId, accountId), eq(referralContacts.companyId, companyId)))
       .orderBy(desc(referralContacts.createdAt));
     res.json(rows);
   } catch (err) {
@@ -152,8 +153,10 @@ router.get("/referral-accounts/:id/contacts", async (req, res) => {
 
 router.post("/referral-accounts/:id/contacts", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { name, position, phone, email, notes } = req.body;
     const [row] = await db.insert(referralContacts).values({
+      companyId,
       accountId: parseInt(req.params.id), name, position, phone, email, notes,
     }).returning();
     res.status(201).json(row);
@@ -165,6 +168,7 @@ router.post("/referral-accounts/:id/contacts", async (req, res) => {
 
 router.patch("/referral-contacts/:id", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { name, position, phone, email, notes } = req.body;
     const update: any = {};
     if (name !== undefined) update.name = name;
@@ -173,7 +177,7 @@ router.patch("/referral-contacts/:id", async (req, res) => {
     if (email !== undefined) update.email = email;
     if (notes !== undefined) update.notes = notes;
     const [row] = await db.update(referralContacts).set(update)
-      .where(eq(referralContacts.id, parseInt(req.params.id))).returning();
+      .where(and(eq(referralContacts.id, parseInt(req.params.id)), eq(referralContacts.companyId, companyId))).returning();
     res.json(row);
   } catch (err) {
     req.log.error(err);
@@ -183,15 +187,14 @@ router.patch("/referral-contacts/:id", async (req, res) => {
 
 router.delete("/referral-contacts/:id", async (req, res) => {
   try {
-    await db.delete(referralContacts).where(eq(referralContacts.id, parseInt(req.params.id)));
+    const companyId = getCompanyId(req);
+    await db.delete(referralContacts).where(and(eq(referralContacts.id, parseInt(req.params.id)), eq(referralContacts.companyId, companyId)));
     res.json({ success: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-// ── Activity Logs ─────────────────────────────────────────────────────────────
 
 const activitySelect = {
   id: bdActivityLogs.id,
@@ -207,10 +210,11 @@ const activitySelect = {
 
 router.get("/referral-accounts/:id/activities", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const rows = await db.select(activitySelect).from(bdActivityLogs)
       .leftJoin(users, eq(bdActivityLogs.userId, users.id))
       .leftJoin(referralAccounts, eq(bdActivityLogs.accountId, referralAccounts.id))
-      .where(eq(bdActivityLogs.accountId, parseInt(req.params.id)))
+      .where(and(eq(bdActivityLogs.accountId, parseInt(req.params.id)), eq(bdActivityLogs.companyId, companyId)))
       .orderBy(desc(bdActivityLogs.activityDate));
     res.json(rows);
   } catch (err) {
@@ -221,11 +225,14 @@ router.get("/referral-accounts/:id/activities", async (req, res) => {
 
 router.post("/referral-accounts/:id/activities", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const user = (req as any).user;
+    const sess = req.session as any;
     const { activityType, notes, activityDate } = req.body;
     const [row] = await db.insert(bdActivityLogs).values({
+      companyId,
       accountId: parseInt(req.params.id),
-      userId: user?.id ?? null,
+      userId: user?.id ?? sess?.userId ?? null,
       activityType,
       notes,
       activityDate: activityDate ? new Date(activityDate) : new Date(),
@@ -237,21 +244,25 @@ router.post("/referral-accounts/:id/activities", async (req, res) => {
   }
 });
 
-// Global activity feed
 router.get("/bd-activities", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const user = (req as any).user;
+    const sess = req.session as any;
     let rows;
-    if (user?.role === "bd_rep") {
+    const userId = user?.id ?? sess?.userId;
+    const userRole = user?.role ?? sess?.role;
+    if (userRole === "bd_rep" && userId) {
       rows = await db.select(activitySelect).from(bdActivityLogs)
         .leftJoin(users, eq(bdActivityLogs.userId, users.id))
         .leftJoin(referralAccounts, eq(bdActivityLogs.accountId, referralAccounts.id))
-        .where(eq(bdActivityLogs.userId, user.id))
+        .where(and(eq(bdActivityLogs.companyId, companyId), eq(bdActivityLogs.userId, userId)))
         .orderBy(desc(bdActivityLogs.activityDate));
     } else {
       rows = await db.select(activitySelect).from(bdActivityLogs)
         .leftJoin(users, eq(bdActivityLogs.userId, users.id))
         .leftJoin(referralAccounts, eq(bdActivityLogs.accountId, referralAccounts.id))
+        .where(eq(bdActivityLogs.companyId, companyId))
         .orderBy(desc(bdActivityLogs.activityDate));
     }
     res.json(rows);
@@ -261,14 +272,16 @@ router.get("/bd-activities", async (req, res) => {
   }
 });
 
-// Quick log activity (account selected in form)
 router.post("/bd-activities", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const user = (req as any).user;
+    const sess = req.session as any;
     const { accountId, activityType, notes, activityDate } = req.body;
     const [row] = await db.insert(bdActivityLogs).values({
+      companyId,
       accountId: accountId ? parseInt(accountId) : null,
-      userId: user?.id ?? null,
+      userId: user?.id ?? sess?.userId ?? null,
       activityType,
       notes,
       activityDate: activityDate ? new Date(activityDate) : new Date(),
@@ -280,35 +293,35 @@ router.post("/bd-activities", async (req, res) => {
   }
 });
 
-// BD Analytics
 router.get("/bd-analytics", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { startDate, endDate } = req.query;
     const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate as string) : new Date();
 
     const [totalAccounts] = await db.select({ count: sql<number>`count(*)::int` })
-      .from(referralAccounts);
+      .from(referralAccounts).where(eq(referralAccounts.companyId, companyId));
 
     const activeAccountIds = await db.selectDistinct({ accountId: bdActivityLogs.accountId })
       .from(bdActivityLogs)
-      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)));
+      .where(and(eq(bdActivityLogs.companyId, companyId), gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)));
 
     const [totalActivitiesPeriod] = await db.select({ count: sql<number>`count(*)::int` })
       .from(bdActivityLogs)
-      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)));
+      .where(and(eq(bdActivityLogs.companyId, companyId), gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)));
 
     const byType = await db.select({
       activityType: bdActivityLogs.activityType,
       count: sql<number>`count(*)::int`,
     }).from(bdActivityLogs)
-      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)))
+      .where(and(eq(bdActivityLogs.companyId, companyId), gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)))
       .groupBy(bdActivityLogs.activityType);
 
     const byAccountType = await db.select({
       type: referralAccounts.type,
       count: sql<number>`count(*)::int`,
-    }).from(referralAccounts).groupBy(referralAccounts.type);
+    }).from(referralAccounts).where(eq(referralAccounts.companyId, companyId)).groupBy(referralAccounts.type);
 
     const topReps = await db.select({
       userId: bdActivityLogs.userId,
@@ -316,7 +329,7 @@ router.get("/bd-analytics", async (req, res) => {
       count: sql<number>`count(*)::int`,
     }).from(bdActivityLogs)
       .leftJoin(users, eq(bdActivityLogs.userId, users.id))
-      .where(and(gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)))
+      .where(and(eq(bdActivityLogs.companyId, companyId), gte(bdActivityLogs.activityDate, start), lte(bdActivityLogs.activityDate, end)))
       .groupBy(bdActivityLogs.userId, users.name)
       .orderBy(sql`count(*) desc`);
 
@@ -334,18 +347,17 @@ router.get("/bd-analytics", async (req, res) => {
   }
 });
 
-// ── AI Referral Insights ──────────────────────────────────────────────────────
-
 router.post("/ai/referral-insights", async (req, res) => {
   try {
+    const companyId = getCompanyId(req);
     const { accountId } = req.body;
-    const [account] = await db.select().from(referralAccounts).where(eq(referralAccounts.id, accountId));
+    const [account] = await db.select().from(referralAccounts).where(and(eq(referralAccounts.id, accountId), eq(referralAccounts.companyId, companyId)));
     if (!account) { res.status(404).json({ error: "Account not found" }); return; }
-    const contacts = await db.select().from(referralContacts).where(eq(referralContacts.accountId, accountId));
+    const contacts = await db.select().from(referralContacts).where(and(eq(referralContacts.accountId, accountId), eq(referralContacts.companyId, companyId)));
     const activities = await db.select(activitySelect).from(bdActivityLogs)
       .leftJoin(users, eq(bdActivityLogs.userId, users.id))
       .leftJoin(referralAccounts, eq(bdActivityLogs.accountId, referralAccounts.id))
-      .where(eq(bdActivityLogs.accountId, accountId))
+      .where(and(eq(bdActivityLogs.accountId, accountId), eq(bdActivityLogs.companyId, companyId)))
       .orderBy(desc(bdActivityLogs.activityDate));
 
     const prompt = `You are an expert business development analyst for an addiction treatment center.

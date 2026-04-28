@@ -1,6 +1,5 @@
 import { db } from "@workspace/db";
-import { auditLogs, users } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { auditLogs } from "@workspace/db/schema";
 import { Request } from "express";
 
 export async function logAudit(
@@ -13,8 +12,10 @@ export async function logAudit(
   try {
     const sess = req.session as any;
     const userId = sess?.userId;
+    const companyId = sess?.companyId ?? null;
     if (!userId) return;
     await db.insert(auditLogs).values({
+      companyId,
       userId,
       action,
       resourceType,
