@@ -3,9 +3,9 @@ import { Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const seatTypes = [
-  { role: "Admin", price: 99, desc: "Full platform access + user management" },
-  { role: "Admissions", price: 70, desc: "Pipeline, inquiries, SMS & scheduling" },
-  { role: "BD Rep", price: 50, desc: "Accounts, contacts & activity tracking" },
+  { role: "Admin", price: 149, desc: "Full platform access + user management" },
+  { role: "Admissions", price: 99, desc: "Pipeline, inquiries, SMS & scheduling" },
+  { role: "BD Rep", price: 69, desc: "Accounts, contacts & activity tracking" },
 ];
 
 const enterpriseTiers = [
@@ -123,7 +123,7 @@ export default function Pricing() {
             <div className="rounded-xl bg-white/4 border border-white/8 px-5 py-4 mb-8 flex flex-wrap items-center gap-x-6 gap-y-2">
               <span className="text-white/40 text-xs font-semibold uppercase tracking-wider">Example bill</span>
               <span className="text-white/70 text-sm">1 Admin + 4 Admissions + 2 BD Reps</span>
-              <span className="text-[#5BC8DC] font-bold text-sm ml-auto">$479 / month</span>
+              <span className="text-[#5BC8DC] font-bold text-sm ml-auto">$683 / month</span>
             </div>
 
             {/* Feature list */}

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ShieldCheck, Package, Phone, MessageSquare, User } from "lucide-react";
+import { ArrowRight, ShieldCheck, Package, Phone, MessageSquare, User, Zap } from "lucide-react";
 
 const pipelineStages = [
   { label: "New Inquiry", count: 4, color: "bg-blue-500" },
@@ -33,13 +33,13 @@ export default function Hero() {
           </div>
 
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.08] tracking-tight mb-6">
-            Buy it once.{" "}
-            <span className="text-[#5BC8DC]">Own it forever.</span>{" "}
-            Run admissions your way.
+            The admissions CRM{" "}
+            <span className="text-[#5BC8DC]">treatment centers</span>{" "}
+            actually want.
           </h1>
 
           <p className="text-lg md:text-xl text-white/65 mb-8 leading-relaxed max-w-xl">
-            AdmitSimple is the admissions CRM purpose-built for treatment centers — with a full 8-stage clinical pipeline, AI-powered workflows, and no recurring software fees if you own the license.
+            Purpose-built for addiction treatment — 8-stage clinical pipeline, AI-powered intake, SMS inbox, bed board, and full HIPAA compliance. Start free, or buy the platform outright and own it forever.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -48,8 +48,8 @@ export default function Hero() {
               size="lg"
               className="h-13 px-8 text-base bg-[#5BC8DC] text-[#1a2233] hover:bg-[#4ab5ca] font-semibold shadow-xl shadow-[#5BC8DC]/20 rounded-xl"
             >
-              <a href="#demo">
-                Request a Demo
+              <a href="/app/signup">
+                Start Free — 30 Days
                 <ArrowRight className="ml-2 w-4 h-4" />
               </a>
             </Button>
@@ -59,14 +59,18 @@ export default function Hero() {
               variant="outline"
               className="h-13 px-8 text-base border-white/15 text-white/80 hover:bg-white/8 bg-transparent rounded-xl"
             >
-              <a href="#pricing">See Pricing Options</a>
+              <a href="#pricing">See All Pricing</a>
             </Button>
           </div>
 
           <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-white/45">
             <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#5BC8DC]/70" />
+              <span>No credit card required for trial</span>
+            </div>
+            <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-[#5BC8DC]/70" />
-              <span>Perpetual license available — no subscription required</span>
+              <span>Perpetual license available — own it outright</span>
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#5BC8DC]/70" />
@@ -153,11 +157,11 @@ export default function Hero() {
             className="absolute -bottom-5 -left-5 bg-[#1e2535] border border-[#5BC8DC]/30 rounded-xl p-3.5 shadow-2xl flex items-center gap-3 z-10"
           >
             <div className="w-9 h-9 rounded-full bg-[#5BC8DC]/15 flex items-center justify-center text-[#5BC8DC] flex-shrink-0">
-              <Package className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-white">Perpetual License</p>
-              <p className="text-[11px] text-white/55">Buy once — your code, your server, your data</p>
+              <p className="text-xs font-semibold text-white">Free for 30 Days</p>
+              <p className="text-[11px] text-white/55">$149 · $99 · $69 per seat — no card needed</p>
             </div>
             <div className="w-2 h-2 rounded-full bg-[#5BC8DC] animate-pulse ml-1 flex-shrink-0" />
           </motion.div>
