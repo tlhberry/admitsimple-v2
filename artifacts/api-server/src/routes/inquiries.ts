@@ -557,12 +557,18 @@ router.get("/calls/token", async (req, res) => {
     const authToken  = process.env.TWILIO_AUTH_TOKEN;
     const appSid     = process.env.TWILIO_TWIML_APP_SID;
 
-    if (!accountSid || !authToken || !appSid) {
+    if (!accountSid || !authToken) {
       res.status(503).json({ error: "Twilio not configured" }); return;
     }
 
     const [keySidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_sid"), eq(settings.companyId, companyId)));
     const [keySecretRow] = await db.select().from(settings).where(and(eq(settings.key, "twilio_api_key_secret"), eq(settings.companyId, companyId)));
+    const [appSidRow]    = await db.select().from(settings).where(and(eq(settings.key, "twilio_twiml_app_sid"), eq(settings.companyId, companyId)));
+
+    const resolvedAppSid = appSidRow?.value || appSid;
+    if (!resolvedAppSid) {
+      res.status(503).json({ error: "Twilio not configured" }); return;
+    }
 
     const AccessToken = twilio.jwt.AccessToken;
     const VoiceGrant  = AccessToken.VoiceGrant;
@@ -570,7 +576,7 @@ router.get("/calls/token", async (req, res) => {
     const apiKeySid    = (keySidRow?.value    || process.env.TWILIO_API_KEY_SID)    ?? accountSid;
     const apiKeySecret = (keySecretRow?.value || process.env.TWILIO_API_KEY_SECRET) ?? authToken;
     const accessToken = new AccessToken(accountSid, apiKeySid, apiKeySecret, { identity, ttl: 3600 } as any);
-    const voiceGrant  = new VoiceGrant({ outgoingApplicationSid: appSid, incomingAllow: true });
+    const voiceGrant  = new VoiceGrant({ outgoingApplicationSid: resolvedAppSid, incomingAllow: true });
     accessToken.addGrant(voiceGrant);
     res.json({ token: accessToken.toJwt(), identity });
   } catch (err) {

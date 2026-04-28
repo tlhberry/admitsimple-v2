@@ -136,6 +136,7 @@ export default function Settings() {
   const [replacingTwilioKeys, setReplacingTwilioKeys] = useState(false);
   const [newTwilioSid, setNewTwilioSid] = useState("");
   const [newTwilioSecret, setNewTwilioSecret] = useState("");
+  const [newTwilioAppSid, setNewTwilioAppSid] = useState("");
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
@@ -154,6 +155,7 @@ export default function Settings() {
   const startReplacingTwilioKeys = () => {
     setNewTwilioSid("");
     setNewTwilioSecret("");
+    setNewTwilioAppSid("");
     setShowApiSecret(false);
     setReplacingTwilioKeys(true);
   };
@@ -162,6 +164,7 @@ export default function Settings() {
     setReplacingTwilioKeys(false);
     setNewTwilioSid("");
     setNewTwilioSecret("");
+    setNewTwilioAppSid("");
   };
 
   const saveTwilioKeys = async () => {
@@ -170,9 +173,11 @@ export default function Settings() {
       // If replacing, use the new values; otherwise use current values (first-time entry)
       const sidValue    = replacingTwilioKeys ? newTwilioSid    : values["twilio_api_key_sid"]    || "";
       const secretValue = replacingTwilioKeys ? newTwilioSecret : values["twilio_api_key_secret"] || "";
+      const appSidValue = replacingTwilioKeys ? newTwilioAppSid : values["twilio_twiml_app_sid"]  || "";
       const keysToSave = [
         { key: "twilio_api_key_sid",    value: sidValue },
         { key: "twilio_api_key_secret", value: secretValue },
+        { key: "twilio_twiml_app_sid",  value: appSidValue },
       ];
       const res = await fetch("/api/settings", {
         method: "PUT",
@@ -627,14 +632,14 @@ export default function Settings() {
                           title: "Create a TwiML App (if you haven't already)",
                           body: "Go to",
                           link: { href: "https://console.twilio.com/us1/develop/voice/manage/twiml-apps", label: "Voice → TwiML Apps" },
-                          detail: "Create a new app. Set the Voice Request URL to your webhook endpoint. The TwiML App SID (starts with AP) goes in your server environment as TWILIO_TWIML_APP_SID.",
+                          detail: "Create a new app. Set the Voice Request URL to your webhook endpoint. Copy the TwiML App SID (starts with AP) — paste it below.",
                         },
                         {
                           n: 4,
-                          title: "Paste the API Key SID and Secret below",
+                          title: "Paste the API Key SID, Secret, and TwiML App SID below",
                           body: null,
                           link: null,
-                          detail: "Enter the SK… SID in the first field and the secret in the second. Click Save Twilio Keys. Browser calling will activate immediately — no restart needed.",
+                          detail: "Enter all three values below and click Save Twilio Keys. Browser calling will activate immediately — no restart needed.",
                         },
                       ].map(step => (
                         <div key={step.n} className="flex gap-3">
@@ -677,6 +682,9 @@ export default function Settings() {
                           </p>
                           <p className="text-xs text-muted-foreground font-mono">
                             Secret: {maskSecret(values["twilio_api_key_secret"] || "")}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">
+                            App SID: {maskSid(values["twilio_twiml_app_sid"] || "")}
                           </p>
                         </div>
                       </div>
@@ -730,6 +738,16 @@ export default function Settings() {
                         </Button>
                       </div>
                     </div>
+                    <div>
+                      <Label className={labelCls}>TwiML App SID <span className="text-xs text-muted-foreground font-normal">(starts with AP…)</span></Label>
+                      <Input
+                        value={replacingTwilioKeys ? newTwilioAppSid : values["twilio_twiml_app_sid"] || ""}
+                        onChange={e => replacingTwilioKeys ? setNewTwilioAppSid(e.target.value) : set("twilio_twiml_app_sid", e.target.value)}
+                        placeholder="APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className={`${fieldCls} mt-1.5 font-mono text-sm`}
+                        autoComplete="off"
+                      />
+                    </div>
                     <div className="flex items-center justify-between gap-3">
                       {replacingTwilioKeys && (
                         <Button variant="ghost" size="sm" onClick={cancelReplacingTwilioKeys} className="text-muted-foreground hover:text-foreground rounded-xl">
@@ -738,7 +756,7 @@ export default function Settings() {
                       )}
                       <Button
                         onClick={saveTwilioKeys}
-                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioSid.trim() || !newTwilioSecret.trim()))}
+                        disabled={savingTwilio || (replacingTwilioKeys && (!newTwilioSid.trim() || !newTwilioSecret.trim() || !newTwilioAppSid.trim()))}
                         className="h-10 px-6 rounded-xl gap-2 ml-auto"
                       >
                         {savingTwilio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
