@@ -15,6 +15,7 @@ import {
   RefreshCw, Users, Plus, Pencil, Power, KeyRound, Trash2, Eye, EyeOff, UserPlus, Mail,
   Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
   MessageSquare, Globe, Bot, LogOut, ShieldCheck, Smartphone, ShieldOff,
+  CreditCard, ExternalLink, Clock, BadgeCheck, AlertCircle,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -289,6 +290,57 @@ export default function Settings() {
 
   const webhookUrl = `${window.location.origin}/api/webhooks/ctm`;
   const copyWebhookUrl = () => { navigator.clipboard.writeText(webhookUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+
+  const { data: billingStatus, isLoading: billingLoading, refetch: refetchBilling } = useQuery({
+    queryKey: ["/api/billing/status"],
+    queryFn: async () => {
+      const r = await fetch("/api/billing/status", { credentials: "include" });
+      if (!r.ok) throw new Error("Failed to fetch billing status");
+      return r.json() as Promise<{
+        subscriptionStatus: string;
+        trialEndsAt: string;
+        trialDaysLeft: number;
+        trialExpired: boolean;
+        hasSubscription: boolean;
+        seats: { admin: number; admissions: number; bd: number };
+        monthlyTotal: number;
+        seatPrices: { admin: number; admissions: number; bd: number };
+      }>;
+    },
+    enabled: isAdmin,
+    staleTime: 30000,
+  });
+
+  const [billingLoading2, setBillingLoading2] = useState(false);
+  const handleSetupBilling = async () => {
+    setBillingLoading2(true);
+    try {
+      const r = await fetch("/api/billing/checkout", { method: "POST", credentials: "include" });
+      const data = await r.json();
+      if (data.url) window.location.href = data.url;
+      else toast({ title: data.error ?? "Failed to start checkout", variant: "destructive" });
+    } finally { setBillingLoading2(false); }
+  };
+
+  const [portalLoading, setPortalLoading] = useState(false);
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    try {
+      const r = await fetch("/api/billing/portal", { method: "POST", credentials: "include" });
+      const data = await r.json();
+      if (data.url) window.location.href = data.url;
+      else toast({ title: data.error ?? "Failed to open portal", variant: "destructive" });
+    } finally { setPortalLoading(false); }
+  };
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("checkout") === "success") {
+      refetchBilling();
+      toast({ title: "Billing set up!", description: "Your subscription is now active." });
+      window.history.replaceState({}, "", "/app/settings?tab=billing");
+    }
+  }, []);
   const generateSecret = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     set("ctm_webhook_secret", Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""));
@@ -306,6 +358,7 @@ export default function Settings() {
       { id: "admissions",   label: "Admissions",   icon: UserPlus },
       { id: "users",        label: "Users",        icon: Users },
       { id: "import",       label: "Import",       icon: Upload },
+      { id: "billing",      label: "Billing",      icon: CreditCard },
     ] : []),
   ];
 
@@ -1059,7 +1112,154 @@ export default function Settings() {
 
           {activeTab === "import" && isAdmin && <ReferralImport />}
 
-          {activeTab !== "integrations" && activeTab !== "users" && activeTab !== "import" && activeTab !== "chatbot" && (
+          {activeTab === "billing" && isAdmin && (() => {
+            const fmt = (cents: number) => `$${(cents / 100).toFixed(0)}`;
+            const status = billingStatus?.subscriptionStatus ?? "trial";
+            const isActive = status === "active";
+            const isPastDue = status === "past_due";
+            const isCanceled = status === "canceled";
+            const isTrial = status === "trial";
+            return (
+              <Card className="rounded-2xl border-border">
+                <CardHeader className="border-b border-border pb-4">
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <CreditCard className="w-4 h-4 text-[#5BC8DC]" /> Billing & Subscription
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+                  {billingLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                  ) : (
+                    <>
+                      {/* Status banner */}
+                      {isTrial && !billingStatus?.trialExpired && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/10 border border-primary/25">
+                          <Clock className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold text-primary">Free Trial — {billingStatus?.trialDaysLeft} days remaining</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              Trial ends {new Date(billingStatus?.trialEndsAt ?? "").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. No credit card required yet.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {isTrial && billingStatus?.trialExpired && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30">
+                          <AlertCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold text-destructive">Trial Expired</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Set up billing below to continue using AdmitSimple.</p>
+                          </div>
+                        </div>
+                      )}
+                      {isActive && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                          <BadgeCheck className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold text-emerald-400">Active Subscription</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Your billing is current. Manage invoices, payment methods, and plan details below.</p>
+                          </div>
+                        </div>
+                      )}
+                      {isPastDue && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                          <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold text-amber-400">Payment Past Due</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Please update your payment method to avoid service interruption.</p>
+                          </div>
+                        </div>
+                      )}
+                      {isCanceled && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-muted border border-border">
+                          <AlertCircle className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold text-foreground">Subscription Canceled</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Set up a new subscription to restore access.</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Seat breakdown */}
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-3">Current Seats (active users)</p>
+                        <div className="rounded-xl border border-border overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-muted/50 border-b border-border">
+                                <th className="text-left px-4 py-2.5 text-muted-foreground font-medium">Role</th>
+                                <th className="text-center px-4 py-2.5 text-muted-foreground font-medium">Seats</th>
+                                <th className="text-right px-4 py-2.5 text-muted-foreground font-medium">Rate</th>
+                                <th className="text-right px-4 py-2.5 text-muted-foreground font-medium">Monthly</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[
+                                { role: "Admin", key: "admin" as const, price: billingStatus?.seatPrices.admin ?? 14900 },
+                                { role: "Admissions", key: "admissions" as const, price: billingStatus?.seatPrices.admissions ?? 9900 },
+                                { role: "BD Rep", key: "bd" as const, price: billingStatus?.seatPrices.bd ?? 6900 },
+                              ].map(({ role, key, price }) => {
+                                const qty = billingStatus?.seats[key] ?? 0;
+                                return (
+                                  <tr key={key} className="border-b border-border last:border-0">
+                                    <td className="px-4 py-3 text-foreground">{role}</td>
+                                    <td className="px-4 py-3 text-center text-foreground">{qty}</td>
+                                    <td className="px-4 py-3 text-right text-muted-foreground">{fmt(price)}/seat</td>
+                                    <td className="px-4 py-3 text-right text-foreground font-medium">{fmt(qty * price)}</td>
+                                  </tr>
+                                );
+                              })}
+                              <tr className="bg-muted/30">
+                                <td colSpan={3} className="px-4 py-3 text-right font-semibold text-foreground">Estimated Monthly Total</td>
+                                <td className="px-4 py-3 text-right font-bold text-[#5BC8DC] text-base">{fmt(billingStatus?.monthlyTotal ?? 0)}/mo</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">Seat counts are based on active users. Manage users in the Users tab.</p>
+                      </div>
+
+                      {/* Pricing reference */}
+                      <div className="p-4 rounded-xl bg-muted/40 border border-border text-sm">
+                        <p className="font-semibold text-foreground mb-2">Per-Seat Pricing</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { label: "Admin", price: "$149", desc: "Full access + user management" },
+                            { label: "Admissions", price: "$99", desc: "Pipeline, SMS & scheduling" },
+                            { label: "BD Rep", price: "$69", desc: "Accounts & activity tracking" },
+                          ].map(p => (
+                            <div key={p.label} className="text-center p-3 rounded-lg bg-muted border border-border">
+                              <p className="text-xl font-bold text-[#5BC8DC]">{p.price}</p>
+                              <p className="text-xs text-muted-foreground">/mo per seat</p>
+                              <p className="font-semibold text-foreground text-sm mt-1">{p.label}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-3">
+                        {!billingStatus?.hasSubscription ? (
+                          <Button onClick={handleSetupBilling} disabled={billingLoading2} className="gap-2">
+                            {billingLoading2 ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                            Set Up Billing
+                          </Button>
+                        ) : (
+                          <Button onClick={handleManageBilling} disabled={portalLoading} variant="outline" className="gap-2 border-border text-foreground hover:bg-muted">
+                            {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                            Manage Billing
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {activeTab !== "integrations" && activeTab !== "users" && activeTab !== "import" && activeTab !== "chatbot" && activeTab !== "billing" && (
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={bulkUpdate.isPending} className="h-10 px-6 rounded-xl gap-2">
                 {bulkUpdate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

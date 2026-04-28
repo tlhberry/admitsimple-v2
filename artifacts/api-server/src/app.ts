@@ -7,6 +7,7 @@ import pinoHttp from "pino-http";
 import helmet from "helmet";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { handleStripeWebhook } from "./routes/billing";
 import { main as runDemoSeed } from "./demoSeed";
 import { main as runDemoSeedContinue } from "./demoSeedContinue";
 import { main as runDemoSeedPatients } from "./demoSeedPatients";
@@ -75,6 +76,13 @@ app.use(
     },
     credentials: true,
   })
+);
+
+// ── Stripe webhook — must be raw body, registered BEFORE express.json() ──────
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  (req: Request, res: Response) => handleStripeWebhook(req, res)
 );
 
 app.use(express.json({ limit: "50mb" }));

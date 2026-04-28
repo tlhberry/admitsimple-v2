@@ -173,10 +173,13 @@ router.post("/auth/signup", signupLimiter, async (req, res) => {
     const initials = parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 
     // Atomic: create company then admin user
+    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const [company] = await db.insert(companies).values({
       name: facilityName.trim(),
       slug,
       plan: "trial",
+      subscriptionStatus: "trial",
+      trialEndsAt,
       isActive: true,
     }).returning();
 

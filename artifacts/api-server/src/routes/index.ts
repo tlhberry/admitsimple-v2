@@ -24,6 +24,7 @@ import chatbotRouter from "./chatbot";
 import dischargesRouter from "./discharges";
 import aiStageSuggestionsRouter from "./aiStageSuggestions";
 import demoRequestRouter from "./demoRequest";
+import billingRouter from "./billing";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(eventsRouter);
 router.use(adminRouter);
 router.use(dischargesRouter);
 router.use(aiStageSuggestionsRouter);
+router.use(billingRouter);
 
 export default router;

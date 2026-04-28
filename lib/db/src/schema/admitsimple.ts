@@ -19,6 +19,10 @@ export const companies = pgTable("companies", {
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   plan: varchar("plan", { length: 50 }).notNull().default("trial"),
   isActive: boolean("is_active").notNull().default(true),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  subscriptionStatus: varchar("subscription_status", { length: 50 }).notNull().default("trial"),
+  trialEndsAt: timestamp("trial_ends_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { AiStageSuggestionsBanner } from "@/components/AiStageSuggestionsBanner";
 import { IdleLogoutGuard } from "@/components/IdleLogoutGuard";
+import { TrialBanner } from "@/components/TrialBanner";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -27,6 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="md:pl-64 min-h-screen pb-36 md:pb-0 transition-all">
+        <TrialBanner />
         <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
           {children}
         </div>
