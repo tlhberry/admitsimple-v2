@@ -75,15 +75,6 @@ export default function ClaudeDataSafety() {
           })}
         </div>
 
-        <div className="mt-12 mx-auto max-w-2xl bg-[#5BC8DC]/8 border border-[#5BC8DC]/20 rounded-2xl p-6 text-center">
-          <p className="text-sm text-white/70 leading-relaxed">
-            Still have compliance questions? Our team works with healthcare attorneys and compliance officers regularly.{" "}
-            <a href="/contact" className="text-[#5BC8DC] font-semibold hover:underline">
-              Reach out directly
-            </a>{" "}
-            and we will walk through your specific requirements.
-          </p>
-        </div>
       </div>
     </section>
   );

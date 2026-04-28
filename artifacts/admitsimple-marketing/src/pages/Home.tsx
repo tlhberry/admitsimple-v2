@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
-import Features from "@/components/Features";
 import PipelineSection from "@/components/PipelineSection";
 import AiSection from "@/components/AiSection";
 import InboundCallSection from "@/components/InboundCallSection";
@@ -17,7 +16,6 @@ export default function Home() {
       <Header />
       <main>
         <Hero />
-        <Features />
         <PipelineSection />
         <AiSection />
         <InboundCallSection />
