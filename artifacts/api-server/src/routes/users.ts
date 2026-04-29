@@ -1,4 +1,5 @@
 import { Router } from "express";
+import sgMail from "@sendgrid/mail";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -70,6 +71,36 @@ router.post("/users", requireAdmin, async (req, res) => {
       isActive: true,
     }).returning();
     await logAudit({ userId: sess.userId, action: "USER_CREATED", resourceType: "user", resourceId: user.id, details: `Created user ${user.username}`, ipAddress: ip });
+
+    const sgApiKey = process.env.SENDGRID_API_KEY;
+    if (sgApiKey && user.email) {
+      try {
+        sgMail.setApiKey(sgApiKey);
+        const appUrl = process.env.APP_URL || "https://admitsimple.com";
+        const roleLabel = user.role === "admin" ? "Admin" : user.role === "admissions" ? "Admissions" : "BD Rep";
+        await sgMail.send({
+          to: user.email,
+          from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
+          subject: "Your AdmitSimple account is ready",
+          text: `Hi ${user.name},\n\nYour AdmitSimple account has been created.\n\nUsername: ${user.username}\nPassword: ${password}\nRole: ${roleLabel}\n\nSign in at: ${appUrl}/app\n\nFor security, please change your password after your first login.\n\n— AdmitSimple`,
+          html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+            <h2 style="color:#5BC8DC;">Welcome to AdmitSimple</h2>
+            <p>Hi ${user.name},</p>
+            <p>Your account has been created. Here are your login details:</p>
+            <table style="font-size:15px;border-collapse:collapse;margin:16px 0;">
+              <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Username</td><td style="font-family:monospace;font-size:14px;">${user.username}</td></tr>
+              <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Password</td><td style="font-family:monospace;font-size:14px;">${password}</td></tr>
+              <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Role</td><td>${roleLabel}</td></tr>
+            </table>
+            <p style="margin:24px 0;"><a href="${appUrl}/app" style="background:#5BC8DC;color:#1a2233;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Sign In to AdmitSimple</a></p>
+            <p style="color:#888;font-size:13px;">For security, please change your password after your first login via Settings → Security.</p>
+          </div>`,
+        });
+      } catch (emailErr: any) {
+        req.log.error({ emailErr }, "Failed to send welcome email to new user");
+      }
+    }
+
     res.status(201).json({
       id: user.id, username: user.username, name: user.name,
       email: user.email, role: user.role, initials: user.initials,

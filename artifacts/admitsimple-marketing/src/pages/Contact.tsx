@@ -10,18 +10,32 @@ import logo from "@assets/Untitled_1775863851436.png";
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
+    setSubmitting(true);
     const form = e.currentTarget;
     const name = (form.querySelector("#name") as HTMLInputElement).value;
     const facility = (form.querySelector("#facility") as HTMLInputElement).value;
     const email = (form.querySelector("#email") as HTMLInputElement).value;
     const phone = (form.querySelector("#phone") as HTMLInputElement).value;
     const message = (form.querySelector("#message") as HTMLTextAreaElement).value;
-    const body = `Name: ${name}\nFacility: ${facility}\nEmail: ${email}\nPhone: ${phone}\n\nMessage:\n${message}`;
-    window.location.href = `mailto:austin@admitsimple.com?subject=Contact from ${name} at ${facility}&body=${encodeURIComponent(body)}`;
-    setSubmitted(true);
+    try {
+      const res = await fetch("/api/demo-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, facility, email, phone, notes: message }),
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please email us directly at austin@admitsimple.com.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -67,7 +81,7 @@ export default function Contact() {
                       </svg>
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Message Sent</h3>
-                    <p className="text-gray-600 text-sm">Your email client should have opened. We will be in touch shortly.</p>
+                    <p className="text-gray-600 text-sm">Thank you! We received your message and will be in touch within one business day.</p>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
@@ -91,8 +105,9 @@ export default function Contact() {
                       <Label htmlFor="message">Message</Label>
                       <Textarea id="message" required placeholder="Tell us what you are looking for..." rows={4} className="resize-none" />
                     </div>
-                    <Button type="submit" className="w-full bg-[#5BC8DC] text-[#1a2233] hover:bg-[#4ab5ca] h-12 font-semibold text-base">
-                      Send Message
+                    {error && <p className="text-red-600 text-sm">{error}</p>}
+                    <Button type="submit" disabled={submitting} className="w-full bg-[#5BC8DC] text-[#1a2233] hover:bg-[#4ab5ca] h-12 font-semibold text-base">
+                      {submitting ? "Sending..." : "Send Message"}
                     </Button>
                   </form>
                 )}

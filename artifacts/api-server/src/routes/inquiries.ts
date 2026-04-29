@@ -1,5 +1,6 @@
 import { Router } from "express";
 import twilio from "twilio";
+import sgMail from "@sendgrid/mail";
 import { db } from "@workspace/db";
 import { inquiries, users, patients, auditLogs, settings, activities } from "@workspace/db/schema";
 import { eq, ilike, or, and, gte, lte, desc, notInArray, inArray, lt, sql } from "drizzle-orm";
@@ -181,6 +182,47 @@ router.post("/inquiries", async (req, res) => {
       .from(inquiries)
       .leftJoin(users, eq(inquiries.assignedTo, users.id))
       .where(eq(inquiries.id, row.id));
+
+    const sgApiKey = process.env.SENDGRID_API_KEY;
+    if (sgApiKey) {
+      try {
+        sgMail.setApiKey(sgApiKey);
+        const [facilityEmailRow] = await db.select().from(settings)
+          .where(and(eq(settings.key, "facility_email"), eq(settings.companyId, companyId)));
+        const adminUsers = await db.select({ email: users.email, name: users.name })
+          .from(users)
+          .where(and(eq(users.companyId, companyId), eq(users.role, "admin"), eq(users.isActive, true)));
+        const notifyEmails = [
+          facilityEmailRow?.value,
+          ...adminUsers.map(u => u.email),
+        ].filter((e): e is string => !!e && e.includes("@"));
+        const uniqueEmails = [...new Set(notifyEmails)];
+        if (uniqueEmails.length > 0) {
+          const inqName = `${row.firstName} ${row.lastName}`.trim();
+          const appUrl = process.env.APP_URL || "https://admitsimple.com";
+          await sgMail.send({
+            to: uniqueEmails,
+            from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
+            subject: `New Inquiry: ${inqName}`,
+            text: `A new inquiry has been submitted.\n\nName: ${inqName}\nPhone: ${row.phone || "N/A"}\nEmail: ${row.email || "N/A"}\nInsurance: ${row.insuranceProvider || "Unknown"}\nStatus: ${row.status}\n\nView in AdmitSimple: ${appUrl}/app`,
+            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+              <h2 style="color:#5BC8DC;margin-bottom:4px;">New Inquiry</h2>
+              <p style="color:#666;margin-top:0;">A new patient inquiry has been submitted in AdmitSimple.</p>
+              <table style="font-size:15px;border-collapse:collapse;width:100%;margin:16px 0;">
+                <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Name</td><td style="color:#1a2233;">${inqName}</td></tr>
+                <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Phone</td><td>${row.phone || "N/A"}</td></tr>
+                <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Email</td><td>${row.email || "N/A"}</td></tr>
+                <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Insurance</td><td>${row.insuranceProvider || "Unknown"}</td></tr>
+                <tr><td style="padding:6px 16px 6px 0;color:#888;font-weight:600;">Level of Care</td><td>${row.levelOfCare || "Not specified"}</td></tr>
+              </table>
+              <p style="margin:24px 0;"><a href="${appUrl}/app" style="background:#5BC8DC;color:#1a2233;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View in AdmitSimple</a></p>
+            </div>`,
+          });
+        }
+      } catch (emailErr) {
+        req.log.error({ emailErr }, "Failed to send new inquiry notification email");
+      }
+    }
 
     res.status(201).json(full[0]);
   } catch (err) {
