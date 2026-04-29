@@ -221,11 +221,60 @@ router.post("/auth/signup", signupLimiter, async (req, res) => {
 
     await logAudit({ userId: user.id, action: "SIGNUP", details: `Company: ${company.name} (id=${company.id})`, ipAddress: ip });
 
-    // Notify Austin of new signup so BAA can be sent
+    // Send emails: welcome to new user + internal notification
     const sgApiKey = process.env.SENDGRID_API_KEY;
     if (sgApiKey) {
       sgMail.setApiKey(sgApiKey);
+      const appUrl = process.env.APP_URL || "https://admitsimple.com";
       const signupTime = new Date().toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "full", timeStyle: "short" });
+
+      // 1. Welcome email to the new customer
+      try {
+        await sgMail.send({
+          to: user.email,
+          from: { email: "austin@admitsimple.com", name: "AdmitSimple" },
+          subject: "Welcome to AdmitSimple — your account is ready",
+          text: [
+            `Hi ${user.name},`,
+            ``,
+            `Welcome to AdmitSimple! Your 30-day free trial has started.`,
+            ``,
+            `Facility:  ${company.name}`,
+            `Username:  ${user.username}`,
+            ``,
+            `Sign in at: ${appUrl}/app`,
+            ``,
+            `If you have any questions, just reply to this email.`,
+            ``,
+            `— The AdmitSimple Team`,
+          ].join("\n"),
+          html: `
+            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+              <div style="background:#1a2233;border-radius:12px 12px 0 0;padding:32px;text-align:center;">
+                <h1 style="margin:0;color:#5BC8DC;font-size:28px;letter-spacing:-0.5px;">AdmitSimple</h1>
+              </div>
+              <div style="background:#f9fafb;border-radius:0 0 12px 12px;padding:32px;border:1px solid #e5e7eb;border-top:none;">
+                <h2 style="margin:0 0 8px;color:#1a2233;">Welcome, ${user.name}!</h2>
+                <p style="color:#6b7280;margin:0 0 24px;">Your AdmitSimple account is ready. Your 30-day free trial has started — no credit card required.</p>
+                <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:24px;">
+                  <tr><td style="padding:12px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #f3f4f6;width:120px;">Facility</td><td style="padding:12px 16px;font-weight:600;color:#1a2233;border-bottom:1px solid #f3f4f6;">${company.name}</td></tr>
+                  <tr><td style="padding:12px 16px;color:#6b7280;font-size:13px;">Username</td><td style="padding:12px 16px;font-family:monospace;font-size:14px;color:#1a2233;">${user.username}</td></tr>
+                </table>
+                <p style="text-align:center;margin:0 0 24px;">
+                  <a href="${appUrl}/app" style="background:#5BC8DC;color:#1a2233;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">Sign In to AdmitSimple</a>
+                </p>
+                <p style="color:#9ca3af;font-size:13px;margin:0;">Questions? Reply to this email and we'll get back to you quickly.</p>
+              </div>
+            </div>
+          `,
+          replyTo: "austin@admitsimple.com",
+        });
+        req.log.info({ to: user.email, company: company.name }, "Welcome email sent to new user");
+      } catch (sgErr: any) {
+        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message }, "Welcome email to new user failed");
+      }
+
+      // 2. Internal notification to Austin so BAA can be sent
       try {
         await sgMail.send({
           to: "austin@admitsimple.com",
@@ -257,9 +306,9 @@ router.post("/auth/signup", signupLimiter, async (req, res) => {
           `,
           replyTo: user.email,
         });
-        req.log.info({ to: "austin@admitsimple.com", company: company.name }, "New signup notification sent");
+        req.log.info({ to: "austin@admitsimple.com", company: company.name }, "New signup notification sent to Austin");
       } catch (sgErr: any) {
-        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message }, "Signup notification email failed");
+        req.log.error({ sgErr: sgErr?.response?.body ?? sgErr?.message }, "Signup notification email to Austin failed");
       }
     }
 
