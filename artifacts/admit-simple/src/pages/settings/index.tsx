@@ -1187,10 +1187,10 @@ export default function Settings() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-muted/50 border-b border-border">
-                                <th className="text-left px-4 py-2.5 text-muted-foreground font-medium">Role</th>
-                                <th className="text-center px-4 py-2.5 text-muted-foreground font-medium">Seats</th>
-                                <th className="text-right px-4 py-2.5 text-muted-foreground font-medium">Rate</th>
-                                <th className="text-right px-4 py-2.5 text-muted-foreground font-medium">Monthly</th>
+                                <th className="text-left px-3 py-2.5 text-muted-foreground font-medium">Role</th>
+                                <th className="text-center px-3 py-2.5 text-muted-foreground font-medium">Seats</th>
+                                <th className="text-right px-3 py-2.5 text-muted-foreground font-medium">Rate</th>
+                                <th className="text-right px-3 py-2.5 text-muted-foreground font-medium hidden sm:table-cell">Subtotal</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1202,37 +1202,39 @@ export default function Settings() {
                                 const qty = billingStatus?.seats[key] ?? 0;
                                 return (
                                   <tr key={key} className="border-b border-border last:border-0">
-                                    <td className="px-4 py-3 text-foreground">{role}</td>
-                                    <td className="px-4 py-3 text-center text-foreground">{qty}</td>
-                                    <td className="px-4 py-3 text-right text-muted-foreground">{fmt(price)}/seat</td>
-                                    <td className="px-4 py-3 text-right text-foreground font-medium">{fmt(qty * price)}</td>
+                                    <td className="px-3 py-3 text-foreground">{role}</td>
+                                    <td className="px-3 py-3 text-center text-foreground">{qty}</td>
+                                    <td className="px-3 py-3 text-right text-muted-foreground whitespace-nowrap">{fmt(price)}/seat</td>
+                                    <td className="px-3 py-3 text-right text-foreground font-medium hidden sm:table-cell">{fmt(qty * price)}</td>
                                   </tr>
                                 );
                               })}
-                              <tr className="bg-muted/30">
-                                <td colSpan={3} className="px-4 py-3 text-right font-semibold text-foreground">Estimated Monthly Total</td>
-                                <td className="px-4 py-3 text-right font-bold text-[#5BC8DC] text-base">{fmt(billingStatus?.monthlyTotal ?? 0)}/mo</td>
-                              </tr>
                             </tbody>
                           </table>
+                          <div className="flex items-center justify-between px-3 py-3 bg-muted/30 border-t border-border">
+                            <span className="font-semibold text-foreground text-sm">Estimated Monthly Total</span>
+                            <span className="font-bold text-[#5BC8DC] text-base whitespace-nowrap">{fmt(billingStatus?.monthlyTotal ?? 0)}/mo</span>
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">Seat counts are based on active users. Manage users in the Users tab.</p>
                       </div>
 
                       {/* Pricing reference */}
                       <div className="p-4 rounded-xl bg-muted/40 border border-border text-sm">
-                        <p className="font-semibold text-foreground mb-2">Per-Seat Pricing</p>
-                        <div className="grid grid-cols-3 gap-3">
+                        <p className="font-semibold text-foreground mb-3">Per-Seat Pricing</p>
+                        <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
                           {[
                             { label: "Admin", price: "$149", desc: "Full access + user management" },
                             { label: "Admissions", price: "$99", desc: "Pipeline, SMS & scheduling" },
                             { label: "BD Rep", price: "$69", desc: "Accounts & activity tracking" },
                           ].map(p => (
-                            <div key={p.label} className="text-center p-3 rounded-lg bg-muted border border-border">
-                              <p className="text-xl font-bold text-[#5BC8DC]">{p.price}</p>
-                              <p className="text-xs text-muted-foreground">/mo per seat</p>
-                              <p className="font-semibold text-foreground text-sm mt-1">{p.label}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
+                            <div key={p.label} className="flex items-center gap-3 p-3 rounded-lg bg-muted border border-border sm:flex-col sm:text-center sm:items-center sm:gap-0">
+                              <p className="text-2xl font-bold text-[#5BC8DC] sm:text-xl shrink-0">{p.price}</p>
+                              <div className="flex-1 sm:flex-none">
+                                <p className="text-xs text-muted-foreground sm:mb-1">/mo per seat</p>
+                                <p className="font-semibold text-foreground text-sm sm:mt-1">{p.label}</p>
+                                <p className="text-xs text-muted-foreground sm:mt-0.5">{p.desc}</p>
+                              </div>
                             </div>
                           ))}
                         </div>
