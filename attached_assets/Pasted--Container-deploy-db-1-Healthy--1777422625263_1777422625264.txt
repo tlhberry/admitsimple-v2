@@ -1,0 +1,74 @@
+ ✔ Container deploy-db-1  Healthy                                                                                        22.9sated                                                            
+[+] up 2/3er deploy-api-1 Starting                                                             
+ ✔ Container deploy-db-1  Healthy                                                                                        22.9sated                                                            
+[+] up 2/3er deploy-api-1 Started                                                              
+ ✔ Container deploy-db-1  Healthy                                                                                        22.9sing                                                             
+[+] up 2/3er deploy-api-1 Started                                                              
+ ✔ Container deploy-db-1  Healthy                                                                                        22.9sing                                                             
+[+] up 3/3er deploy-api-1 Started                                                              
+ ✔ Container deploy-db-1  Healthy                                                                                        22.9sing                                                             
+ ✔ Container deploy-api-1 Started                                                                                        22.6s
+ ✔ Container deploy-web-1 Started                                                                                        12.5s
+[ec2-user@ip-172-31-22-79 deploy]$ grep STRIPE ~/new-app/deploy/.env
+STRIPE_WEBHOOK_SECRET=whsec_BZBeqkLHRgvmhPFFKk6msYFSSsI3GaUR
+STRIPE_SECRET_KEY=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
+STRIPE_PRICE_ADMIN=price_1TRKOAHeJJY5ejq3XrTw3pNx
+STRIPE_PRICE_ADMISSIONS=price_1TRKOWHeJJY5ejq3ijA8tfSG
+STRIPE_PRICE_BD_REP=price_1TRKP5HeJJY5ejq3wnmMdjGl
+[ec2-user@ip-172-31-22-79 deploy]$ grep -A 30 "api:" ~/new-app/depgrep -A 30 "api:" ~/new-app/deploy/docker-compose.ec2.yml | grep -E "env_file|environment|STRIPE"
+    environment:
+[ec2-user@ip-172-31-22-79 deploy]$ docker exec $(docker-compose -fdocker exec $(docker-compose -f ~/new-app/deploy/docker-compose.ec2.yml ps -q api) env | grep STRIPE
+[ec2-user@ip-172-31-22-79 deploy]$ cat ~/new-app/deploy/docker-compose.ec2.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admitsimple
+      POSTGRES_USER: admitsimple
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admitsimple"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://admitsimple:${DB_PASSWORD}@db:5432/admitsimple
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      TWILIO_TWIML_APP_SID: ${TWILIO_TWIML_APP_SID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+[ec2-user@ip-172-31-22-79 deploy]$ 
